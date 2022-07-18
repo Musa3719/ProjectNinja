@@ -15,31 +15,43 @@ public interface PlayerState
 public class PlayerStateController : MonoBehaviour
 {
     public static PlayerStateController _instance;
-    public PlayerState playerState { get; private set; }
+    public PlayerState _playerState { get; private set; }
 
     public Rigidbody _rb { get; private set; }
+    public CameraController _cameraController { get; private set; }
 
-    private float bufferTime;
+    private float _bufferTime;
 
-    public bool jumpBuffer;
-    public bool crouchBuffer;
+    public bool _jumpBuffer;
+    public bool _crouchBuffer;
 
-    public Coroutine jumpCoroutine;
-    public Coroutine crouchCoroutine;
+    public Coroutine _jumpCoroutine;
+    public Coroutine _crouchCoroutine;
+    public Coroutine _isGroundedCoroutine;
+    public Coroutine _isTouchingCoroutine;
 
-    private void EnterState(PlayerState newState)
+
+    private float _coyoteTime;
+
+    public bool _isGroundedBuffer;
+    public bool _isTouchingBuffer;
+    public CameraShake.BounceShake.Params smallShake;
+   
+    public void EnterState(PlayerState newState)
     {
-        if (playerState != null)
-            playerState.Exit(_rb);
-        playerState = newState;
-        playerState.Enter(_rb);
+        if (_playerState != null)
+            _playerState.Exit(_rb);
+        _playerState = newState;
+        _playerState.Enter(_rb);
     }
     private void Awake()
     {
         _instance = this;
-        bufferTime = 0.3f;
+        _bufferTime = 0.25f;
+        _coyoteTime = 0.2f;
         //Debug.Log(UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale.name);
         _rb = GetComponent<Rigidbody>();
+        _cameraController = Camera.main.transform.parent.GetComponent<CameraController>();
 
         EnterState(new Movement());
     }
@@ -47,51 +59,97 @@ public class PlayerStateController : MonoBehaviour
     void Update()
     {
         if (GameManager._instance.isGameStopped || GameManager._instance.isPlayerDead) return;
-
-        playerState.DoState(_rb);
+        
+        _playerState.DoState(_rb);
     }
     void LateUpdate()
     {
         if (GameManager._instance.isGameStopped || GameManager._instance.isPlayerDead) return;
 
-        playerState.DoStateLateUpdate(_rb);
+        _playerState.DoStateLateUpdate(_rb);
     }
     void FixedUpdate()
     {
         if (GameManager._instance.isGameStopped || GameManager._instance.isPlayerDead) return;
 
-        playerState.DoStateFixedUpdate(_rb);
+        _playerState.DoStateFixedUpdate(_rb);
     }
+
+
     public IEnumerator JumpBuffer()
     {
-        if (jumpCoroutine != null)
-            StopCoroutine(jumpCoroutine);
-        jumpBuffer = true;
-        yield return new WaitForSeconds(bufferTime);
-        jumpBuffer = false;
+        if (_jumpCoroutine != null)
+            StopCoroutine(_jumpCoroutine);
+        _jumpBuffer = true;
+        yield return new WaitForSeconds(_bufferTime);
+        _jumpBuffer = false;
     }
     public IEnumerator CrouchBuffer()
     {
-        if (crouchCoroutine != null)
-            StopCoroutine(crouchCoroutine);
-        crouchBuffer = true;
-        yield return new WaitForSeconds(bufferTime);
-        crouchBuffer = false;
+        if (_crouchCoroutine != null)
+            StopCoroutine(_crouchCoroutine);
+        _crouchBuffer = true;
+        yield return new WaitForSeconds(_bufferTime);
+        _crouchBuffer = false;
+    }
+    public IEnumerator IsGroundedCoyoteTime()
+    {
+        if (_isGroundedCoroutine != null)
+            StopCoroutine(_isGroundedCoroutine);
+        _isGroundedBuffer = true;
+        yield return new WaitForSeconds(_coyoteTime);
+        _isGroundedBuffer = false;
+    }
+    public IEnumerator IsTouchingCoyoteTime()
+    {
+        if (_isTouchingCoroutine != null)
+            StopCoroutine(_isTouchingCoroutine);
+        _isTouchingBuffer = true;
+        yield return new WaitForSeconds(_coyoteTime);
+        _isTouchingBuffer = false;
+    }
+
+    public static bool CheckForOnWall()
+    {
+        if(!PlayerMovement._instance.IsGrounded() && PlayerMovement._instance.IsTouching() && !PlayerMovement._instance.isJumpedFromWall)
+        {
+            return true;
+        }
+        return false;
     }
     public static void CheckForBuffers()
     {
         if (Input.GetButtonDown("Jump"))
-            PlayerStateController._instance.jumpCoroutine = PlayerStateController._instance.StartCoroutine(PlayerStateController._instance.JumpBuffer());
+            PlayerStateController._instance._jumpCoroutine = PlayerStateController._instance.StartCoroutine(PlayerStateController._instance.JumpBuffer());
         if (Input.GetButtonDown("Crouch"))
-            PlayerStateController._instance.crouchCoroutine = PlayerStateController._instance.StartCoroutine(PlayerStateController._instance.CrouchBuffer());
+            PlayerStateController._instance._crouchCoroutine = PlayerStateController._instance.StartCoroutine(PlayerStateController._instance.CrouchBuffer());
+        if (PlayerMovement._instance.IsGrounded() && !PlayerMovement._instance.isJumped)
+            PlayerStateController._instance._isGroundedCoroutine = PlayerStateController._instance.StartCoroutine(PlayerStateController._instance.IsGroundedCoyoteTime());
+        if (PlayerMovement._instance.IsTouching())
+            PlayerStateController._instance._isTouchingCoroutine = PlayerStateController._instance.StartCoroutine(PlayerStateController._instance.IsTouchingCoyoteTime());
     }
+
+
     public static bool CheckForJump()
     {
-        return PlayerStateController._instance.jumpBuffer && PlayerMovement._instance.IsGrounded() && PlayerMovement._instance._Stamina >= PlayerMovement._instance._needStaminaForJump;
+        return PlayerStateController._instance._jumpBuffer && PlayerStateController._instance._isGroundedBuffer && PlayerMovement._instance._Stamina >= PlayerMovement._instance._needStaminaForJump;
     }
     public static bool CheckForCrouch()
     {
-        return PlayerStateController._instance.crouchBuffer && PlayerMovement._instance.IsGrounded();
+        return PlayerStateController._instance._crouchBuffer && PlayerStateController._instance._isGroundedBuffer;
+    }
+
+    public static bool CheckForWallJump()
+    {
+        return Input.GetButtonUp("Jump") && PlayerStateController._instance._isTouchingBuffer;
+    }
+    public static bool CheckForWallJumpCounter()
+    {
+        return Input.GetButton("Jump");
+    }
+    public static bool CheckForSlideWall()
+    {
+        return Input.GetButton("Crouch") && PlayerStateController._instance._isTouchingBuffer;
     }
     public static void CheckForDisableCrouch()
     {
@@ -103,9 +161,81 @@ public class PlayerStateController : MonoBehaviour
             PlayerMovement._instance._distToGround = 1f;
         }
     }
+
+
     public static bool IsRunning()
     {
-        return Input.GetKey(KeyCode.LeftShift) && PlayerMovement._instance._canRunWithStamina && PlayerMovement._instance._distToGround != PlayerMovement.crouchedYScale;
+        return Input.GetAxis("Vertical") > 0f && Input.GetKey(KeyCode.LeftShift) && PlayerMovement._instance._canRunWithStamina && !IsCrouching();
+    }
+    public static bool IsCrouching()
+    {
+        return PlayerMovement._instance._distToGround == PlayerMovement.crouchedYScale;
+    }
+}
+
+public class OnWall : PlayerState
+{
+    private float _jumpCounter;
+    public void Enter(Rigidbody rb)
+    {
+
+    }
+    public void Exit(Rigidbody rb)
+    {
+        
+    }
+    public void DoState(Rigidbody rb)
+    {
+        PlayerStateController.CheckForBuffers();
+
+        PlayerStateController.CheckForDisableCrouch();
+
+        if (!PlayerStateController.CheckForOnWall())
+        {
+            PlayerStateController._instance.EnterState(new Movement());
+        }
+        else if (PlayerStateController.CheckForWallJumpCounter())
+        {
+            _jumpCounter += Time.deltaTime;
+        }
+        else if (PlayerStateController.CheckForWallJump())
+        {
+            PlayerStateController._instance.StopCoroutine(PlayerStateController._instance._isTouchingCoroutine);
+            PlayerStateController._instance._isTouchingBuffer = false;
+
+            PlayerMovement._instance.JumpFromWall(rb, _jumpCounter);
+        }
+        else if (PlayerStateController.CheckForSlideWall())
+        {
+            PlayerStateController._instance.StopCoroutine(PlayerStateController._instance._isTouchingCoroutine);
+            PlayerStateController._instance._isTouchingBuffer = false;
+
+            PlayerMovement._instance.SlideFromWall(rb);
+        }
+        else if (PlayerMovement._instance.IsTouching())
+        {
+            if (PlayerStateController.IsRunning())
+            {
+                PlayerMovement._instance.WallRun(rb);
+            }
+            else
+            {
+                rb.GetComponent<PlayerMovement>().WallWalk(rb);
+            }
+        }
+
+        CameraController._instance.LookAround(false);
+
+    }
+
+    public void DoStateFixedUpdate(Rigidbody rb)
+    {
+
+    }
+
+    public void DoStateLateUpdate(Rigidbody rb)
+    {
+
     }
 }
 
@@ -116,7 +246,7 @@ public class Movement : PlayerState
     }
     public void Exit(Rigidbody rb)
     {
-        rb.velocity = Vector3.zero;
+        
     }
     public void DoState(Rigidbody rb)
     {
@@ -124,17 +254,30 @@ public class Movement : PlayerState
 
         PlayerStateController.CheckForDisableCrouch();
 
-        if (PlayerStateController.CheckForJump())
+        if (PlayerStateController.CheckForOnWall())
         {
-            PlayerStateController._instance.StopCoroutine(PlayerStateController._instance.jumpCoroutine);
-            PlayerStateController._instance.jumpBuffer = false;
+            PlayerStateController._instance.EnterState(new OnWall());
+        }
+        /*else if (Input.GetKeyDown(KeyCode.G))
+        {
+            CameraShake.CameraShaker.Shake(new CameraShake.BounceShake(PlayerStateController._instance.smallShake));
+        }*/
+        else if (PlayerStateController.CheckForJump())
+        {
+            PlayerStateController._instance.StopCoroutine(PlayerStateController._instance._jumpCoroutine);
+            PlayerStateController._instance._jumpBuffer = false;
+            PlayerStateController._instance.StopCoroutine(PlayerStateController._instance._isGroundedCoroutine);
+            PlayerStateController._instance._isGroundedBuffer = false;
 
             PlayerMovement._instance.Jump(rb);
         }
+        
         else if (PlayerStateController.CheckForCrouch())
         {
-            PlayerStateController._instance.StopCoroutine(PlayerStateController._instance.crouchCoroutine);
-            PlayerStateController._instance.crouchBuffer = false;
+            PlayerStateController._instance.StopCoroutine(PlayerStateController._instance._crouchCoroutine);
+            PlayerStateController._instance._crouchBuffer = false;
+            PlayerStateController._instance.StopCoroutine(PlayerStateController._instance._isGroundedCoroutine);
+            PlayerStateController._instance._isGroundedBuffer = false;
 
             PlayerMovement._instance.Crouch(rb);
         }
@@ -149,8 +292,8 @@ public class Movement : PlayerState
                 rb.GetComponent<PlayerMovement>().Walk(rb);
             }
         }
-        
-        CameraController._instance.LookAround();
+
+        CameraController._instance.LookAround(true);
 
     }
 

@@ -5,6 +5,8 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     public static PlayerMovement _instance;
+    
+    private ConstantForce _constantForceUp;
 
     public static float crouchedYScale;
     public static float normalYScale;
@@ -39,15 +41,19 @@ public class PlayerMovement : MonoBehaviour
     public float _distToGround;
 
     public Coroutine CrouchCoroutine;
+    public Coroutine JumpCoroutine;
+
+    public bool isJumped;
+    public bool isJumpedFromWall;
 
 
-    private List<Collider> _touchingColliders;
+    private List<Collider> _touchingWallColliders;
 
     private void Awake()
     {
         _instance = this;
         _canRunWithStamina = true;
-        _touchingColliders = new List<Collider>();
+        _touchingWallColliders = new List<Collider>();
         _needStaminaForJump = 10f;
         _staminaDecreasePerSecond = 8f;
         _staminaIncreasePerSecond = 5f;
@@ -55,6 +61,7 @@ public class PlayerMovement : MonoBehaviour
         _xBound = GetComponent<Collider>().bounds.extents.x;
         _zBound = GetComponent<Collider>().bounds.extents.z;
         _distToGround = GetComponent<Collider>().bounds.extents.y;
+        _constantForceUp = GetComponent<ConstantForce>();
         normalYScale = 1f;
         crouchedYScale = 0.4f;
     }
@@ -71,33 +78,53 @@ public class PlayerMovement : MonoBehaviour
     }
     public bool IsGrounded()
     {
-        //Debug.Log(Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f, -Vector3.up, 0.2f));
-        bool firstRay = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f + Vector3.right * _xBound * 9f / 10f + Vector3.forward * _zBound * 9f / 10f, -Vector3.up, 0.2f);
-        bool secondRay = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f + Vector3.right * _xBound * 9f / 10f - Vector3.forward * _zBound * 9f / 10f, -Vector3.up, 0.2f);
-        bool thirdRay = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f, -Vector3.up, 0.2f);
-        bool fourthRay = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f - Vector3.right * _xBound * 9f / 10f + Vector3.forward * _zBound * 9f / 10f, -Vector3.up, 0.2f);
-        bool fifthRay = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f - Vector3.right * _xBound * 9f / 10f - Vector3.forward * _zBound * 9f / 10f, -Vector3.up, 0.2f);
+        bool firstRay = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f + Vector3.right * _xBound * 9f / 10f + Vector3.forward * _zBound * 9f / 10f, -Vector3.up, 0.3f);
+        bool secondRay = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f + Vector3.right * _xBound * 9f / 10f - Vector3.forward * _zBound * 9f / 10f, -Vector3.up, 0.3f);
+        bool thirdRay = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f, -Vector3.up, 0.3f);
+        bool fourthRay = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f - Vector3.right * _xBound * 9f / 10f + Vector3.forward * _zBound * 9f / 10f, -Vector3.up, 0.3f);
+        bool fifthRay = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f - Vector3.right * _xBound * 9f / 10f - Vector3.forward * _zBound * 9f / 10f, -Vector3.up, 0.3f);
+        
+        ArrangeGravity(firstRay, secondRay, thirdRay, fourthRay, fifthRay);
 
         return firstRay || secondRay || thirdRay || fourthRay || fifthRay;
     }
+    private void ArrangeGravity(bool firstRay, bool secondRay, bool thirdRay, bool fourthRay, bool fifthRay)
+    {
+        if (firstRay || secondRay || thirdRay || fourthRay || fifthRay)
+        {
+            _constantForceUp.enabled = true;
+        }
+        else
+        {
+            _constantForceUp.enabled = false;
+        }
+    }
     public bool IsTouching()
     {
-        return _touchingColliders.Count > 0;
+        return _touchingWallColliders.Count > 0;
     }
 
-    private void OnCollisionEnter(Collision collision)
+    private void OnTriggerEnter(Collider collider)
     {
-        if (!_touchingColliders.Contains(collision.collider))
-            _touchingColliders.Add(collision.collider);
+        if (collider.gameObject == null || collider.gameObject.layer != LayerMask.NameToLayer("WallsAndPlanes") || !collider.CompareTag("Wall")) return;
+        if (!_touchingWallColliders.Contains(collider))
+            _touchingWallColliders.Add(collider);
     }
-    private void OnCollisionExit(Collision collision)
+    private void OnTriggerExit(Collider collider)
     {
-        if (_touchingColliders.Contains(collision.collider))
-            _touchingColliders.Remove(collision.collider);
+        if (collider.gameObject == null || collider.gameObject.layer != LayerMask.NameToLayer("WallsAndPlanes") || !collider.CompareTag("Wall")) return;
+        if (_touchingWallColliders.Contains(collider))
+            _touchingWallColliders.Remove(collider);
     }
     public void Crouch(Rigidbody rb)
     {
         CrouchCoroutine = StartCoroutine("CrouchRoutine");
+    }
+    public void SlideFromWall(Rigidbody rb)
+    {
+        float lerpSpeed = 10f;
+        Vector3 targetVelocity = -Vector3.up * 15f;
+        rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed / (targetVelocity - rb.velocity).magnitude);
     }
     IEnumerator CrouchRoutine()
     {
@@ -114,16 +141,61 @@ public class PlayerMovement : MonoBehaviour
     }
     public void Jump(Rigidbody rb)
     {
-        rb.velocity = new Vector3(rb.velocity.x, _JumpPower, rb.velocity.z) + transform.forward;
+        Vector3 forwardBySpeed = Mathf.Clamp(rb.velocity.magnitude / 5f, 0.25f, 100f) * transform.forward;
+        rb.velocity = new Vector3(rb.velocity.x, _JumpPower, rb.velocity.z) + forwardBySpeed;
         _Stamina -= _needStaminaForJump;
+        if (JumpCoroutine != null)
+            StopCoroutine(JumpCoroutine);
+        JumpCoroutine = StartCoroutine(JumpButtonHolding(rb));
+
+        isJumped = true;
+        Invoke("CloseIsJumped", 0.2f);
+    }
+    public void JumpFromWall(Rigidbody rb, float amount)
+    {
+        float jumpPower = _JumpPower * amount * 6f;
+        rb.velocity = PlayerStateController._instance._cameraController.transform.forward * jumpPower;
+
+        isJumpedFromWall = true;
+        Invoke("CloseIsJumpedFromWall", 0.1f);
+    }
+    private void CloseIsJumped()
+    {
+        isJumped = false;
+    }
+    private void CloseIsJumpedFromWall()
+    {
+        isJumpedFromWall = false;
+    }
+    IEnumerator JumpButtonHolding(Rigidbody rb)
+    {
+        while (Input.GetButton("Jump"))
+        {
+            yield return null;
+        }
+        if (rb.velocity.y > 0)
+        {
+            rb.velocity = new Vector3(rb.velocity.x, rb.velocity.y * 3f / 4f, rb.velocity.z);
+            yield return new WaitForSeconds(0.1f);
+            rb.velocity = new Vector3(rb.velocity.x, rb.velocity.y * 2f / 3f, rb.velocity.z);
+        }
     }
     public void Walk(Rigidbody rb)
     {
-        Movement(rb, _MoveSpeed, 15f);
+        Movement(rb, _MoveSpeed, 10f);
     }
     public void Run(Rigidbody rb)
     {
         Movement(rb, _RunSpeed, 10f);
+        _Stamina -= Time.deltaTime * _staminaDecreasePerSecond;
+    }
+    public void WallWalk(Rigidbody rb)
+    {
+        WallMovement(rb, _MoveSpeed * 2f, 15f);
+    }
+    public void WallRun(Rigidbody rb)
+    {
+        WallMovement(rb, _RunSpeed, 15f);
         _Stamina -= Time.deltaTime * _staminaDecreasePerSecond;
     }
     private void Movement(Rigidbody rb, float speed, float lerpSpeed)
@@ -133,12 +205,46 @@ public class PlayerMovement : MonoBehaviour
 
         Vector3 rightDirection = (rb.transform.right * xInput);
         Vector3 forwardDirection = (rb.transform.forward * yInput);
-        Vector3 direction = (forwardDirection + rightDirection).normalized - rightDirection * 0.38f;
+        Vector3 direction = (forwardDirection + rightDirection).normalized - rightDirection * (0.38f + rb.velocity.magnitude / 20f / 6f);
+
         if (yInput < 0)
         {
             direction -= forwardDirection * 0.38f;
         }
-
-        rb.velocity = Vector3.Lerp(rb.velocity, direction * speed, Time.deltaTime * lerpSpeed / (direction * speed - rb.velocity).magnitude);
+        var targetVelocity = direction * speed;
+        targetVelocity.y = rb.velocity.y;
+        rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed / (targetVelocity - rb.velocity).magnitude);
     }
+    private void WallMovement(Rigidbody rb, float speed, float lerpSpeed)
+    {
+        if (PlayerMovement._instance._touchingWallColliders.Count == 0) return;
+
+        float yInput = Input.GetAxisRaw("Vertical");
+
+        Vector2 first = new Vector2(PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.parent.transform.forward.x, PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.parent.transform.forward.z);
+        Vector2 second = new Vector2(transform.forward.x, transform.forward.z);
+        float isForward = 0f;
+        if (Vector2.Dot(first, second) > 0)//angle lower than 90
+        {
+            isForward = 1;
+        }
+        else
+        {
+            isForward = -1;
+        }
+        Vector3 forwardDirection = (PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.parent.transform.forward * yInput * isForward);
+
+        if (yInput < 0)
+        {
+            forwardDirection -= forwardDirection * 0.38f;
+        }
+
+        var targetVelocity = forwardDirection * speed;
+        targetVelocity.y = rb.velocity.y;
+        if (targetVelocity.y < -5f)
+            targetVelocity.y = -5f;
+        rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed / (targetVelocity - rb.velocity).magnitude);
+    }
+
 }
+
