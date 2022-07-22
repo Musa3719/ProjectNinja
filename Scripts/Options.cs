@@ -11,6 +11,7 @@ public class Options : MonoBehaviour
 
     public Slider SoundSlider;
     public Slider MusicSlider;
+    public Slider SensitivitySlider;
 
     private void Awake()
     {
@@ -19,6 +20,12 @@ public class Options : MonoBehaviour
         MusicVolume = PlayerPrefs.GetFloat("Music", 0.5f);
         SoundSlider.value = SoundVolume;
         MusicSlider.value = MusicVolume;
+    }
+    private void Start()
+    {
+        SensitivitySlider.value = PlayerPrefs.GetFloat("Sensitivity", 0.75f);
+        CameraController._instance._mouseSensitivity = SensitivitySlider.value * CameraController._instance._maxSensitivity;
+
     }
     public void SoundVolumeChanged(float newValue)
     {
@@ -29,5 +36,20 @@ public class Options : MonoBehaviour
     {
         MusicVolume = newValue;
         PlayerPrefs.SetFloat("Music", newValue);
+    }
+    public void MouseSensitivityVolumeChanged(float newValue)
+    {
+        if (newValue <= 0.2f)
+        {
+            newValue = 0.2f;
+            SensitivitySlider.value = 0.2f;
+        }
+
+        PlayerPrefs.SetFloat("Sensitivity", newValue);
+
+        if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex != 0)
+        {
+            CameraController._instance._mouseSensitivity = newValue * CameraController._instance._maxSensitivity;
+        }
     }
 }

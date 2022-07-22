@@ -13,6 +13,12 @@ public class HeadBobber : MonoBehaviour
 
     void Update()
     {
+        if (GameManager._instance.isGameStopped || GameManager._instance.isPlayerDead)
+        {
+            bobOffset = Vector3.zero;
+            return;
+        }
+
         bobbingAmount = 0.07f * (PlayerStateController._instance._rb.velocity.magnitude/6f + 5f) / 15f;
         bobbingSpeed = 0.09f * (PlayerStateController._instance._rb.velocity.magnitude/5f + 5f) / 6f;
 

@@ -44,14 +44,17 @@ public class SceneController : MonoBehaviour
     }
     public void NextScene()
     {
+        Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
     }
     public void LoadScene(int index)
     {
+        Time.timeScale = 1f;
         SceneManager.LoadScene(index);
     }
     public void ToMenu()
     {
+        Time.timeScale = 1f;
         SceneManager.LoadScene(0);
     }
     public void QuitGame()

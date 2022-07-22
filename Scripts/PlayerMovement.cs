@@ -23,6 +23,10 @@ public class PlayerMovement : MonoBehaviour
     private float _runSpeed;
     public float _RunSpeed => _runSpeed;
 
+    [SerializeField]
+    private float _climbSpeed;
+    public float _ClimbSpeed => _climbSpeed;
+
     private float _stamina;
     public float _Stamina { get { return _stamina; } 
         private set 
@@ -34,6 +38,7 @@ public class PlayerMovement : MonoBehaviour
     }
     public float _needStaminaForJump { get; private set; }
     public bool _canRunWithStamina { get; private set; }
+    public float _wallClimbStaminaUse;
     private float _staminaDecreasePerSecond;
     private float _staminaIncreasePerSecond;
     private float _xBound;
@@ -42,22 +47,34 @@ public class PlayerMovement : MonoBehaviour
 
     public Coroutine CrouchCoroutine;
     public Coroutine JumpCoroutine;
+    public Coroutine WallJumpCoroutine;
+    public Coroutine OpenVelocityForwardCoroutine;
+    public Coroutine IsAllowedHookCoroutine;
 
-    public bool isJumped;
-    public bool isJumpedFromWall;
+    public bool _isJumped;
+    public bool _isAllowedToVelocityForward;
+    public bool _isHookAllowed;
+
+    public float _climbTime;
+    public float _hookWaitTime;
 
 
-    private List<Collider> _touchingWallColliders;
+    public List<Collider> _touchingWallColliders { get; private set; }
 
     private void Awake()
     {
         _instance = this;
+        _climbTime = 0.8f;
+        _hookWaitTime = 1f;
+        _isAllowedToVelocityForward = true;
+        _isHookAllowed = true;
         _canRunWithStamina = true;
         _touchingWallColliders = new List<Collider>();
         _needStaminaForJump = 10f;
         _staminaDecreasePerSecond = 8f;
         _staminaIncreasePerSecond = 5f;
         _Stamina = 100f;
+        _wallClimbStaminaUse = 10f;
         _xBound = GetComponent<Collider>().bounds.extents.x;
         _zBound = GetComponent<Collider>().bounds.extents.z;
         _distToGround = GetComponent<Collider>().bounds.extents.y;
@@ -78,15 +95,28 @@ public class PlayerMovement : MonoBehaviour
     }
     public bool IsGrounded()
     {
-        bool firstRay = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f + Vector3.right * _xBound * 9f / 10f + Vector3.forward * _zBound * 9f / 10f, -Vector3.up, 0.3f);
-        bool secondRay = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f + Vector3.right * _xBound * 9f / 10f - Vector3.forward * _zBound * 9f / 10f, -Vector3.up, 0.3f);
-        bool thirdRay = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f, -Vector3.up, 0.3f);
-        bool fourthRay = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f - Vector3.right * _xBound * 9f / 10f + Vector3.forward * _zBound * 9f / 10f, -Vector3.up, 0.3f);
-        bool fifthRay = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f - Vector3.right * _xBound * 9f / 10f - Vector3.forward * _zBound * 9f / 10f, -Vector3.up, 0.3f);
-        
-        ArrangeGravity(firstRay, secondRay, thirdRay, fourthRay, fifthRay);
 
-        return firstRay || secondRay || thirdRay || fourthRay || fifthRay;
+        RaycastHit[] hits = new RaycastHit[5];
+        bool[] rays = new bool[5];
+        rays[0] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f + Vector3.right * _xBound * 9f / 10f + Vector3.forward * _zBound * 9f / 10f, -Vector3.up, out hits[0], 0.3f);
+        rays[1] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f + Vector3.right * _xBound * 9f / 10f - Vector3.forward * _zBound * 9f / 10f, -Vector3.up, out hits[1], 0.3f);
+        rays[2] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f, -Vector3.up, out hits[2], 0.3f);
+        rays[3] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f - Vector3.right * _xBound * 9f / 10f + Vector3.forward * _zBound * 9f / 10f, -Vector3.up, out hits[3], 0.3f);
+        rays[4] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f - Vector3.right * _xBound * 9f / 10f - Vector3.forward * _zBound * 9f / 10f, -Vector3.up, out hits[4], 0.3f);
+
+        int i = 0;
+        foreach (var hit in hits)
+        {
+            if (hit.collider!=null && hit.collider.isTrigger && rays[i]==true)
+            {
+                rays[i] = false;
+            }
+            i++;
+        }
+
+        ArrangeGravity(rays[0], rays[1], rays[2], rays[3], rays[4]);
+
+        return rays[0] || rays[1] || rays[2] || rays[3] || rays[4];
     }
     private void ArrangeGravity(bool firstRay, bool secondRay, bool thirdRay, bool fourthRay, bool fifthRay)
     {
@@ -141,31 +171,29 @@ public class PlayerMovement : MonoBehaviour
     }
     public void Jump(Rigidbody rb)
     {
-        Vector3 forwardBySpeed = Mathf.Clamp(rb.velocity.magnitude / 5f, 0.25f, 100f) * transform.forward;
-        rb.velocity = new Vector3(rb.velocity.x, _JumpPower, rb.velocity.z) + forwardBySpeed;
+        Vector3 forwardBySpeed = Mathf.Clamp(rb.velocity.magnitude / 15f, 0.25f, 100f) * transform.forward;
+        rb.velocity = new Vector3(rb.velocity.x, _JumpPower, rb.velocity.z);
         _Stamina -= _needStaminaForJump;
+
         if (JumpCoroutine != null)
             StopCoroutine(JumpCoroutine);
         JumpCoroutine = StartCoroutine(JumpButtonHolding(rb));
 
-        isJumped = true;
+        _isJumped = true;
         Invoke("CloseIsJumped", 0.2f);
     }
-    public void JumpFromWall(Rigidbody rb, float amount)
+    public void JumpFromWall(Rigidbody rb)
     {
-        float jumpPower = _JumpPower * amount * 6f;
-        rb.velocity = PlayerStateController._instance._cameraController.transform.forward * jumpPower;
+        Vector3 jumpVelocity = transform.forward * PlayerMovement._instance._jumpPower * 1.75f + rb.velocity.y * Vector3.up / 2f;
+        rb.velocity = jumpVelocity;
+        _Stamina -= _needStaminaForJump;
 
-        isJumpedFromWall = true;
-        Invoke("CloseIsJumpedFromWall", 0.1f);
-    }
-    private void CloseIsJumped()
-    {
-        isJumped = false;
-    }
-    private void CloseIsJumpedFromWall()
-    {
-        isJumpedFromWall = false;
+        if (WallJumpCoroutine != null)
+            StopCoroutine(WallJumpCoroutine);
+        WallJumpCoroutine = StartCoroutine(WallJumpButtonHolding(rb));
+
+        _isJumped = true;
+        Invoke("CloseIsJumped", 0.2f);
     }
     IEnumerator JumpButtonHolding(Rigidbody rb)
     {
@@ -179,10 +207,58 @@ public class PlayerMovement : MonoBehaviour
             yield return new WaitForSeconds(0.1f);
             rb.velocity = new Vector3(rb.velocity.x, rb.velocity.y * 2f / 3f, rb.velocity.z);
         }
+
+    }
+    IEnumerator WallJumpButtonHolding(Rigidbody rb)
+    {
+        while (Input.GetButton("Jump"))
+        {
+            yield return null;
+        }
+
+        rb.velocity = new Vector3(rb.velocity.x * 3f / 4f, rb.velocity.y, rb.velocity.z * 3f / 4f);
+        yield return new WaitForSeconds(0.1f);
+        rb.velocity = new Vector3(rb.velocity.x * 2f / 3f, rb.velocity.y, rb.velocity.z * 2f / 3f);
+
+    }
+    public IEnumerator IsAllowedHookTimer()
+    {
+        yield return new WaitForSeconds(_hookWaitTime);
+        _isHookAllowed = true;
+    }
+    private void CloseIsJumped()
+    {
+        _isJumped = false;
+    }
+    private void ArrangeIsVelocityToForward()
+    {
+        _isAllowedToVelocityForward = false;
+        if (OpenVelocityForwardCoroutine != null)
+            StopCoroutine(OpenVelocityForwardCoroutine);
+        OpenVelocityForwardCoroutine = StartCoroutine(OpenIsAllowedToVelocityForward(0.7f));
+    }
+    IEnumerator OpenIsAllowedToVelocityForward(float time)
+    {
+        yield return new WaitForSeconds(time);
+        _isAllowedToVelocityForward = true;
+    }
+    public void ThrowHook()
+    {
+        /////////////////////////////////////////////////////////////////////////////
+    }
+
+    public void PullHook()
+    {
+        /////////////////////////////////////////////////////////////////////////////
+    }
+
+    public void HookMovement(Rigidbody rb, float lerpSpeed)
+    {
+        /////////////////////////////////////////////////////////////////////////////
     }
     public void Walk(Rigidbody rb)
     {
-        Movement(rb, _MoveSpeed, 10f);
+        Movement(rb, _MoveSpeed, 15f);
     }
     public void Run(Rigidbody rb)
     {
@@ -195,11 +271,21 @@ public class PlayerMovement : MonoBehaviour
     }
     public void WallRun(Rigidbody rb)
     {
-        WallMovement(rb, _RunSpeed, 15f);
+        WallMovement(rb, _RunSpeed, 10f);
         _Stamina -= Time.deltaTime * _staminaDecreasePerSecond;
+    }
+    public void WallWalkWithHook(Rigidbody rb)
+    {
+        /////////////////////////////////////////////////////////////////////////////
+    }
+    public void WallRunWithHook(Rigidbody rb)
+    {
+        /////////////////////////////////////////////////////////////////////////////
     }
     private void Movement(Rigidbody rb, float speed, float lerpSpeed)
     {
+        _constantForceUp.force = Vector3.zero;//16
+
         float xInput = Input.GetAxisRaw("Horizontal");
         float yInput = Input.GetAxisRaw("Vertical");
 
@@ -213,15 +299,22 @@ public class PlayerMovement : MonoBehaviour
         }
         var targetVelocity = direction * speed;
         targetVelocity.y = rb.velocity.y;
-        rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed / (targetVelocity - rb.velocity).magnitude);
+
+        if (targetVelocity == rb.velocity)
+            rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed * 2.5f);
+        else
+            rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed / (targetVelocity - rb.velocity).magnitude);
+
     }
     private void WallMovement(Rigidbody rb, float speed, float lerpSpeed)
     {
         if (PlayerMovement._instance._touchingWallColliders.Count == 0) return;
 
+        _constantForceUp.force = Vector3.up * 16f;
+
         float yInput = Input.GetAxisRaw("Vertical");
 
-        Vector2 first = new Vector2(PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.parent.transform.forward.x, PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.parent.transform.forward.z);
+        Vector2 first = new Vector2(PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.forward.x, PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.forward.z);
         Vector2 second = new Vector2(transform.forward.x, transform.forward.z);
         float isForward = 0f;
         if (Vector2.Dot(first, second) > 0)//angle lower than 90
@@ -232,18 +325,28 @@ public class PlayerMovement : MonoBehaviour
         {
             isForward = -1;
         }
-        Vector3 forwardDirection = (PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.parent.transform.forward * yInput * isForward);
+        Vector3 forwardDirection = (PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.forward * yInput * isForward);
 
         if (yInput < 0)
         {
             forwardDirection -= forwardDirection * 0.38f;
         }
 
+
         var targetVelocity = forwardDirection * speed;
         targetVelocity.y = rb.velocity.y;
         if (targetVelocity.y < -5f)
             targetVelocity.y = -5f;
-        rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed / (targetVelocity - rb.velocity).magnitude);
+
+        if (targetVelocity.magnitude > rb.velocity.magnitude)
+        {
+            lerpSpeed = lerpSpeed / 3f;
+        }
+        
+        if (targetVelocity == rb.velocity)
+            rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed * 2.5f);
+        else
+            rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed / (targetVelocity - rb.velocity).magnitude);
     }
 
 }

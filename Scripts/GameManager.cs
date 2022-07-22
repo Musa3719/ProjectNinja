@@ -27,6 +27,23 @@ public class GameManager : MonoBehaviour
     }
     private void Update()
     {
+        /*if (PlayerStateController._instance._playerState is OnWall)
+        {
+            if ((PlayerStateController._instance._playerState as OnWall)._jumpCounter > 0 && !JumpCounterBar.transform.parent.gameObject.activeInHierarchy)
+                JumpCounterBar.transform.parent.gameObject.SetActive(true);
+            JumpCounterBar.fillAmount = ((PlayerStateController._instance._playerState as OnWall)._jumpCounter - 0.25f) * 4f / 3f;
+        }
+        else if (PlayerStateController._instance._playerState is ClimbWall)
+        {
+            if ((PlayerStateController._instance._playerState as ClimbWall)._jumpCounter > 0 && !JumpCounterBar.transform.parent.gameObject.activeInHierarchy)
+                JumpCounterBar.transform.parent.gameObject.SetActive(true);
+            JumpCounterBar.fillAmount = ((PlayerStateController._instance._playerState as ClimbWall)._jumpCounter - 0.25f) * 4f / 3f;
+        }
+        else
+        {
+            JumpCounterBar.transform.parent.gameObject.SetActive(false);
+        }*/
+
         StaminaBar.fillAmount = PlayerMovement._instance._Stamina / 100f;
         SpeedText.text = playerRb.velocity.magnitude.ToString("n0") + " m/s";
         
