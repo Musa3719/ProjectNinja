@@ -6,7 +6,7 @@ public class TrapTrigger : MonoBehaviour
 {
     private void OnTriggerEnter(Collider other)
     {
-        if(other!=null && other.CompareTag("HitBox"))
+        if (other != null && other.gameObject.layer == LayerMask.NameToLayer("Killable"))
         {
             if(transform.parent.GetComponentInChildren<ITrap>()!=null)
                 transform.parent.GetComponentInChildren<ITrap>()._CheckForActivate = true;
