@@ -164,7 +164,7 @@ public class BossMovement : MonoBehaviour
     }
     public void MoveAfterAttack(bool isFirstAttack)
     {
-        Vector3 direction = (GameManager._instance.PlayerRb.position + Random.Range(-0.6f, 0.6f) * GameManager._instance.PlayerRb.transform.right - transform.position).normalized;
+        Vector3 direction = (GameManager._instance.PlayerRb.position + Random.Range(-0.25f, 0.25f) * GameManager._instance.PlayerRb.transform.right - transform.position).normalized;
 
         _navMeshAgent.enabled = false;
         _rb.isKinematic = false;
@@ -172,12 +172,13 @@ public class BossMovement : MonoBehaviour
 
         float firstMultiplier = isFirstAttack ? 0.95f : 1f;
         float subtranctByDistance = (6.5f - (GameManager._instance.PlayerRb.position - transform.position).magnitude);
-        if (subtranctByDistance > 0) subtranctByDistance = subtranctByDistance / 1.5f;
-        float distanceMultiplier = (GameManager._instance.PlayerRb.position - transform.position).magnitude;// - subtranctByDistance;
+        if (subtranctByDistance < 0) subtranctByDistance = subtranctByDistance / 3f;
+        else subtranctByDistance = 0f;
+        float distanceMultiplier = (GameManager._instance.PlayerRb.position - transform.position).magnitude - subtranctByDistance;
 
-        if (distanceMultiplier < 5f) distanceMultiplier /= 1.6f;
+        if (subtranctByDistance < 0f) distanceMultiplier /= 1.6f;
 
-        Vector3 targetVel = direction * 16f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 0f, 8.5f) / 5f;
+        Vector3 targetVel = direction * 17f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 0f, 8.5f) / 5f;
         if (_moveAfterAttackCoroutine != null)
             StopCoroutine(_moveAfterAttackCoroutine);
         _moveAfterAttackCoroutine = StartCoroutine(MoveAfterAttackCoroutine(targetVel));
@@ -185,23 +186,24 @@ public class BossMovement : MonoBehaviour
     private IEnumerator MoveAfterAttackCoroutine(Vector3 targetVel)
     {
         float startTime = Time.time;
+        float moveTime = 0.45f;
         float dividerOfTime = 1.5f;
-        while (Time.time < startTime + 0.65f / dividerOfTime)
+        while (Time.time < startTime + moveTime / dividerOfTime)
         {
             if (_bossStateController._bossCombat._IsAttackInterrupted) yield break;
 
-            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, (Time.time - startTime) / (0.65f / dividerOfTime));
+            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, (Time.time - startTime) / (moveTime / dividerOfTime));
             _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 6f);
             ArrangeMoveAfterAttackGrounded();
             yield return null;
         }
         _rb.velocity = targetVel;
         float newTime = Time.time;
-        while (Time.time < startTime + 0.65f)
+        while (Time.time < startTime + moveTime)
         {
             if (_bossStateController._bossCombat._IsAttackInterrupted) yield break;
 
-            _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, (Time.time - newTime) / (0.65f - (newTime - startTime)));
+            _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, (Time.time - newTime) / (moveTime - (newTime - startTime)));
             _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 8f);
             ArrangeMoveAfterAttackGrounded();
             yield return null;
@@ -522,7 +524,7 @@ public class BossMovement : MonoBehaviour
         //phase change position
         //cutscene etc
     }
-    public void MoveToPosition(Vector3 position, Vector3 lookAtPos, float rotationLerpSpeed = 6.5f, float? speed=null)
+    public void MoveToPosition(Vector3 position, Vector3 lookAtPos, float rotationLerpSpeed = 10f, float? speed=null)
     {
         if (!_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh || _navMeshAgent.isOnOffMeshLink) return;
 

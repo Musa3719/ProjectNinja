@@ -455,6 +455,10 @@ public class BossCombat : MonoBehaviour, IKillable
         int c = 0;
         foreach (var attackName in patternNumbers)
         {
+            if ((GameManager._instance.PlayerRb.transform.position - transform.position).magnitude > 12f)
+            {
+                break;
+            }
             if (c == 0)
             {
                 GameManager._instance.CallForAction(() => _bossStateController._bossMovement.MoveAfterAttack(true), 0.05f);
@@ -750,7 +754,7 @@ public class BossCombat : MonoBehaviour, IKillable
 
         GameObject bloodPrefab = GameManager._instance.BloodDecalPrefabs[UnityEngine.Random.Range(0, GameManager._instance.BloodDecalPrefabs.Count)];
         GameObject decal = Instantiate(bloodPrefab, transform);
-        float size = UnityEngine.Random.Range(0.5f, 0.8f);
+        float size = UnityEngine.Random.Range(1f, 1.75f);
         decal.GetComponent<DecalProjector>().size = new Vector3(size, size, decal.GetComponent<DecalProjector>().size.z);
         decal.GetComponent<DecalFollow>().FollowingTransform = _decalFollowTransform;
         decal.GetComponent<DecalFollow>().LocalPosition = new Vector3(UnityEngine.Random.Range(-0.2f, 0.2f), UnityEngine.Random.Range(0.2f, 0.7f), 0f);

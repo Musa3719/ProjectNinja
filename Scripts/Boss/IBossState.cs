@@ -125,7 +125,10 @@ namespace BossStates
             }
 
             if(!_bossStateController._bossCombat._IsDodging && !_bossStateController._bossCombat._IsInAttackPattern && !_bossStateController._bossCombat._IsBlocking)
-                _bossStateController._bossMovement.MoveToPosition(_playerTransform.position, GameManager._instance.PlayerRb.transform.position);
+                if ((_playerTransform.position - _bossStateController.transform.position).magnitude < _bossStateController._bossCombat.AttackRange * 0.5f)
+                    _bossStateController._bossMovement.MoveToPosition(_bossStateController.transform.position - _bossStateController.transform.forward, _playerTransform.position);
+                else
+                    _bossStateController._bossMovement.MoveToPosition(_playerTransform.position, GameManager._instance.PlayerRb.transform.position);
 
 
         }
