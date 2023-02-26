@@ -24,7 +24,7 @@ public class PlayerHandMeshFollow : MonoBehaviour
 
         _lastCamAngle = _camTransform.transform.eulerAngles;
 
-        if(PlayerStateController._instance._playerState is PlayerStates.OnWall)
+        if (PlayerStateController._instance._playerState is PlayerStates.OnWall && PlayerMovement._instance._touchingWallColliders.Count > 0)
         {
             Collider wallCollider = PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1];
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using PlayerStates;
 using System;
+using UnityEngine.Rendering.HighDefinition;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -46,6 +47,7 @@ public class PlayerMovement : MonoBehaviour
     public float _MaxHookLenght => _maxHookLenght;
 
     private Transform _HandOffsetForHook;
+    private float _hookAnimTime;
 
     public float _MaxStamina { get; private set; }
     private float _stamina;
@@ -57,6 +59,8 @@ public class PlayerMovement : MonoBehaviour
             else _stamina = value; 
         } 
     }
+
+    private float _isGroundedCounter;
 
     public float _needStaminaForJump { get; private set; }
     public float _hookStaminaUse { get; private set; }
@@ -105,7 +109,9 @@ public class PlayerMovement : MonoBehaviour
     private float _lastCrouchStartTime;
 
     private bool _isUpHookLastTime;
-    
+    private bool _isHookDisabled;
+
+
 
     public List<Collider> _touchingWallColliders { get; private set; }
     public List<Collider> _touchingGroundColliders { get; private set; }
@@ -207,6 +213,7 @@ public class PlayerMovement : MonoBehaviour
         _HandOffsetForHook = _rightHandTransform;
         GameManager._instance._isGroundedWorkedThisFrameEvent += () => _isGroundedWorkedThisFrame = false;
         GameManager._instance.PlayerRunningSpeed = _MoveSpeed;
+        _hookAnimTime = 0.15f;
     }
     private void Update()
     {
@@ -246,13 +253,19 @@ public class PlayerMovement : MonoBehaviour
         //Vector3 offsetByRotation = transform.up * offsetType.y + transform.right * offsetType.x + transform.forward * offsetType.z;
 
         PlayerStateController._instance._lineRenderer.SetPosition(0, offsetType);
-        if (_hookConnectedTransform != null)
+        if (_hookConnectedTransform != null && !_isHookDisabled)
         {
-            PlayerStateController._instance._lineRenderer.SetPosition(1, _hookConnectedTransform.position + _hookConnectedPositionOffset);
+            if (PlayerMovement._instance._lastHookTime + _hookAnimTime > Time.time)
+            {
+                PlayerStateController._instance._lineRenderer.SetPosition(1, Vector3.Lerp(offsetType, _hookConnectedTransform.position + _hookConnectedPositionOffset, (Time.time - PlayerMovement._instance._lastHookTime) / _hookAnimTime));
+            }
+            else
+                PlayerStateController._instance._lineRenderer.SetPosition(1, _hookConnectedTransform.position + _hookConnectedPositionOffset);
+            PlayerStateController._instance._hookAnchor.transform.position = PlayerStateController._instance._lineRenderer.GetPosition(1);
+            PlayerStateController._instance._hookAnchor.transform.forward = (PlayerStateController._instance._lineRenderer.GetPosition(1) - PlayerStateController._instance._lineRenderer.GetPosition(0)).normalized;
         }
     }
-    
-    public bool IsGrounded()
+    private bool IsGroundedInside()
     {
 
         float downDistance = 0.3f;
@@ -289,7 +302,7 @@ public class PlayerMovement : MonoBehaviour
         int i = 0;
         foreach (var hit in hits)
         {
-            if (hit.collider!=null && hit.collider.isTrigger && rays[i]==true)
+            if (hit.collider != null && hit.collider.isTrigger && rays[i] == true)
             {
                 rays[i] = false;
             }
@@ -308,9 +321,23 @@ public class PlayerMovement : MonoBehaviour
             return IsGroundedFromList();
         return rays[0] || rays[1] || rays[2] || rays[3] || rays[4] || rays[5];
     }
+    public bool IsGrounded()
+    {
+        if (IsGroundedInside())
+        {
+            _isGroundedCounter = 0f;
+            return true;
+        }
+        else
+        {
+            _isGroundedCounter += Time.deltaTime;
+            if (_isGroundedCounter > 0.15f) return false;
+            return true;
+        }
+    }
     private void ArrangePlaneSound(RaycastHit[] hits)
     {
-        if (PlayerStateController._instance._playerState is OnWall) return;
+        if (PlayerStateController._instance._playerState is OnWall || (PlayerStateController._instance._playerState is Movement && (PlayerStateController._instance._playerState as Movement).isCrouching)) return;
 
         float speed = PlayerStateController._instance._rb.velocity.magnitude;
         foreach (var hit in hits)
@@ -498,8 +525,8 @@ public class PlayerMovement : MonoBehaviour
     }
     public void Crouch(Rigidbody rb)
     {
-        if (_lastCrouchStartTime + 3f < Time.time)
-            rb.velocity += transform.forward * 2.5f;
+        if (_lastCrouchStartTime + 2.5f < Time.time)
+            rb.velocity += transform.forward * 2f;
 
         _lastCrouchStartTime = Time.time;
 
@@ -528,8 +555,8 @@ public class PlayerMovement : MonoBehaviour
     }
     private void FastLand(Rigidbody rb)
     {
-        float lerpSpeed = 3.5f;
-        Vector3 targetVelocity = -Vector3.up * 40f;
+        float lerpSpeed = 6f;
+        Vector3 targetVelocity = -Vector3.up * 70f;
         rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed / (targetVelocity - rb.velocity).magnitude);
     }
     IEnumerator CrouchRoutine()
@@ -718,8 +745,10 @@ public class PlayerMovement : MonoBehaviour
         bool isWallOrGround = hit.collider.gameObject.layer == LayerMask.NameToLayer("Grounds") || hit.collider.CompareTag("Wall");
         if (hit.collider != null && isWallOrGround)
         {
-            PlayerStateController._instance._lineRenderer.SetPosition(1, hit.point);
+            //PlayerStateController._instance._lineRenderer.SetPosition(1, hit.point);
             PlayerStateController._instance._lineRenderer.enabled = true;
+            PlayerStateController._instance._hookAnchor.SetActive(true);
+            _isHookDisabled = false;
 
             PlayerStateController._instance.ChangeAnimation("UpHookThrow");
             SoundManager._instance.PlaySound(SoundManager._instance.ThrowHook, transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
@@ -732,7 +761,7 @@ public class PlayerMovement : MonoBehaviour
             _isHookAllowed = false;
             _isHookAllowedForAir = false;
             _isUpHookLastTime = true;
-            HookPullMovement(rb, true);
+            GameManager._instance.CallForAction(() => HookPullMovement(rb, true, hit), _hookAnimTime);
             GameManager._instance.CallForAction(PullHook, _hookTime);
             GameManager._instance.CallForAction(()=> { _isHookAllowedForAir = false; }, 0.15f);
         }
@@ -761,8 +790,10 @@ public class PlayerMovement : MonoBehaviour
         bool isWallOrGround = hit.collider.gameObject.layer == LayerMask.NameToLayer("Grounds") || hit.collider.CompareTag("Wall");
         if (isWallOrGround)
         {
-            PlayerStateController._instance._lineRenderer.SetPosition(1, hit.point);
+            //PlayerStateController._instance._lineRenderer.SetPosition(1, hit.point);
             PlayerStateController._instance._lineRenderer.enabled = true;
+            PlayerStateController._instance._hookAnchor.SetActive(true);
+            _isHookDisabled = false;
 
             PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.7f));
             PlayerStateController._instance.ChangeAnimation(GetThrowHookName());
@@ -776,7 +807,7 @@ public class PlayerMovement : MonoBehaviour
             _isHookAllowed = false;
             _isHookAllowedForAir = false;
             _isUpHookLastTime = false;
-            HookPullMovement(rb, false);
+            GameManager._instance.CallForAction(() => HookPullMovement(rb, false, hit), _hookAnimTime);
             GameManager._instance.CallForAction(PullHook, _hookTime);
             GameManager._instance.CallForAction(() => { _isHookAllowedForAir = false; }, 0.15f);
         }
@@ -792,16 +823,40 @@ public class PlayerMovement : MonoBehaviour
     }
     public void PullHook()
     {
-        PlayerStateController._instance._lineRenderer.enabled = false;
-        PlayerMovement._instance._hookConnectedTransform = null;
-
         if (_isAllowedHookCoroutine != null)
             StopCoroutine(_isAllowedHookCoroutine);
         _isHookAllowed = false;
+        _isHookDisabled = true;
         _isAllowedHookCoroutine = StartCoroutine("IsAllowedHookTimer");
+        StartCoroutine(PullHookPositionCoroutine());
     }
-    public void HookPullMovement(Rigidbody rb, bool isUpHook)
+    private IEnumerator PullHookPositionCoroutine()
     {
+        float startTime = Time.time;
+        float localAnimTime = _hookAnimTime * 2f;
+        while (Time.time < startTime + localAnimTime)
+        {
+            PlayerStateController._instance._lineRenderer.SetPosition(1, Vector3.Lerp(_hookConnectedTransform.position + _hookConnectedPositionOffset, PlayerStateController._instance._lineRenderer.GetPosition(0), (Time.time - startTime) / localAnimTime));
+            PlayerStateController._instance._hookAnchor.transform.position = PlayerStateController._instance._lineRenderer.GetPosition(1);
+            yield return null;
+        }
+        PlayerMovement._instance._hookConnectedTransform = null;
+        PlayerStateController._instance._lineRenderer.enabled = false;
+        PlayerStateController._instance._hookAnchor.SetActive(false);
+    }
+    public void HookPullMovement(Rigidbody rb, bool isUpHook, RaycastHit hit)
+    {
+        SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, hit.point, 0.5f, false, UnityEngine.Random.Range(0.8f, 0.9f));
+        GameObject decal = Instantiate(GameManager._instance.HoleDecal, hit.point, Quaternion.identity);
+        decal.GetComponent<DecalProjector>().size *= UnityEngine.Random.Range(1.4f, 2.1f);
+        decal.transform.forward = hit.transform.right;
+        decal.transform.localEulerAngles = new Vector3(decal.transform.localEulerAngles.x, decal.transform.localEulerAngles.y, UnityEngine.Random.Range(0f, 360f));
+        GameObject smokeVFX = Instantiate(GameManager._instance.HitSmokeVFX, hit.point + hit.normal * 0.5f, Quaternion.identity);
+        smokeVFX.transform.localScale *= 5f;
+        Color color = smokeVFX.GetComponentInChildren<SpriteRenderer>().color;
+        smokeVFX.GetComponentInChildren<SpriteRenderer>().color = new Color(color.r, color.g, color.b, color.a / 2.5f);
+        Destroy(smokeVFX, 5f);
+
         _Stamina -= _hookStaminaUse;
         Vector3 distance = ((PlayerMovement._instance._hookConnectedTransform.position + PlayerMovement._instance._hookConnectedPositionOffset) - rb.transform.position);
         Vector3 direction = distance.normalized;
@@ -971,7 +1026,7 @@ public class PlayerMovement : MonoBehaviour
         else
             rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * 1f);
 
-        EnemyAI.MakeArtificialSoundForPlayer(rb.position, 6f);
+        EnemyAI.MakeArtificialSoundForPlayer(rb.position, 12f);
     }
     private void Movement(Rigidbody rb, float speed, float lerpSpeed)
     {
@@ -1015,7 +1070,7 @@ public class PlayerMovement : MonoBehaviour
             rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed / (targetVelocity - rb.velocity).magnitude);
 
         if (rb.velocity.magnitude > 0.5f)
-            EnemyAI.MakeArtificialSoundForPlayer(rb.position, 10f);
+            EnemyAI.MakeArtificialSoundForPlayer(rb.position, 20f);
     }
     public Vector3 GetForwardDirectionForWall(Transform transform, float yInput)
     {
@@ -1062,7 +1117,7 @@ public class PlayerMovement : MonoBehaviour
         else
             rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed / (targetVelocity - rb.velocity).magnitude);
 
-        EnemyAI.MakeArtificialSoundForPlayer(rb.position, 12.5f);
+        EnemyAI.MakeArtificialSoundForPlayer(rb.position, 25f);
     }
     public void AirMovement(Rigidbody rb)
     {
@@ -1100,7 +1155,7 @@ public class PlayerMovement : MonoBehaviour
         else
             rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed * 2f);
 
-        EnemyAI.MakeArtificialSoundForPlayer(rb.position, 6f);
+        EnemyAI.MakeArtificialSoundForPlayer(rb.position, 12f);
     }
     public void StaminaMovement(Rigidbody rb)
     {

@@ -426,7 +426,6 @@ public class PlayerCombat : MonoBehaviour, IKillable
     public void HitBreakable(GameObject breakable)
     {
         PlayerStateController._instance.ChangeAnimation("HitBreakable");
-        //sound and VFX
         PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.8f));
     }
 
@@ -501,7 +500,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
         PlayerStateController._instance._Animator.SetTrigger("Death");
         var vfx = Instantiate(GameManager._instance.DeathVFX, Camera.main.transform);
         vfx.transform.localPosition = new Vector3(0f, 0f, 0.1f);
-        SoundManager._instance.PlaySound(SoundManager._instance.Die, transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        SoundManager._instance.PlaySound(SoundManager._instance.Die, transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         CameraController._instance.DeathMove();
         PlayerMovement._instance.DeathMove(dir, killersVelocityMagnitude);
         

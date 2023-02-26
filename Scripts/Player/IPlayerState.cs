@@ -330,13 +330,6 @@ namespace PlayerStates
 
                 PlayerMovement._instance.JumpFromWall(rb);
             }
-            else if (PlayerStateController.CheckForSlideWall())
-            {
-                PlayerStateController._instance.StopCoroutine(PlayerStateController._instance._isTouchingCoroutine);
-                PlayerStateController._instance._isTouchingBuffer = false;
-
-                PlayerMovement._instance.SlideFromWall(rb);
-            }
             else if (firstLerpTime > 0f)
             {
                 float lerpSpeed = 8f;
@@ -357,6 +350,11 @@ namespace PlayerStates
                 }
             }
 
+            if (PlayerStateController.CheckForSlideWall())
+            {
+                PlayerMovement._instance.SlideFromWall(rb);
+            }
+
             CameraController._instance.LookAround(false);
 
         }
@@ -370,13 +368,19 @@ namespace PlayerStates
 
             Vector3 tempWallDirection = wallCollider.transform.right;
             tempWallDirection.y = 0f;
-
             float angle = Vector3.SignedAngle(tempWallDirection, tempCameraDirection, Vector3.up);
-            if (angle > 25f) return;
+            if (isWallOnLeftSide)
+            {
+                if (angle > 20f) return;
+            }
+            else
+            {
+                if (angle > 0f && angle < 160f) return;
+            }
 
             //Vector3 pos = isWallOnLeftSide ? GameManager._instance.PlayerLeftHandTransform.position + PlayerStateController._instance.transform.right / 2f : GameManager._instance.PlayerRightHandTransform.position - PlayerStateController._instance.transform.right / 2f;
             Vector3 pos = isWallOnLeftSide ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
-            pos += isWallOnLeftSide ? PlayerStateController._instance.transform.right * -0.75f : PlayerStateController._instance.transform.right * 0.75f;
+            pos += isWallOnLeftSide ? PlayerStateController._instance.transform.right * 0.75f : PlayerStateController._instance.transform.right * -0.75f;
             PlayerStateController._instance.OnWallSpark = GameObject.Instantiate(GameManager._instance.SparksVFX[0], pos, Quaternion.identity);
             PlayerStateController._instance.OnWallSpark.GetComponentInChildren<Animator>().speed *= 4.5f;
             PlayerStateController._instance.OnWallSpark.transform.localScale *= 0.4f;
@@ -389,13 +393,13 @@ namespace PlayerStates
             decal.transform.localEulerAngles = new Vector3(decal.transform.localEulerAngles.x, decal.transform.localEulerAngles.y, UnityEngine.Random.Range(0f, 360f));
             */
             pos = isWallOnLeftSide ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
-            pos += isWallOnLeftSide ? PlayerStateController._instance.transform.right * 0.25f : -PlayerStateController._instance.transform.right * 0.25f;
+            //pos += isWallOnLeftSide ? PlayerStateController._instance.transform.right * 0.25f : -PlayerStateController._instance.transform.right * 0.25f;
             GameObject hitSmoke = GameObject.Instantiate(GameManager._instance.HitSmokeVFX, pos, Quaternion.identity);
             hitSmoke.transform.localScale *= 1.1f;
             hitSmoke.GetComponentInChildren<Animator>().speed = 4f;
             Color temp = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
-            hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(temp.r, temp.g, temp.b, 16f / 255f);
-            GameObject.Destroy(hitSmoke, 5f);
+            hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(temp.r, temp.g, temp.b, 25f / 255f);
+            GameObject.Destroy(hitSmoke, 1f);
         }
 
         public void DoStateFixedUpdate(Rigidbody rb)

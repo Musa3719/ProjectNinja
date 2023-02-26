@@ -51,6 +51,7 @@ public class PlayerStateController : MonoBehaviour
     private float _coyoteTime;
 
     private GameObject _CurrentTeleportSpot;
+    public GameObject _hookAnchor;
 
     private bool isCreateTeleportAvailable;
     private bool isUseTeleportAvailable;
@@ -104,8 +105,9 @@ public class PlayerStateController : MonoBehaviour
         _Animator.SetBool("IsBlocking", PlayerCombat._instance._IsBlocking);
         _Animator.SetBool("IsBlockedOrDeflected", PlayerCombat._instance._IsBlockedOrDeflected);
         _Animator.SetBool("IsStaminaReload", _isStaminaManual);
+        _Animator.SetFloat("RunAnimSpeedMultiplier", _rb.velocity.magnitude / PlayerMovement._instance._MoveSpeed * 0.875f);
 
-        if (_playerAnimState is PlayerAnimations.InAir && !_Animator.IsInTransition(1))
+        if (_playerAnimState is PlayerAnimations.InAir && !_Animator.IsInTransition(1) && !PlayerCombat._instance._IsBlocking)
         {
             if (PlayerMovement._instance._lastTimeFastLanded + 0.1f >= Time.time && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("FastLand"))
             {
@@ -116,7 +118,7 @@ public class PlayerStateController : MonoBehaviour
                 ChangeAnimation("InAir");
             }
         }
-        else if (_playerAnimState is PlayerAnimations.Sliding && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("Sliding") && !_Animator.IsInTransition(1))
+        else if (_playerAnimState is PlayerAnimations.Sliding && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("Sliding") && !_Animator.IsInTransition(1) && !PlayerCombat._instance._IsBlocking)
         {
             ChangeAnimation("Sliding");
         }
@@ -517,6 +519,7 @@ public class PlayerStateController : MonoBehaviour
 
         if (PlayerStateController._instance.SlidingSoundObject != null)
         {
+            PlayerStateController._instance.SlidingSoundObject.GetComponent<AudioSource>().volume -= Time.deltaTime * PlayerStateController._instance.SlidingSoundObject.GetComponent<AudioSource>().volume;
             PlayerStateController._instance.SlidingSoundObject.transform.position = transform.position;
         }
         if (PlayerStateController._instance.BladeSpinSoundObject != null)
@@ -571,11 +574,11 @@ public class PlayerStateController : MonoBehaviour
     public static bool CheckForCrouch()
     {
         if ((PlayerStateController._instance._playerState as Movement).isCrouching) return false;
-        return InputHandler.GetButton("Crouch") && PlayerMovement._instance.IsGrounded() && PlayerStateController._instance._rb.velocity.magnitude > PlayerMovement._instance._MoveSpeed - 1.5f;
+        return InputHandler.GetButton("Crouch") && !PlayerMovement._instance._isJumped && PlayerMovement._instance.IsGrounded() && PlayerStateController._instance._rb.velocity.magnitude > PlayerMovement._instance._MoveSpeed - 1.5f;
     }
     public static bool CheckForSlideWall()
     {
-        return InputHandler.GetButton("Crouch") && PlayerStateController._instance._isTouchingBuffer;
+        return InputHandler.GetButton("Crouch");
     }
     public static bool CheckForFastLandingInAir()
     {
@@ -593,7 +596,6 @@ public class PlayerStateController : MonoBehaviour
         bool isThereColliderOnTheTop = Physics.Raycast(PlayerStateController._instance._rb.position, Vector3.up, 1.75f);
         bool isThereColliderOnTheTopFromBack = Physics.Raycast(PlayerStateController._instance._rb.position - frontVector, Vector3.up, 1.75f);
         bool isThereColliderOnTheTopFromFront = Physics.Raycast(PlayerStateController._instance._rb.position + frontVector, Vector3.up, 1.75f);
-
         if (!InputHandler.GetButton("Crouch") && !isThereColliderOnTheTop && !isThereColliderOnTheTopFromBack && !isThereColliderOnTheTopFromFront)
         {
             DisableCrouch();

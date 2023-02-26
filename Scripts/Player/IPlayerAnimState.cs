@@ -14,14 +14,7 @@ namespace PlayerAnimations
     {
         public void Enter(Rigidbody rb, IPlayerAnimState oldState)
         {
-            if (!PlayerStateController._instance._Animator.IsInTransition(2) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand")))
-            {
-                PlayerStateController._instance.ChangeAnimation("EmptyLeft");
-            }
-            if (!PlayerStateController._instance._Animator.IsInTransition(3) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWallFastLand")))
-            {
-                PlayerStateController._instance.ChangeAnimation("EmptyRight");
-            }
+           
         }
 
         public void Exit(Rigidbody rb, IPlayerAnimState newState)
@@ -60,14 +53,6 @@ namespace PlayerAnimations
 
         public void DoStateLateUpdate(Rigidbody rb)
         {
-
-        }
-    }
-    
-    public class Walk : IPlayerAnimState
-    {
-        public void Enter(Rigidbody rb, IPlayerAnimState oldState)
-        {
             if (!PlayerStateController._instance._Animator.IsInTransition(2) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand")))
             {
                 PlayerStateController._instance.ChangeAnimation("EmptyLeft");
@@ -76,6 +61,14 @@ namespace PlayerAnimations
             {
                 PlayerStateController._instance.ChangeAnimation("EmptyRight");
             }
+        }
+    }
+    
+    public class Walk : IPlayerAnimState
+    {
+        public void Enter(Rigidbody rb, IPlayerAnimState oldState)
+        {
+           
         }
 
         public void Exit(Rigidbody rb, IPlayerAnimState newState)
@@ -121,7 +114,14 @@ namespace PlayerAnimations
 
         public void DoStateLateUpdate(Rigidbody rb)
         {
-
+            if (!PlayerStateController._instance._Animator.IsInTransition(2) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand")))
+            {
+                PlayerStateController._instance.ChangeAnimation("EmptyLeft");
+            }
+            if (!PlayerStateController._instance._Animator.IsInTransition(3) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWallFastLand")))
+            {
+                PlayerStateController._instance.ChangeAnimation("EmptyRight");
+            }
         }
     }
     
@@ -131,14 +131,7 @@ namespace PlayerAnimations
     {
         public void Enter(Rigidbody rb, IPlayerAnimState oldState)
         {
-            if (!PlayerStateController._instance._Animator.IsInTransition(2) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand")))
-            {
-                PlayerStateController._instance.ChangeAnimation("EmptyLeft");
-            }
-            if (!PlayerStateController._instance._Animator.IsInTransition(3) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWallFastLand")))
-            {
-                PlayerStateController._instance.ChangeAnimation("EmptyRight");
-            }
+            
         }
 
         public void Exit(Rigidbody rb, IPlayerAnimState newState)
@@ -180,7 +173,14 @@ namespace PlayerAnimations
 
         public void DoStateLateUpdate(Rigidbody rb)
         {
-
+            if (!PlayerStateController._instance._Animator.IsInTransition(2) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand")))
+            {
+                PlayerStateController._instance.ChangeAnimation("EmptyLeft");
+            }
+            if (!PlayerStateController._instance._Animator.IsInTransition(3) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWallFastLand")))
+            {
+                PlayerStateController._instance.ChangeAnimation("EmptyRight");
+            }
         }
     }
     public class InAir : IPlayerAnimState
@@ -218,7 +218,14 @@ namespace PlayerAnimations
 
         public void DoStateLateUpdate(Rigidbody rb)
         {
-
+            if (!PlayerStateController._instance._Animator.IsInTransition(2) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand")))
+            {
+                PlayerStateController._instance.ChangeAnimation("EmptyLeft");
+            }
+            if (!PlayerStateController._instance._Animator.IsInTransition(3) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWallFastLand")))
+            {
+                PlayerStateController._instance.ChangeAnimation("EmptyRight");
+            }
         }
     }
     public class WaitForOneAnim : IPlayerAnimState
@@ -266,7 +273,14 @@ namespace PlayerAnimations
 
         public void DoStateLateUpdate(Rigidbody rb)
         {
-
+            if (!PlayerStateController._instance._Animator.IsInTransition(2) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand")))
+            {
+                PlayerStateController._instance.ChangeAnimation("EmptyLeft");
+            }
+            if (!PlayerStateController._instance._Animator.IsInTransition(3) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWallFastLand")))
+            {
+                PlayerStateController._instance.ChangeAnimation("EmptyRight");
+            }
         }
     }
 
@@ -314,7 +328,14 @@ namespace PlayerAnimations
 
         public void DoStateLateUpdate(Rigidbody rb)
         {
-
+            if (!PlayerStateController._instance._Animator.IsInTransition(2) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand")))
+            {
+                PlayerStateController._instance.ChangeAnimation("EmptyLeft");
+            }
+            if (!PlayerStateController._instance._Animator.IsInTransition(3) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWallFastLand")))
+            {
+                PlayerStateController._instance.ChangeAnimation("EmptyRight");
+            }
         }
     }
     public class Sliding : IPlayerAnimState
@@ -345,7 +366,14 @@ namespace PlayerAnimations
 
         public void DoStateLateUpdate(Rigidbody rb)
         {
-
+            if (!PlayerStateController._instance._Animator.IsInTransition(2) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand")))
+            {
+                PlayerStateController._instance.ChangeAnimation("EmptyLeft");
+            }
+            if (!PlayerStateController._instance._Animator.IsInTransition(3) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWallFastLand")))
+            {
+                PlayerStateController._instance.ChangeAnimation("EmptyRight");
+            }
         }
     }
     public class OnWall : IPlayerAnimState
@@ -362,11 +390,11 @@ namespace PlayerAnimations
 
         public void Exit(Rigidbody rb, IPlayerAnimState newState)
         {
-            if (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand"))
+            if (!PlayerStateController._instance._Animator.IsInTransition(2) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand")))
             {
                 PlayerStateController._instance.ChangeAnimation("EmptyLeft");
             }
-            if (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWallFastLand"))
+            if (!PlayerStateController._instance._Animator.IsInTransition(3) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWallFastLand")))
             {
                 PlayerStateController._instance.ChangeAnimation("EmptyRight");
             }
@@ -376,11 +404,7 @@ namespace PlayerAnimations
         {
             if (!(PlayerStateController._instance._playerState is PlayerStates.OnWall))
             {
-                if (PlayerCombat._instance._IsBlocking)
-                {
-                    //
-                }
-                else if (PlayerMovement._instance.IsGrounded())
+                if (PlayerMovement._instance.IsGrounded())
                 {
                     PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Walk());
                 }
