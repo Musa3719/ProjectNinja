@@ -63,6 +63,7 @@ GameObject:
   - component: {fileID: 6980618355964839106}
   - component: {fileID: 5693918205578304637}
   - component: {fileID: 6198451197184811411}
+  - component: {fileID: 998484147}
   m_Layer: 7
   m_Name: ExplosiveL1Projectile
   m_TagString: Untagged
@@ -161,6 +162,26 @@ SphereCollider:
   serializedVersion: 2
   m_Radius: 0.25
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!95 &998484147
+Animator:
+  serializedVersion: 4
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1784432962143523240}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 36ed2d2113ff56b4493486369e2ac139, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorControllerStateOnDisable: 0
 --- !u!1 &7120928086969858991
 GameObject:
   m_ObjectHideFlags: 0
@@ -178,7 +199,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &66542443312697957
 Transform:
   m_ObjectHideFlags: 0
