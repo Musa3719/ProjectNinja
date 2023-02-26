@@ -4,13 +4,12 @@ using UnityEngine;
 
 public class RangedWeapon : MonoBehaviour
 {
-    public void Fire(GameObject projectilePrefab, Vector3 projectilePosition, Collider creatorCollider, Vector3 target, float speed)
+    public void Fire(GameObject projectilePrefab, Vector3 projectilePosition, Collider creatorCollider, Vector3 forward, float speed)
     {
-        Vector3 dir = (target - projectilePosition).normalized;
         GameObject newProjectile = Instantiate(projectilePrefab, projectilePosition, Quaternion.identity);
-        newProjectile.GetComponent<Projectile>().WhenTriggered = newProjectile.GetComponent<Projectile>().WhenTriggeredForKnife;
-        newProjectile.GetComponent<Projectile>().IgnoreCollisionCollider = creatorCollider;
-        newProjectile.GetComponent<Rigidbody>().velocity = dir * speed;
-        newProjectile.transform.forward = dir;
+        newProjectile.GetComponentInChildren<Projectile>().WhenTriggered = newProjectile.GetComponentInChildren<Projectile>().WhenTriggeredForKnife;
+        newProjectile.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = creatorCollider;
+        newProjectile.GetComponentInChildren<Rigidbody>().velocity = forward * speed;
+        newProjectile.transform.forward = forward;
     }
 }

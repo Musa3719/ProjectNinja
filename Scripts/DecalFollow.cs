@@ -17,6 +17,6 @@ public class DecalFollow : MonoBehaviour
     private void LateUpdate()
     {
         transform.position = FollowingTransform.position + LocalPosition.x * FollowingTransform.right + LocalPosition.y * FollowingTransform.up + +LocalPosition.z * FollowingTransform.forward;
-        decalProjector.fadeFactor = Mathf.Lerp(decalProjector.fadeFactor, 1f, Time.deltaTime * 2.5f);
+        decalProjector.fadeFactor = Mathf.Lerp(decalProjector.fadeFactor, 1f, Time.deltaTime * 0.5f);
     }
 }

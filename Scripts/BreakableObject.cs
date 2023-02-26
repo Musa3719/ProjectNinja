@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class BreakableObject : MonoBehaviour
 {
@@ -22,8 +23,14 @@ public class BreakableObject : MonoBehaviour
     }
     public void BrakeObject(Vector3 direction, float force = 100f)
     {
+        transform.parent.GetComponent<NavMeshObstacle>().enabled = false;
         SoundManager._instance.PlaySound(_brokenSound, transform.position, 0.6f * _volumeMultiplier, false, Random.Range(0.9f, 1.1f));
         transform.parent.Find("Broken").gameObject.SetActive(true);
+
+        GameObject hitSmoke = GameObject.Instantiate(GameManager._instance.HitSmokeVFX, transform.position + Vector3.up * 1f, Quaternion.identity);
+        hitSmoke.transform.localScale *= 2f;
+        GameObject.Destroy(hitSmoke, 3f);
+
         foreach (var brokenRb in _rigidbodies)
         {
             brokenRb.AddForce((direction * (force + Random.Range(0f, 75f)) - Vector3.up * Random.Range(125f, 250f)) * 0.04f);

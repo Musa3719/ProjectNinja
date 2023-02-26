@@ -66,7 +66,7 @@ public class ExplosiveL1 : MonoBehaviour
         targetVelocityMagnitude = Mathf.Clamp(6f * Mathf.Log(targetVelocityMagnitude), 0.2f, 20f);
         _rb.velocity = Vector3.Lerp(_rb.velocity, targetVelocityMagnitude * dir, Time.deltaTime * 4f);
 
-        if ((_playerTransform.position - transform.position).magnitude < 2f)
+        if ((_playerTransform.position - transform.position).magnitude < 2.5f)
         {
             _isAboutToExplode = true;
             _explodeCoroutine = StartCoroutine(Explode());
@@ -74,9 +74,9 @@ public class ExplosiveL1 : MonoBehaviour
     }
     private IEnumerator Explode()
     {
-        //exploding animation and sound
-        GameObject explodingSound = SoundManager._instance.PlaySound(SoundManager._instance.ReadyForExplosion, transform.position, 0.3f, false, 1f);
-        float waitTime = Random.Range(1f, 1.75f);
+        GetComponent<Animator>().SetTrigger("Exploding");
+        GameObject explodingSound = SoundManager._instance.PlaySound(SoundManager._instance.ReadyForExplosion, transform.position, 0.2f, false, 1f);
+        float waitTime = Random.Range(1f, 2f);
         float startTime = Time.time;
         AudioSource explodingSource = explodingSound.GetComponent<AudioSource>();
         while (startTime + waitTime > Time.time)
@@ -119,8 +119,16 @@ public class ExplosiveL1 : MonoBehaviour
         }
         SoundManager.ProjectileTriggeredSoundArtificial?.Invoke(transform.position, 12.5f);
 
+        GameObject broken = Instantiate(PrefabHolder._instance.L1ExplosiveBroken, transform.position, transform.rotation);
+        foreach (Transform item in broken.transform)
+        {
+            Rigidbody tempRB = item.GetComponent<Rigidbody>();
+            tempRB.AddForce((item.transform.position - broken.transform.position) * 40f);
+            GameManager._instance.CallForAction(() => { tempRB.isKinematic = true; tempRB.GetComponent<Collider>().enabled = false; }, 20f);
+        }
+
         Destroy(explodingSound);
-        Destroy(gameObject);
+        Destroy(transform.parent.gameObject);
     }
     private void OnTriggerEnter(Collider other)
     {

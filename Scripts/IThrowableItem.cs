@@ -38,7 +38,7 @@ public class Knife : IThrowableItem
         else
             throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 30f;
         throwable.transform.forward = throwable.GetComponentInChildren<Rigidbody>().velocity.normalized;
-        throwable.GetComponentInChildren<Rigidbody>().angularVelocity = new Vector3(2f, 0f, 2f);
+        throwable.GetComponentInChildren<Rigidbody>().angularVelocity = new Vector3(25f, 0f, 2f);
         throwable.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = IgnoredCollider;
         throwable.GetComponentInChildren<Projectile>().WhenTriggered = throwable.GetComponentInChildren<Projectile>().WhenTriggeredForKnife;
 

@@ -22,7 +22,12 @@ public class WarningPositionUI : MonoBehaviour
 
     void Update()
     {
-        if (TargetTransform == null) return;
+        if (TargetTransform == null)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         if (color == Color.black) color = GetComponent<Image>().color;
 
 

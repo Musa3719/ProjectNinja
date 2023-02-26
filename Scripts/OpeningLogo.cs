@@ -18,7 +18,7 @@ public class OpeningLogo : MonoBehaviour
     {
         Color color;
         float startTime = Time.time;
-        while (Time.time < startTime + 1.5f)
+        while (Time.time < startTime + 1f)
         {
             if (InputHandler.GetButtonDown("Esc")) { Destroy(gameObject); Destroy(back); }
 
@@ -33,7 +33,7 @@ public class OpeningLogo : MonoBehaviour
         image.color = new Color(color.r, color.g, color.b, 1f);
 
         startTime = Time.time;
-        while (Time.time < startTime + 2f)
+        while (Time.time < startTime + 1.25f)
         {
             if (InputHandler.GetButtonDown("Esc")) Destroy(gameObject);
 

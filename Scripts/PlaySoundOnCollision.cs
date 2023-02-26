@@ -32,6 +32,6 @@ public class PlaySoundOnCollision : MonoBehaviour
         if (collision.collider == null) return;
 
         if (_isEnabled && _soundClip != null && (_collisionSpeed > 2f || collision.collider.CompareTag("Player") || collision.collider.CompareTag("Enemy") || collision.collider.CompareTag("Boss")))
-            SoundManager._instance.PlaySound(_soundClip, transform.position, 0.2f, false, Random.Range(0.85f, 1.15f));
+            SoundManager._instance.PlaySound(_soundClip, transform.position, 0.1f, false, Random.Range(0.85f, 1.15f));
     }
 }

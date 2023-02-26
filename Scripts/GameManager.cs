@@ -222,6 +222,7 @@ public class GameManager : MonoBehaviour
     public GameObject HoleDecal;
     public GameObject DeathVFX;
     public GameObject HitSmokeVFX;
+    public GameObject GunFireVFX;
     public List<GameObject> BloodVFX;
     public List<GameObject> ExplosionVFX;
     public List<GameObject> SparksVFX;
@@ -493,7 +494,6 @@ public class GameManager : MonoBehaviour
         _isInBossLevel = false;
     }
 
-
     public void CallForAction(Action action, float time)
     {
         StartCoroutine(CallForActionCoroutine(action, time));
@@ -514,6 +514,17 @@ public class GameManager : MonoBehaviour
         }
         foreach (var projectile in Projectiles)
         {
+            StartCoroutine(CheckForOneProjectileWarning(projectile));
+        }
+    }
+    private IEnumerator CheckForOneProjectileWarning(GameObject projectile)
+    {
+        float firstDistance = (projectile.transform.position - PlayerRb.transform.position).magnitude;
+        yield return new WaitForSeconds(0.05f);
+        float secondDistance = (projectile.transform.position - PlayerRb.transform.position).magnitude;
+
+        if (firstDistance < secondDistance)
+        {
             GameObject warning = Instantiate(WarningUIPrefab, WarningUIParent.transform);
             warning.GetComponent<WarningPositionUI>().TargetTransform = projectile.transform;
             warning.GetComponent<Image>().color = Color.blue;
@@ -529,7 +540,7 @@ public class GameManager : MonoBehaviour
     }
     private IEnumerator DisableWarningUICoroutine()
     {
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(0.5f);
 
         foreach (Transform item in WarningUIParent.transform)
         {
@@ -542,7 +553,7 @@ public class GameManager : MonoBehaviour
             foreach (Transform item in WarningUIParent.transform)
             {
                 Color color = item.GetComponent<Image>().color;
-                item.GetComponent<Image>().color = new Color(color.r, color.g, color.b, color.a - Time.deltaTime / 2f);
+                item.GetComponent<Image>().color = new Color(color.r, color.g, color.b, color.a - Time.deltaTime * 1.5f);
             }
             yield return null;
         }
@@ -698,7 +709,7 @@ public class GameManager : MonoBehaviour
         {
             foreach (var enemy in allEnemies)
             {
-                if ((PlayerRb.position-enemy.transform.position).magnitude < 20f && !enemiesNearPlayer.Contains(enemy))
+                if ((PlayerRb.position-enemy.transform.position).magnitude < 45f && !enemiesNearPlayer.Contains(enemy))
                 {
                     enemiesNearPlayer.Add(enemy);
                 }
@@ -712,7 +723,7 @@ public class GameManager : MonoBehaviour
 
             foreach (var enemyNear in tempListForNearPlayers)
             {
-                if((PlayerRb.position - enemyNear.transform.position).magnitude >= 20f)
+                if((PlayerRb.position - enemyNear.transform.position).magnitude >= 45f)
                 {
                     enemiesNearPlayer.Remove(enemyNear);
                 }
@@ -913,7 +924,7 @@ public class GameManager : MonoBehaviour
         while (Time.timeScale > 0.1f || isGameStopped)
         {
             if(!isGameStopped)
-                Time.timeScale = Mathf.Lerp(Time.timeScale, Time.timeScale - 1f, Time.deltaTime * 3.3f);
+                Time.timeScale = Mathf.Lerp(Time.timeScale, 0f, Time.deltaTime * 8f);
             yield return null;
         }
 
@@ -924,7 +935,7 @@ public class GameManager : MonoBehaviour
         while (Time.timeScale < 1f)
         {
             if(!isGameStopped)
-                Time.timeScale = Mathf.Lerp(Time.timeScale, Time.timeScale + 1f, Time.deltaTime * 7.5f);
+                Time.timeScale = Mathf.Lerp(Time.timeScale, 1f, Time.deltaTime * 20f);
             yield return null;
         }
 

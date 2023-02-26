@@ -30,6 +30,7 @@ public class ProjectileStopped : MonoBehaviour
     }
     private void OnCollisionEnter(Collision collision)
     {
-        SoundManager._instance.PlaySound(SoundManager._instance.StoneHit, transform.position, 0.05f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        if (_rb.velocity.magnitude > 2f || (collision.collider.GetComponentInChildren<Rigidbody>() != null && collision.collider.GetComponentInChildren<Rigidbody>().velocity.magnitude > 2f))
+            SoundManager._instance.PlaySound(SoundManager._instance.StoneHit, transform.position, 0.05f, false, UnityEngine.Random.Range(0.93f, 1.07f));
     }
 }

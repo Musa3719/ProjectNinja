@@ -228,55 +228,55 @@ public class SoundManager : MonoBehaviour
         {
             case PlaneSoundType.Metal:
                 AudioClip clip = GetRandomSoundFromList(MetalPlaneSounds);
-                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.1f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
+                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.07f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
                 break;
             case PlaneSoundType.TechMetal:
                 clip = GetRandomSoundFromList(TechMetalPlaneSounds);
-                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.1f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
+                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.07f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
                 break;
             case PlaneSoundType.ThinMetal:
                 clip = GetRandomSoundFromList(ThinMetalPlaneSounds);
-                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.1f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
+                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.07f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
                 break;
             case PlaneSoundType.Glass:
                 clip = GetRandomSoundFromList(GlassPlaneSounds);
-                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.1f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
+                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.07f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
                 break;
             case PlaneSoundType.Marble:
                 clip = GetRandomSoundFromList(MarblePlaneSounds);
-                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.1f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
+                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.07f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
                 break;
             case PlaneSoundType.Brick:
                 clip = GetRandomSoundFromList(BrickPlaneSounds);
-                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.1f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
+                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.07f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
                 break;
             case PlaneSoundType.Stone:
                 clip = GetRandomSoundFromList(StonePlaneSounds);
-                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.1f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
+                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.07f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
                 break;
             case PlaneSoundType.Dirt:
                 clip = GetRandomSoundFromList(DirtPlaneSounds);
-                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.1f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
+                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.07f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
                 break;
             case PlaneSoundType.Grass:
                 clip = GetRandomSoundFromList(GrassPlaneSounds);
-                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.1f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
+                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.07f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
                 break;
             case PlaneSoundType.Wood:
                 clip = GetRandomSoundFromList(WoodPlaneSounds);
-                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.1f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
+                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.07f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
                 break;
             case PlaneSoundType.Fabric:
                 clip = GetRandomSoundFromList(FabricPlaneSounds);
-                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.1f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
+                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.07f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
                 break;
             case PlaneSoundType.Water:
                 clip = GetRandomSoundFromList(WaterPlaneSounds);
-                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.1f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
+                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.07f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
                 break;
             case PlaneSoundType.Ice:
                 clip = GetRandomSoundFromList(IcePlaneSounds);
-                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.1f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
+                PlaySound(clip, Camera.main.transform.position - Vector3.up * 2f, 0.07f * volumeMultiplier, false, pitchFromSpeed + UnityEngine.Random.Range(-0.1f, 0.1f));
                 break;
             default:
                 break;

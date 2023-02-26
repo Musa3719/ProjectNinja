@@ -27,6 +27,8 @@ public class PrefabHolder : MonoBehaviour
     public GameObject L1Explosive;
     [SerializeField]
     public GameObject L5Explosive;
+    [SerializeField]
+    public GameObject L1ExplosiveBroken;
 
     [SerializeField]
     public GameObject KnifeItemMesh;
