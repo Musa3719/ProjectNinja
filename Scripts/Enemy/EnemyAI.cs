@@ -289,7 +289,8 @@ public class EnemyAI : MonoBehaviour
 
         if (_controller._enemyCombat._IsRanged)
         {
-            Physics.Raycast(transform.position, transform.forward, out RaycastHit hit, _controller._enemyCombat.AttackRange);
+            Vector3 direction = (GameManager._instance.PlayerRb.transform.position - transform.position).normalized;
+            Physics.Raycast(transform.position + direction, direction, out RaycastHit hit, _controller._enemyCombat.AttackRange);
             if (IsRayHitPlayer(hit) && _controller._enemyCombat._IsAllowedToAttack)
             {
                 if (_AgressiveValue * 50f * Time.deltaTime * 60f > Random.Range(0, 1000))

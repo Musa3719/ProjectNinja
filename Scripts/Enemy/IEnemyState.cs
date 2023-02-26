@@ -149,7 +149,7 @@ namespace EnemyStates
         public void Enter(Rigidbody rb, IEnemyState oldState)
         {
             _enemyStateController = rb.GetComponent<EnemyStateController>();
-            _playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
+            _playerTransform = GameManager._instance.PlayerRb.transform;
 
             _enemyStateController.EnableHeadAim();
 
@@ -204,8 +204,28 @@ namespace EnemyStates
                 _enemyStateController._enemyCombat.ThrowKillObject();
             }
 
+            Vector3 lookAtPos = _enemyStateController._enemyCombat._IsRanged ? _playerTransform.position + GameManager._instance.PlayerRb.velocity * 0.6f * 0.075f * (_playerTransform.position - _enemyStateController.transform.position).magnitude : _playerTransform.position;
+            if (_enemyStateController._enemyCombat._IsRanged)
+            {
+                Vector3 normalDir = (_playerTransform.position - _enemyStateController.transform.position).normalized;
+                Vector3 futureDir = (_playerTransform.position + GameManager._instance.PlayerRb.velocity * 0.6f * 0.075f * (_playerTransform.position - _enemyStateController.transform.position).magnitude - _enemyStateController.transform.position).normalized;
+                float angle = Vector3.Angle(normalDir, futureDir);
+                if (angle > 30f)
+                {
+                    if (Vector3.Angle(Quaternion.AngleAxis(30f, Vector3.up) * normalDir, futureDir) < angle)
+                        lookAtPos = Quaternion.AngleAxis(30f, Vector3.up) * normalDir;
+                    else
+                        lookAtPos = Quaternion.AngleAxis(-30f, Vector3.up) * normalDir;
+                }
+            }
+
             if (!_enemyStateController._enemyCombat._IsDodging && !_enemyStateController._enemyCombat._isInAttackPattern && !_enemyStateController._enemyCombat._IsBlocking)
-                _enemyStateController._enemyMovement.MoveToPosition(_playerTransform.position, _playerTransform.position);
+                if (_enemyStateController._enemyCombat._IsRanged && (_playerTransform.position - _enemyStateController.transform.position).magnitude < _enemyStateController._enemyCombat.AttackRange * 0.75f)
+                    _enemyStateController._enemyMovement.MoveToPosition(_enemyStateController.transform.position, lookAtPos);
+                else if (!_enemyStateController._enemyCombat._IsRanged && (_playerTransform.position - _enemyStateController.transform.position).magnitude < _enemyStateController._enemyCombat.AttackRange * 0.5f)
+                    _enemyStateController._enemyMovement.MoveToPosition(_enemyStateController.transform.position - _enemyStateController.transform.forward, lookAtPos);
+                else
+                    _enemyStateController._enemyMovement.MoveToPosition(_playerTransform.position, lookAtPos);
         }
 
         public void DoStateFixedUpdate(Rigidbody rb)

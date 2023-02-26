@@ -306,7 +306,7 @@ public class EnemyStateController : MonoBehaviour
         }
         else
         {
-            if (_animator.GetCurrentAnimatorStateInfo(1).IsName("Empty"))
+            /*if (_animator.GetCurrentAnimatorStateInfo(1).IsName("Empty"))
             {
                 _animator.SetLayerWeight(4, 0f);
                 _animator.SetLayerWeight(5, 1f);
@@ -315,7 +315,7 @@ public class EnemyStateController : MonoBehaviour
             {
                 _animator.SetLayerWeight(4, 1f);
                 _animator.SetLayerWeight(5, 0f);
-            }
+            }*/
         }
         
     }
