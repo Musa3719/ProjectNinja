@@ -13,6 +13,7 @@ public interface IKillable
 
     public float _CollisionVelocity { get; }
     public void AttackDeflected(IKillable deflectedKillable);
+    public void ChangeStamina(float amount);
 
     public void AttackWarning(Collider collider, bool isFastAttack, Vector3 attackPosition);
     public void DeflectWithBlock(Vector3 dir, IKillable attacker, bool isRangedAttack);

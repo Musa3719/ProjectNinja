@@ -8,7 +8,7 @@ public class RagdollForWeapon : MonoBehaviour
     private List<GameObject> _weapons;
 
     public List<GameObject> _Weapons => _weapons;
-    public void SeperateWeaponsFromRagdoll(Vector3 tempDir, float forceMultiplier, float forceUpMultiplier)
+    public void SeperateWeaponsFromRagdoll(Vector3 tempDir, float forceMultiplier, float forceUpMultiplier, float killersVelocityMagnitude)
     {
         foreach (var weapon in _weapons)
         {
@@ -68,7 +68,8 @@ public class RagdollForWeapon : MonoBehaviour
             rb.mass = 18f;
             rb.interpolation = RigidbodyInterpolation.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-            rb.AddForce(tempDir * forceMultiplier * 1.5f + Vector3.up * forceUpMultiplier * 1.2f);
+            //rb.AddForce(tempDir * forceMultiplier * 1.5f + Vector3.up * forceUpMultiplier * 1.2f);
+            rb.AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 50f + tempDir * forceMultiplier + Vector3.up * forceUpMultiplier) * 4f);
         }
     }
 }

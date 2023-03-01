@@ -160,7 +160,7 @@ public class Projectile : MonoBehaviour, IKillObject
 
         position -= rb.velocity * 0.1f;
 
-        float bombRange = 6f;
+        float bombRange = 8.5f;
         Collider[] sphereCastColliders = Physics.OverlapSphere(position, bombRange);
         foreach (var collider in sphereCastColliders)
         {

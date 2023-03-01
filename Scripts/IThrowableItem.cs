@@ -28,8 +28,10 @@ public class Knife : IThrowableItem
     {
         if (Count <= 0) return true;
 
+        Vector3 pos = rb.transform.position;
+        if (!isPlayer) pos += Vector3.up * 0.5f;
         Count--;
-        GameObject throwable = GameObject.Instantiate(PrefabGetter, rb.transform.position, Quaternion.identity);
+        GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
         {
             throwable.GetComponentInChildren<Rigidbody>().velocity = Camera.main.transform.forward * 45f;
@@ -38,7 +40,7 @@ public class Knife : IThrowableItem
         else
             throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 30f;
         throwable.transform.forward = throwable.GetComponentInChildren<Rigidbody>().velocity.normalized;
-        throwable.GetComponentInChildren<Rigidbody>().angularVelocity = new Vector3(25f, 0f, 2f);
+        throwable.GetComponentInChildren<Rigidbody>().angularVelocity = new Vector3(10f, 0f, 0f);
         throwable.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = IgnoredCollider;
         throwable.GetComponentInChildren<Projectile>().WhenTriggered = throwable.GetComponentInChildren<Projectile>().WhenTriggeredForKnife;
 
@@ -59,8 +61,10 @@ public class Bomb : IThrowableItem
     {
         if (Count <= 0) return true;
 
+        Vector3 pos = rb.transform.position;
+        if (!isPlayer) pos += Vector3.up * 0.5f;
         Count--;
-        GameObject throwable = GameObject.Instantiate(PrefabGetter, rb.transform.position, Quaternion.identity);
+        GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
         {
             throwable.GetComponentInChildren<Rigidbody>().velocity = Camera.main.transform.forward * 60f / 2f;
@@ -88,8 +92,10 @@ public class Smoke : IThrowableItem
     {
         if (Count <= 0) return true;
 
+        Vector3 pos = rb.transform.position;
+        if (!isPlayer) pos += Vector3.up * 0.5f;
         Count--;
-        GameObject throwable = GameObject.Instantiate(PrefabGetter, rb.transform.position, Quaternion.identity);
+        GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
         {
             throwable.GetComponentInChildren<Rigidbody>().velocity = Camera.main.transform.forward * 60f / 3f;
@@ -119,8 +125,10 @@ public class Shuriken : IThrowableItem
     {
         if (Count <= 0) return true;
 
+        Vector3 pos = rb.transform.position;
+        if (!isPlayer) pos += Vector3.up * 0.5f;
         Count--;
-        GameObject throwable = GameObject.Instantiate(PrefabGetter, rb.transform.position, Quaternion.identity);
+        GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
         {
             throwable.GetComponentInChildren<Rigidbody>().velocity = Camera.main.transform.forward * 45f;
@@ -150,8 +158,10 @@ public class Glass : IThrowableItem
     {
         if (Count <= 0) return true;
 
+        Vector3 pos = rb.transform.position;
+        if (!isPlayer) pos += Vector3.up * 0.5f;
         Count--;
-        GameObject throwable = GameObject.Instantiate(PrefabGetter, rb.transform.position, Quaternion.identity);
+        GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
         {
             throwable.GetComponentInChildren<Rigidbody>().velocity = Camera.main.transform.forward * 60f / 2f;
@@ -180,8 +190,10 @@ public class Stone : IThrowableItem
     {
         if (Count <= 0) return true;
 
+        Vector3 pos = rb.transform.position;
+        if (!isPlayer) pos += Vector3.up * 0.5f;
         Count--;
-        GameObject throwable = GameObject.Instantiate(PrefabGetter, rb.transform.position, Quaternion.identity);
+        GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
         {
             throwable.GetComponentInChildren<Rigidbody>().velocity = Camera.main.transform.forward * 60f / 2f;

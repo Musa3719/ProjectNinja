@@ -62,6 +62,7 @@ public class GameManager : MonoBehaviour
 
     public LayerMask LayerMaskWithoutTriggerColliders;
     public LayerMask MirrorRayLayer;
+    public LayerMask WallLayer;
 
 
     public Color MidScreenDotMovementColor;
@@ -343,11 +344,11 @@ public class GameManager : MonoBehaviour
             ["Attack10"] = "Empty"
         };
 
-        SwordAnimNameToSpeed = new Dictionary<string, float> { ["Attack1"] = 1f, ["Attack2"] = 1.6f, ["Attack3"] = 1.9f, ["Attack4"] = 1.6f, ["Attack5"] = 1.6f, ["Attack6"] = 1f };
-        AxeAnimNameToSpeed = new Dictionary<string, float> { ["Attack1"] = 1f, ["Attack2"] = 1.6f, ["Attack3"] = 1.9f, ["Attack4"] = 1.6f, ["Attack5"] = 1.6f, ["Attack6"] = 1f };
-        HalberdAnimNameToSpeed = new Dictionary<string, float> { ["Attack1"] = 1f, ["Attack2"] = 1.6f, ["Attack3"] = 1.9f, ["Attack4"] = 1.6f, ["Attack5"] = 1.6f, ["Attack6"] = 1f };
-        MaceAnimNameToSpeed = new Dictionary<string, float> { ["Attack1"] = 1f, ["Attack2"] = 1.6f, ["Attack3"] = 1.9f, ["Attack4"] = 1.6f, ["Attack5"] = 1.6f, ["Attack6"] = 1f };
-        HammerAnimNameToSpeed = new Dictionary<string, float> { ["Attack1"] = 1f, ["Attack2"] = 1.6f, ["Attack3"] = 1.9f, ["Attack4"] = 1.6f, ["Attack5"] = 1.6f, ["Attack6"] = 1f };
+        SwordAnimNameToSpeed = new Dictionary<string, float> { ["Attack1"] = 1f, ["Attack2"] = 1.8f, ["Attack3"] = 2f, ["Attack4"] = 1.8f, ["Attack5"] = 1.6f, ["Attack6"] = 1.4f };
+        AxeAnimNameToSpeed = new Dictionary<string, float> { ["Attack1"] = 1f, ["Attack2"] = 1.8f, ["Attack3"] = 2f, ["Attack4"] = 1.8f, ["Attack5"] = 1.6f, ["Attack6"] = 1.4f };
+        HalberdAnimNameToSpeed = new Dictionary<string, float> { ["Attack1"] = 1f, ["Attack2"] = 1.8f, ["Attack3"] = 2f, ["Attack4"] = 1.8f, ["Attack5"] = 1.6f, ["Attack6"] = 1.4f };
+        MaceAnimNameToSpeed = new Dictionary<string, float> { ["Attack1"] = 1f, ["Attack2"] = 1.8f, ["Attack3"] = 2f, ["Attack4"] = 1.8f, ["Attack5"] = 1.6f, ["Attack6"] = 1.4f };
+        HammerAnimNameToSpeed = new Dictionary<string, float> { ["Attack1"] = 1f, ["Attack2"] = 1.8f, ["Attack3"] = 2f, ["Attack4"] = 1.8f, ["Attack5"] = 1.6f, ["Attack6"] = 1.4f };
         KatanaAnimNameToSpeed = new Dictionary<string, float> { ["Attack1"] = 0.65f * 6f, ["Attack2"] = 0.65f * 6f, ["Attack3"] = 0.65f * 6f, ["Attack4"] = 0.65f * 6f, ["Attack5"] = 0.65f * 6f, ["Attack6"] = 0.65f * 6f };
 
         Boss1AnimNameToSpeed = new Dictionary<string, float> { ["JumpAttack"] = 1f, ["Attack1"] = 1.3f, ["Attack2"] = 1.3f, ["Attack3"] = 1.4f, ["Attack4"] = 1.2f, ["Attack5"] = 1.1f, ["Attack6"] = 1.6f, ["Attack7"] = 1.5f, ["Attack8"] = 1.3f, ["Attack9"] = 1.4f, ["Attack10"] = 1.5f };
@@ -521,6 +522,7 @@ public class GameManager : MonoBehaviour
     {
         float firstDistance = (projectile.transform.position - PlayerRb.transform.position).magnitude;
         yield return new WaitForSeconds(0.05f);
+        if (projectile == null) yield break;
         float secondDistance = (projectile.transform.position - PlayerRb.transform.position).magnitude;
 
         if (firstDistance < secondDistance)

@@ -21,7 +21,6 @@ public class WaitingScreen : MonoBehaviour
     }
     private void CloseWaitingScreen()
     {
-        InputHandler._isAllowedToInput = true;
         StartCoroutine(CloseWaitingScreenCoroutine());
     }
     private IEnumerator CloseWaitingScreenCoroutine()
@@ -36,6 +35,7 @@ public class WaitingScreen : MonoBehaviour
             }
             yield return null;
         }
+        InputHandler._isAllowedToInput = true;
         image = GetComponent<Image>();
         startTime = Time.realtimeSinceStartup;
         while (Time.realtimeSinceStartup < startTime + 0.75f)
