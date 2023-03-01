@@ -201,7 +201,8 @@ namespace EnemyStates
             }
             else if (_enemyStateController._enemyAI.CheckForThrow())
             {
-                _enemyStateController._enemyCombat.ThrowKillObject();
+                _enemyStateController._enemyCombat._rangedWarning.SetActive(true);
+                GameManager._instance.CallForAction(() => _enemyStateController._enemyCombat.ThrowKillObject(), 0.5f); 
             }
 
             Vector3 lookAtPos = _enemyStateController._enemyCombat._IsRanged ? _playerTransform.position + GameManager._instance.PlayerRb.velocity * 0.6f * 0.075f * (_playerTransform.position - _enemyStateController.transform.position).magnitude : _playerTransform.position;
@@ -295,7 +296,8 @@ namespace EnemyStates
             }
             else if (_enemyStateController._enemyAI.CheckForThrow())
             {
-                _enemyStateController._enemyCombat.ThrowKillObject();
+                _enemyStateController._enemyCombat._rangedWarning.SetActive(true);
+                GameManager._instance.CallForAction(() => _enemyStateController._enemyCombat.ThrowKillObject(), 0.5f);
             }
 
             if (!_enemyStateController._enemyCombat._IsDodging && !_enemyStateController._enemyCombat._isInAttackPattern && !_enemyStateController._enemyCombat._IsBlocking)

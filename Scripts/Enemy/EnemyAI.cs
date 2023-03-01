@@ -74,7 +74,7 @@ public class EnemyAI : MonoBehaviour
         List<string> selectedAnimNames = new List<string>();
 
         //selectedAnimNames.Add("Attack3");
-        //selectedAnimNames.Add("Attack5");
+        //selectedAnimNames.Add("Attack6");
         //return selectedAnimNames;
 
         switch (_controller._enemyCombat.WeaponType)

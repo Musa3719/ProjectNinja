@@ -150,6 +150,7 @@ public class EnemyMovement : MonoBehaviour
 
         _navMeshAgent.enabled = false;
         _rb.isKinematic = false;
+        _enemyStateController._animator.SetInteger("MoveAfterAttackNumber", Random.Range(1, 3));
         _enemyStateController._animator.SetTrigger("MoveAfterAttack");
         GameManager._instance.CallForAction(() => { if (_enemyStateController._enemyCombat.IsDead) return; _navMeshAgent.enabled = true; _rb.isKinematic = true; }, 0.65f);
 
@@ -157,11 +158,11 @@ public class EnemyMovement : MonoBehaviour
         float subtranctByDistance = (6.5f - (GameManager._instance.PlayerRb.position - transform.position).magnitude);
         if (subtranctByDistance < 0) subtranctByDistance = subtranctByDistance / 3f;
         else subtranctByDistance = 0f;
-        float distanceMultiplier = (GameManager._instance.PlayerRb.position - transform.position).magnitude - subtranctByDistance;
+        float distanceMultiplier = (GameManager._instance.PlayerRb.position - transform.position).magnitude;// - subtranctByDistance;
 
-        if (subtranctByDistance < 0f) distanceMultiplier /= 1.6f;
+        //if (subtranctByDistance < 0f) distanceMultiplier /= 1.6f;
 
-        Vector3 targetVel = direction * 19f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 0f, 7.5f) / 5f;
+        Vector3 targetVel = direction * 19f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 3.5f, 6.5f) / 5f;
         if (_moveAfterAttackCoroutine != null)
             StopCoroutine(_moveAfterAttackCoroutine);
         _moveAfterAttackCoroutine = StartCoroutine(MoveAfterAttackCoroutine(targetVel));
@@ -169,20 +170,20 @@ public class EnemyMovement : MonoBehaviour
     private IEnumerator MoveAfterAttackCoroutine(Vector3 targetVel)
     {
         float startTime = Time.time;
-        float moveTime = 0.45f;
-        float dividerOfTime = 1.5f;
-        while (Time.time < startTime + moveTime / dividerOfTime)
+        float firstMoveTime = 0.2f;
+        float secondMoveTime = 0.5f;
+        while (Time.time < startTime + firstMoveTime)
         {
-            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, (Time.time - startTime) / (moveTime / dividerOfTime));
+            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 6f);
             _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 6f);
             ArrangeMoveAfterAttackGrounded();
             yield return null;
         }
-        _rb.velocity = targetVel;
+        //_rb.velocity = targetVel;
         float newTime = Time.time;
-        while (Time.time < startTime + moveTime)
+        while (Time.time < newTime + secondMoveTime)
         {
-            _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, (Time.time - newTime) / (moveTime - (newTime - startTime)));
+            _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, Time.deltaTime * 3f);
             _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 8f);
             ArrangeMoveAfterAttackGrounded();
             yield return null;
@@ -232,7 +233,7 @@ public class EnemyMovement : MonoBehaviour
         while (_enemyStateController._enemyCombat._isAttacking)
         {
             if (_enemyStateController._agent.enabled && !_enemyStateController._isOnOffMeshLinkPath && _navMeshAgent.isOnNavMesh)
-                MoveToPosition(transform.position, GameManager._instance.PlayerRb.transform.position, 5f, 0f);
+                MoveToPosition(transform.position, GameManager._instance.PlayerRb.transform.position, 8f, 0f);
             yield return null;
         }
     }
@@ -241,7 +242,7 @@ public class EnemyMovement : MonoBehaviour
         while (_enemyStateController._enemyCombat._IsBlocking)
         {
             if (_enemyStateController._agent.enabled && !_enemyStateController._isOnOffMeshLinkPath && _navMeshAgent.isOnNavMesh)
-                MoveToPosition(transform.position, GameManager._instance.PlayerRb.transform.position, 5f, 0f);
+                MoveToPosition(transform.position, GameManager._instance.PlayerRb.transform.position, 8f, 0f);
             yield return null;
         }
     }

@@ -168,17 +168,19 @@ public class BossMovement : MonoBehaviour
 
         _navMeshAgent.enabled = false;
         _rb.isKinematic = false;
+        _bossStateController._animator.SetInteger("MoveAfterAttackNumber", Random.Range(1, 3));
+        _bossStateController._animator.SetTrigger("MoveAfterAttack");
         GameManager._instance.CallForAction(() => { if (_bossStateController._bossCombat.IsDead) return; _navMeshAgent.enabled = true; _rb.isKinematic = true; }, 0.65f);
 
         float firstMultiplier = isFirstAttack ? 0.95f : 1f;
         float subtranctByDistance = (6.5f - (GameManager._instance.PlayerRb.position - transform.position).magnitude);
         if (subtranctByDistance < 0) subtranctByDistance = subtranctByDistance / 3f;
         else subtranctByDistance = 0f;
-        float distanceMultiplier = (GameManager._instance.PlayerRb.position - transform.position).magnitude - subtranctByDistance;
+        float distanceMultiplier = (GameManager._instance.PlayerRb.position - transform.position).magnitude;// - subtranctByDistance;
 
-        if (subtranctByDistance < 0f) distanceMultiplier /= 1.6f;
+        //if (subtranctByDistance < 0f) distanceMultiplier /= 1.6f;
 
-        Vector3 targetVel = direction * 17f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 0f, 8.5f) / 5f;
+        Vector3 targetVel = direction * 17f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 3.5f, 6.5f) / 5f;
         if (_moveAfterAttackCoroutine != null)
             StopCoroutine(_moveAfterAttackCoroutine);
         _moveAfterAttackCoroutine = StartCoroutine(MoveAfterAttackCoroutine(targetVel));
@@ -186,24 +188,25 @@ public class BossMovement : MonoBehaviour
     private IEnumerator MoveAfterAttackCoroutine(Vector3 targetVel)
     {
         float startTime = Time.time;
-        float moveTime = 0.45f;
-        float dividerOfTime = 1.5f;
-        while (Time.time < startTime + moveTime / dividerOfTime)
+        float firstMoveTime = 0.2f;
+        float secondMoveTime = 0.5f;
+
+        while (Time.time < startTime + firstMoveTime)
         {
             if (_bossStateController._bossCombat._IsAttackInterrupted) yield break;
 
-            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, (Time.time - startTime) / (moveTime / dividerOfTime));
+            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 6f);
             _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 6f);
             ArrangeMoveAfterAttackGrounded();
             yield return null;
         }
-        _rb.velocity = targetVel;
+        //_rb.velocity = targetVel;
         float newTime = Time.time;
-        while (Time.time < startTime + moveTime)
+        while (Time.time < newTime + secondMoveTime)
         {
             if (_bossStateController._bossCombat._IsAttackInterrupted) yield break;
 
-            _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, (Time.time - newTime) / (moveTime - (newTime - startTime)));
+            _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, Time.deltaTime * 3f);
             _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 8f);
             ArrangeMoveAfterAttackGrounded();
             yield return null;
@@ -279,7 +282,7 @@ public class BossMovement : MonoBehaviour
         while (_bossStateController._bossCombat._IsAttacking)
         {
             if (_bossStateController._agent.enabled && !_bossStateController._isOnOffMeshLinkPath && _navMeshAgent.isOnNavMesh)
-                MoveToPosition(transform.position, GameManager._instance.PlayerRb.transform.position, 5f, 0f);
+                MoveToPosition(transform.position, GameManager._instance.PlayerRb.transform.position, 8f, 0f);
             yield return null;
         }
     }
@@ -288,7 +291,7 @@ public class BossMovement : MonoBehaviour
         while (_bossStateController._bossCombat._IsBlocking)
         {
             if (_bossStateController._agent.enabled && !_bossStateController._isOnOffMeshLinkPath && _navMeshAgent.isOnNavMesh)
-                MoveToPosition(transform.position, GameManager._instance.PlayerRb.transform.position, 5f, 0f);
+                MoveToPosition(transform.position, GameManager._instance.PlayerRb.transform.position, 8f, 0f);
             yield return null;
         }
     }

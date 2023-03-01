@@ -1087,7 +1087,17 @@ public class PlayerMovement : MonoBehaviour
         {
             isForward = -1;
         }
-        return (PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.forward * yInput * isForward);
+
+        Vector3 direction = PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.forward;
+        Vector3 rayDirection = (PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.position - transform.position).normalized;
+        rayDirection.y = 0f;
+        Physics.Raycast(transform.position, rayDirection, out RaycastHit hit, 15f, GameManager._instance.WallLayer);
+        if (hit.collider != null)
+        {
+            direction = Quaternion.AngleAxis(-90f, Vector3.up) * hit.normal;
+        }
+
+        return (direction * yInput * isForward);
     }
     private void WallMovement(Rigidbody rb, float speed, float lerpSpeed)
     {

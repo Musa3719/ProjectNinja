@@ -25,6 +25,9 @@ public class PlayerCombat : MonoBehaviour, IKillable
     public bool _DeflectedBuffer { get => false; set {  } }
 
     public CapsuleCollider _collider { get; private set; }
+
+    private float _lastAttackTime;
+    private int _lastAttackNumber;
     
     [SerializeField]
     private CapsuleCollider _attackColliderWarning;
@@ -210,14 +213,14 @@ public class PlayerCombat : MonoBehaviour, IKillable
     {
         _IsBlocking = false;
 
-        Vector3 VFXposition = _meleeWeapon.transform.position - transform.forward * 1.25f;
 
         if (Time.time - _blockStartTime > _blockTimingValue)
         {
             if (PlayerMovement._instance._Stamina < PlayerMovement._instance._blockedStaminaUse) return;
 
+            Vector3 VFXposition = _meleeWeapon.transform.position - transform.forward * 1.5f;
             PlayerStateController._instance.ChangeAnimation(GetBlockedName());
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
             CameraController.ShakeCamera(4f, 1.15f, 0.15f, 0.65f);
             PlayerMovement._instance.BlockedMove(PlayerStateController._instance._rb, -dir);
             _AttackBlockedCounter = 0.4f;
@@ -250,20 +253,22 @@ public class PlayerCombat : MonoBehaviour, IKillable
         }
         else
         {
+            Vector3 VFXposition = _meleeWeapon.transform.position + transform.forward * 0.5f;
             CameraController.ShakeCamera(3f, 1.1f, 0.2f, 0.5f);
             PlayerStateController._instance.ChangeAnimation(GetDeflectedName());
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
             if (_isBlockedOrDeflectedCoroutine != null)
                 StopCoroutine(_isBlockedOrDeflectedCoroutine);
             _isBlockedOrDeflectedCoroutine = StartCoroutine(IsBlockedOrDeflectedCoroutine());
 
-            GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.ShiningSparksVFX), VFXposition, Quaternion.identity);
+            GameObject sparksVFX = Instantiate(GameManager._instance.ShiningSparksVFX[1], VFXposition, Quaternion.identity);
             Destroy(sparksVFX, 4f);
 
             if (attacker != null && attacker.Object.CompareTag("Boss"))
             {
-                if (isRangedAttack && _lastAttackDeflectedCounter >= attacker.InterruptAttackCounterGetter && _lastAttackDeflectedTime + 5f > Time.time)
+                attacker.ChangeStamina(-1f);
+                if (!isRangedAttack && _lastAttackDeflectedCounter >= attacker.InterruptAttackCounterGetter && _lastAttackDeflectedTime + 5f > Time.time)
                 {
                     _lastAttackDeflectedCounter = -1;
                     attacker.AttackDeflected(this as IKillable);
@@ -315,7 +320,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
         GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; _isAllowedToAttack = true; }, _attackWaitTime);
 
         PlayerStateController._instance.ChangeAnimation(GetAttackName());
-        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.3f, false, UnityEngine.Random.Range(0.9f, 1f)), 0.12f);
+        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.3f, false, UnityEngine.Random.Range(0.9f, 1f)), 0.3f);
         SoundManager._instance.PlaySound(SoundManager._instance.BladeSlide, transform.position, 0.4f, false, UnityEngine.Random.Range(0.8f, 0.95f));
 
 
@@ -348,13 +353,19 @@ public class PlayerCombat : MonoBehaviour, IKillable
             return;
         }
 
-        int random = UnityEngine.Random.Range(0, 16);
-        if (random != 14 && random != 15)
+        _attackType = AttackType.Both;
+
+        /*int random = UnityEngine.Random.Range(0, 25);
+        if (random != 23 && random != 24)
             _attackType = AttackType.Both;
-        else if (random == 14)
+        else if (random == 23)
             _attackType = AttackType.Left;
-        else if (random == 15)
-            _attackType = AttackType.Right;
+        else if (random == 24)
+            _attackType = AttackType.Right;*/
+    }
+    public void ChangeStamina(float amount)
+    {
+        //
     }
     public void ForwardLeap()
     {
@@ -458,14 +469,25 @@ public class PlayerCombat : MonoBehaviour, IKillable
 
         if (_attackType == AttackType.Both)
         {
-            return "Attack" + UnityEngine.Random.Range(1, 6);
+            if (_lastAttackTime + 1.5f > Time.time)
+            {
+                _lastAttackNumber++;
+                if (_lastAttackNumber > 5) _lastAttackNumber = 1;
+                _lastAttackTime = Time.time;
+                return "Attack" + _lastAttackNumber;
+            }
+            _lastAttackNumber = 1;
+            _lastAttackTime = Time.time;
+            return "Attack" + _lastAttackNumber;
         }
         else
         {
+            _lastAttackTime = Time.time;
+            _lastAttackNumber = 0;
             if(_attackType == AttackType.Left)
-                return "LeftAttack" + UnityEngine.Random.Range(1, 3).ToString();
+                return "LeftAttack" + UnityEngine.Random.Range(1, 2).ToString();
             else
-                return "RightAttack" + UnityEngine.Random.Range(1, 3).ToString();
+                return "RightAttack" + UnityEngine.Random.Range(1, 2).ToString();
         }
     }
     public string GetThrowName()

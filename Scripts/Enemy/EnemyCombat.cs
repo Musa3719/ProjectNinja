@@ -84,7 +84,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
 
 
     [SerializeField]
-    private GameObject _rangedWarning;
+    public GameObject _rangedWarning;
     [SerializeField]
     private Transform _decalFollowTransform;
 
@@ -133,7 +133,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
         switch (_weaponType)
         {
             case WeaponTypeEnum.Sword:
-                _attackRange = 5f;
+                _attackRange = 8f;
                 _weaponObject = Instantiate(PrefabHolder._instance.SwordPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0.01773758f, 0.06871963f, -0.00327652f);
@@ -145,7 +145,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 _IsRanged = false;
                 break;
             case WeaponTypeEnum.Axe:
-                _attackRange = 6f;
+                _attackRange = 9f;
                 _weaponObject = Instantiate(PrefabHolder._instance.AxePrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0f, 0f, 0f);
@@ -156,7 +156,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 _IsRanged = false;
                 break;
             case WeaponTypeEnum.Halberd:
-                _attackRange = 7f;
+                _attackRange = 11f;
                 _weaponObject = Instantiate(PrefabHolder._instance.HalberdPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0.013f, -0.002f, 0.005f);
@@ -167,7 +167,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 _IsRanged = false;
                 break;
             case WeaponTypeEnum.Mace:
-                _attackRange = 4.5f;
+                _attackRange = 6f;
                 _weaponObject = Instantiate(PrefabHolder._instance.MacePrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0f, 0f, 0f);
@@ -178,7 +178,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 _IsRanged = false;
                 break;
             case WeaponTypeEnum.Hammer:
-                _attackRange = 4.5f;
+                _attackRange = 6f;
                 _weaponObject = Instantiate(PrefabHolder._instance.HammerPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0f, 0f, 0f);
@@ -222,7 +222,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 _rangedWeapon = GetComponentInChildren<RangedWeapon>();
                 break;
             case WeaponTypeEnum.Katana:
-                _attackRange = 6f;
+                _attackRange = 9f;
                 _weaponObject = Instantiate(PrefabHolder._instance.KatanaPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0.01773758f, 0.06871963f, -0.00327652f);
@@ -399,7 +399,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
             Destroy(sparksVFX, 4f);
 
             _enemyStateController.ChangeAnimation(GetBlockAnimName(), 0.2f, true);
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
             _enemyStateController._enemyMovement.BlockMovement(_enemyStateController._BlockedEnemyPosition);
 
@@ -414,7 +414,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
             if (attacker != null && !isRangedAttack)
                 attacker.AttackDeflected(this as IKillable);
             _enemyStateController.ChangeAnimation(GetDeflectAnimName(), 0.2f, true);
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.35f, false, UnityEngine.Random.Range(0.93f, 1.07f));
             Destroy(sparksVFX, 4f);
 
             _IsAllowedToAttack = false;
@@ -441,7 +441,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
 
         if (!_isAttackInterrupted)
         {
-            bool isIdle = _enemyStateController.ChangeAnimation(_attackNameToPrepareName[attackName], 0.05f);
+            bool isIdle = _enemyStateController.ChangeAnimation(_attackNameToPrepareName[attackName], 0.2f);
 
             int animLayer = 1;
             if (isIdle)
@@ -483,7 +483,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 if (_isAttackInterrupted) return;
                 _isPreparingAttack = false;
             };
-            GameManager._instance.CallForAction(CloseIsPreparingToAttack, animTime);
+            GameManager._instance.CallForAction(CloseIsPreparingToAttack, animTime / 2f);
         }
     }
     public void AttackWithPattern()
@@ -519,8 +519,13 @@ public class EnemyCombat : MonoBehaviour, IKillable
     {
         _lastAttackNumberForPattern = -1;
         int c = 0;
+        float lastTimeAttacked = Time.time;
+
         foreach (var attackName in patternNumbers)
         {
+            if (lastTimeAttacked + 0.7f > Time.time)
+                yield return new WaitForSeconds(0.7f - Mathf.Abs(Time.time - lastTimeAttacked));
+            lastTimeAttacked = Time.time;
             if ((GameManager._instance.PlayerRb.transform.position-transform.position).magnitude > 8.5f)
             {
                 break;
@@ -653,7 +658,10 @@ public class EnemyCombat : MonoBehaviour, IKillable
         _enemyStateController._enemyAI._isAttackFast = isFast;
         _enemyStateController._enemyAI._attackPosition = attackPosition;
     }
-    
+    public void ChangeStamina(float amount)
+    {
+        //
+    }
     private void RangedAttack()
     {
         if (_isAttacking || _IsDodging) return;
@@ -829,7 +837,10 @@ public class EnemyCombat : MonoBehaviour, IKillable
     }
     public void ThrowKillObject()
     {
-        if (_IsAllowedToThrow == false || _IsDodging) return;
+        _rangedWarning.SetActive(false);
+
+        if (_ThrowableItem.CountInterface == 0) return;
+        if (_IsRanged || _IsDodging || _IsBlocking || _isInAttackPattern || !_IsAllowedToThrow) return;
         
         _IsAllowedToThrow = false;
         Action OpenIsAllowedToThrow = () => {
@@ -864,7 +875,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
         //die vfx, blood and sound etc
         Vector3 VFXposition = transform.position + transform.forward * 0.5f;
         GameObject bloodVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.BloodVFX), VFXposition, Quaternion.identity);
-        bloodVFX.GetComponentInChildren<Rigidbody>().velocity = Vector3.up * 2f + Vector3.right * UnityEngine.Random.Range(-0.1f, 0.1f) + Vector3.forward * UnityEngine.Random.Range(-0.1f, 0.1f);
+        bloodVFX.GetComponentInChildren<Rigidbody>().velocity = Vector3.up * 2f + transform.right * UnityEngine.Random.Range(-1f, 1f) + dir * UnityEngine.Random.Range(4f, 6f);
         Destroy(bloodVFX, 5f);
 
         GameObject bloodPrefab = GameManager._instance.BloodDecalPrefabs[UnityEngine.Random.Range(0, GameManager._instance.BloodDecalPrefabs.Count)];
@@ -927,7 +938,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
 
         GetComponentInChildren<TransformBonePosition>().TransformPosition();
         Vector3 tempDirForWeapon = dir + new Vector3(UnityEngine.Random.Range(-0.6f, 0.6f), UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.6f, 0.6f));
-        GetComponentInChildren<RagdollForWeapon>().SeperateWeaponsFromRagdoll(tempDirForWeapon, forceMultiplier, forceUpMultiplier);
+        GetComponentInChildren<RagdollForWeapon>().SeperateWeaponsFromRagdoll(tempDirForWeapon, forceMultiplier, forceUpMultiplier, killersVelocityMagnitude);
 
         foreach (var collider in _ragdollColliders)
         {

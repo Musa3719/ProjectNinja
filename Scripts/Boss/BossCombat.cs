@@ -221,9 +221,13 @@ public class BossCombat : MonoBehaviour, IKillable
             _bossStateController._bossMovement.BlockMovement(deflectedKillable.Object.transform.position);
         }
 
-        _CombatStamina -= _DodgeOrBlockStaminaUse * 2f;
+        _CombatStamina -= _DodgeOrBlockStaminaUse / 2f;
         _bossStateController.ChangeAnimation(GetAttackDeflectedAnimName(), 0.2f, true);
         SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.AttackDeflecteds), transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+    }
+    public void ChangeStamina(float amount)
+    {
+        _CombatStamina += amount * _DodgeOrBlockStaminaUse;
     }
     public void StopAttackInstantly()
     {
@@ -330,7 +334,7 @@ public class BossCombat : MonoBehaviour, IKillable
             Destroy(sparksVFX, 4f);
 
             _bossStateController.ChangeAnimation(GetBlockAnimName(), 0.2f, true);
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
             _CombatStamina -= _DodgeOrBlockStaminaUse;
             if (!(_bossStateController._bossState is BossStates.Retreat) && !(_bossStateController._bossState is BossStates.SpecialAction))
@@ -359,7 +363,7 @@ public class BossCombat : MonoBehaviour, IKillable
             if (attacker != null && !isRangedAttack)
                 attacker.AttackDeflected(this as IKillable);
             _bossStateController.ChangeAnimation(GetDeflectAnimName(), 0.2f, true);
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.35f, false, UnityEngine.Random.Range(0.93f, 1.07f));
             Destroy(sparksVFX, 4f);
         }
     }
@@ -385,7 +389,7 @@ public class BossCombat : MonoBehaviour, IKillable
 
         if (!_IsAttackInterrupted)
         {
-            bool isIdle = _bossStateController.ChangeAnimation(_attackNameToPrepareName[attackName], 0.05f);
+            bool isIdle = _bossStateController.ChangeAnimation(_attackNameToPrepareName[attackName], 0.2f);
 
             int animLayer = 1;
             if (isIdle)
@@ -428,7 +432,7 @@ public class BossCombat : MonoBehaviour, IKillable
                 if (_IsAttackInterrupted) return;
                 _IsPreparingAttack = false;
             };
-            GameManager._instance.CallForAction(CloseIsPreparingToAttack, animTime);
+            GameManager._instance.CallForAction(CloseIsPreparingToAttack, animTime / 2f);
         }
     }
     public void AttackWithPattern()
@@ -453,8 +457,13 @@ public class BossCombat : MonoBehaviour, IKillable
     {
         _lastAttackNumberForPattern = -1;
         int c = 0;
+        float lastTimeAttacked = Time.time;
         foreach (var attackName in patternNumbers)
         {
+            if (lastTimeAttacked + 0.7f > Time.time)
+                yield return new WaitForSeconds(0.7f - Mathf.Abs(Time.time - lastTimeAttacked));
+            lastTimeAttacked = Time.time;
+
             if ((GameManager._instance.PlayerRb.transform.position - transform.position).magnitude > 12f)
             {
                 break;
@@ -749,7 +758,7 @@ public class BossCombat : MonoBehaviour, IKillable
         //_enemyStateController._animator.SetTrigger("Death");
         Vector3 VFXposition = transform.position + transform.forward * 0.5f;
         GameObject bloodVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.BloodVFX), VFXposition, Quaternion.identity);
-        bloodVFX.GetComponentInChildren<Rigidbody>().velocity = Vector3.up * 2f + Vector3.right * UnityEngine.Random.Range(-0.1f, 0.1f) + Vector3.forward * UnityEngine.Random.Range(-0.1f, 0.1f);
+        bloodVFX.GetComponentInChildren<Rigidbody>().velocity = Vector3.up * 2f + transform.right * UnityEngine.Random.Range(-1f, 1f) + dir * UnityEngine.Random.Range(4f, 6f);
         Destroy(bloodVFX, 5f);
 
         GameObject bloodPrefab = GameManager._instance.BloodDecalPrefabs[UnityEngine.Random.Range(0, GameManager._instance.BloodDecalPrefabs.Count)];
@@ -811,7 +820,7 @@ public class BossCombat : MonoBehaviour, IKillable
 
         GetComponentInChildren<TransformBonePosition>().TransformPosition();
         Vector3 tempDirForWeapon = dir + new Vector3(UnityEngine.Random.Range(-0.6f, 0.6f), UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.6f, 0.6f));
-        GetComponentInChildren<RagdollForWeapon>().SeperateWeaponsFromRagdoll(tempDirForWeapon, forceMultiplier, forceUpMultiplier);
+        GetComponentInChildren<RagdollForWeapon>().SeperateWeaponsFromRagdoll(tempDirForWeapon, forceMultiplier, forceUpMultiplier, killersVelocityMagnitude);
 
         foreach (var collider in _ragdollColliders)
         {
