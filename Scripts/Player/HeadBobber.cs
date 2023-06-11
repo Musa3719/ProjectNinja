@@ -25,7 +25,7 @@ public class HeadBobber : MonoBehaviour
         bobbingSpeed = 0.13f + (Mathf.Clamp(PlayerStateController._instance._rb.velocity.magnitude, 0.1f, 14f) + 5f) / 140f;
 
         var moveState = PlayerStateController._instance._playerState as PlayerStates.Movement;
-        if (moveState != null && moveState.isCrouching)
+        if (moveState != null && moveState._isCrouching)
         {
             bobbingAmount /= 2.5f;
             bobbingSpeed /= 2.5f;

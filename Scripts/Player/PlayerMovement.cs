@@ -24,7 +24,10 @@ public class PlayerMovement : MonoBehaviour
 
     [SerializeField]
     private float _runSpeed;
-    public float _RunSpeed => _runSpeed;
+    public float _RunSpeed => _runSpeed + _runSpeedAddition * 0.8f;
+    [HideInInspector]
+    public int _runSpeedAddition;
+
     [SerializeField]
     private float _dodgeSpeed;
     public float _DodgeSpeed => _dodgeSpeed;
@@ -85,10 +88,13 @@ public class PlayerMovement : MonoBehaviour
     public Coroutine _wallJumpCoroutine;
     public Coroutine _openVelocityForwardCoroutine;
     public Coroutine _isAllowedHookCoroutine;
+    public Coroutine _pullHookPositionCoroutine;
     public Coroutine _hookCoroutine;
     public Coroutine _attackMoveCoroutine;
     public Coroutine _attackDeflectedMoveCoroutine;
+    public Coroutine _runSpeedAdditionToZeroCoroutine;
 
+    public bool _canDoWallMovement;
     public bool _canRunWithStamina { get; private set; }
     public bool _isJumped { get; private set; }
     public bool _isOnAttackOrAttackDeflectedMove { get; private set; }
@@ -107,6 +113,7 @@ public class PlayerMovement : MonoBehaviour
     private float _crouchTimerForGrounded;
 
     private float _lastCrouchStartTime;
+    public float _lastExitWallTime;
 
     private bool _isUpHookLastTime;
     private bool _isHookDisabled;
@@ -125,6 +132,8 @@ public class PlayerMovement : MonoBehaviour
     public float _lastHookTime;
     public float _lastHookNotReadyTime;
 
+    private float _lastEnemyDiedTime;
+
     public bool _isGroundedWorkedThisFrame;
 
     [SerializeField]
@@ -140,6 +149,7 @@ public class PlayerMovement : MonoBehaviour
         GameManager._instance._pushEvent += Pushed;
         GameManager._instance._playAnimEvent += ChangeAnimFromEvent;
         GameManager._instance._bornEvent += Born;
+        GameManager._instance._enemyDiedEvent += EnemyDied;
     }
     private void OnDisable()
     {
@@ -147,6 +157,41 @@ public class PlayerMovement : MonoBehaviour
         GameManager._instance._pushEvent -= Pushed;
         GameManager._instance._playAnimEvent -= ChangeAnimFromEvent;
         GameManager._instance._bornEvent -= Born;
+        GameManager._instance._enemyDiedEvent -= EnemyDied;
+    }
+    private void EnemyDied()
+    {
+        _runSpeedAddition++;
+        if (_runSpeedAddition > 4)
+            _runSpeedAddition = 4;
+
+        GameManager._instance.MaxSpeedCounterUI.transform.Find("Timer").gameObject.SetActive(true);
+        GameManager._instance.MaxSpeedCounterUI.transform.Find("Timer").gameObject.GetComponent<SpeedCounterTimer>()._timer = GameManager._instance.RunSpeedAdditionActiveTime;
+
+        if (_runSpeedAddition == 1) GameManager._instance.MaxSpeedCounterUI.transform.Find("1").gameObject.SetActive(true);
+        if (_runSpeedAddition == 2) GameManager._instance.MaxSpeedCounterUI.transform.Find("2").gameObject.SetActive(true);
+        if (_runSpeedAddition == 3) GameManager._instance.MaxSpeedCounterUI.transform.Find("3").gameObject.SetActive(true);
+        if (_runSpeedAddition == 4) GameManager._instance.MaxSpeedCounterUI.transform.Find("4").gameObject.SetActive(true);
+
+        if (_runSpeedAdditionToZeroCoroutine != null)
+            StopCoroutine(_runSpeedAdditionToZeroCoroutine);
+        _runSpeedAdditionToZeroCoroutine = StartCoroutine(RunSpeedAdditionToZeroCoroutine(GameManager._instance.RunSpeedAdditionActiveTime));
+
+        _lastEnemyDiedTime = Time.time;
+    }
+    private IEnumerator RunSpeedAdditionToZeroCoroutine(float time)
+    {
+        PlayerCombat._instance._isImmune = true;
+        yield return new WaitForSeconds(time);
+
+        GameManager._instance.MaxSpeedCounterUI.transform.Find("1").gameObject.SetActive(false);
+        GameManager._instance.MaxSpeedCounterUI.transform.Find("2").gameObject.SetActive(false);
+        GameManager._instance.MaxSpeedCounterUI.transform.Find("3").gameObject.SetActive(false);
+        GameManager._instance.MaxSpeedCounterUI.transform.Find("4").gameObject.SetActive(false);
+        GameManager._instance.MaxSpeedCounterUI.transform.Find("Timer").gameObject.SetActive(false);
+
+        _runSpeedAddition = 0;
+        PlayerCombat._instance._isImmune = false;
     }
     private void StaminaGain(float additionalStamina)
     {
@@ -178,8 +223,9 @@ public class PlayerMovement : MonoBehaviour
     {
         _instance = this;
         _MaxStamina = 100f;
-        _hookWaitTime = 3f;
-        _hookTime = 0.25f;
+        _hookWaitTime = 5f;
+        _hookTime = 0.15f;
+        _canDoWallMovement = true;
         _isAllowedToVelocityForward = true;
         _isHookAllowed = true;
         _isHookAllowedForAir = true;
@@ -187,16 +233,16 @@ public class PlayerMovement : MonoBehaviour
         _canRunWithStamina = true;
         _touchingWallColliders = new List<Collider>();
         _touchingGroundColliders = new List<Collider>();
-        _needStaminaForJump = 10f;
-        _staminaDecreasePerSecond = 10f;
+        _needStaminaForJump = 8f;
+        _staminaDecreasePerSecond = 8f;
         _staminaIncreasePerSecond = 5f;
         _Stamina = 100f;
-        _hookStaminaUse = 32f;
+        _hookStaminaUse = 20f;
         _attackStaminaUse = 8f;
         _forwardLeapStaminaUse = 16f;
-        _dodgeStaminaUse = 30f;
-        _blockedStaminaUse = 16f;
-        _attackDeflectedStaminaUse = 20f;
+        _dodgeStaminaUse = 16f;
+        _blockedStaminaUse = 11f;
+        _attackDeflectedStaminaUse = 12f;
         _xBound = GetComponent<Collider>().bounds.extents.x;
         _zBound = GetComponent<Collider>().bounds.extents.z;
         _distToGround = GetComponent<Collider>().bounds.extents.y;
@@ -226,7 +272,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (PlayerStateController._instance._isStaminaManual)
         {
-            _Stamina += Time.deltaTime * _staminaIncreasePerSecond * Mathf.Clamp((PlayerStateController._instance._staminaManualCounter + 1f) * 1.5f, 1.75f, 5f);
+            _Stamina += Time.deltaTime * _staminaIncreasePerSecond * Mathf.Clamp((PlayerStateController._instance._staminaManualCounter + 0.25f) * 4f, 1f, 7.5f);
         }
         else if(PlayerCombat._instance._IsBlocking)
         {
@@ -241,6 +287,7 @@ public class PlayerMovement : MonoBehaviour
     private void LateUpdate()
     {
         ArrangeLineRendererPlayerPosition();
+        //GameManager._instance.BlurVolume.weight = (PlayerStateController._instance._rb.velocity.magnitude > _RunSpeed - 2f) && IsGrounded() ? 1f : 0f;
     }
     private void ArrangeLineRendererPlayerPosition()
     {
@@ -269,7 +316,7 @@ public class PlayerMovement : MonoBehaviour
     {
 
         float downDistance = 0.3f;
-        if (PlayerStateController._instance._playerState is PlayerStates.Movement && (PlayerStateController._instance._playerState as PlayerStates.Movement).isCrouching)
+        if (PlayerStateController._instance._playerState is PlayerStates.Movement && (PlayerStateController._instance._playerState as PlayerStates.Movement)._isCrouching)
         {
             _crouchTimerForGrounded = 0.1f;
             downDistance *= 1.5f;
@@ -309,19 +356,25 @@ public class PlayerMovement : MonoBehaviour
             i++;
         }
 
+        bool isGrounded;
+        if (PlayerStateController._instance._playerState is PlayerStates.OnWall)
+            isGrounded = rays[5];
+        else
+            isGrounded = rays[0] || rays[1] || rays[2] || rays[3] || rays[4] || rays[5];
+
         if (!_isGroundedWorkedThisFrame)
         {
             ArrangePlaneSound(hits);
-            ArrangeIsAllowedInAir(rays[0], rays[1], rays[2], rays[3], rays[4], rays[5]);
-            ArrangeGravity(rays[0], rays[1], rays[2], rays[3], rays[4], rays[5]);
+            ArrangeIsAllowedInAir(isGrounded);
         }
 
         _isGroundedWorkedThisFrame = true;
+
         if (PlayerStateController._instance._rb.velocity.y < -10f)
             return IsGroundedFromList();
-        return rays[0] || rays[1] || rays[2] || rays[3] || rays[4] || rays[5];
+        return isGrounded;
     }
-    public bool IsGrounded()
+    public bool IsGrounded(float counterTime = 0.15f)
     {
         if (IsGroundedInside())
         {
@@ -331,13 +384,13 @@ public class PlayerMovement : MonoBehaviour
         else
         {
             _isGroundedCounter += Time.deltaTime;
-            if (_isGroundedCounter > 0.15f) return false;
+            if (_isGroundedCounter > counterTime) return false;
             return true;
         }
     }
     private void ArrangePlaneSound(RaycastHit[] hits)
     {
-        if (PlayerStateController._instance._playerState is OnWall || (PlayerStateController._instance._playerState is Movement && (PlayerStateController._instance._playerState as Movement).isCrouching)) return;
+        if (PlayerStateController._instance._playerState is OnWall || (PlayerStateController._instance._playerState is Movement && (PlayerStateController._instance._playerState as Movement)._isCrouching)) return;
 
         float speed = PlayerStateController._instance._rb.velocity.magnitude;
         foreach (var hit in hits)
@@ -381,24 +434,12 @@ public class PlayerMovement : MonoBehaviour
 
         }
     }
-    private void ArrangeIsAllowedInAir(bool firstRay, bool secondRay, bool thirdRay, bool fourthRay, bool fifthRay, bool sixthRay)
+    private void ArrangeIsAllowedInAir(bool isGrounded)
     {
-        if (firstRay || secondRay || thirdRay || fourthRay || fifthRay || sixthRay)
-        {
-            _isHookAllowedForAir = true;
-            _isDodgeAllowedForAir = true;
-        }
-    }
-    private void ArrangeGravity(bool firstRay, bool secondRay, bool thirdRay, bool fourthRay, bool fifthRay, bool sixthRay)
-    {
-        if (firstRay || secondRay || thirdRay || fourthRay || fifthRay || sixthRay)
-        {
-            _constantForceUp.enabled = true;
-        }
-        else
-        {
-            //_constantForceUp.enabled = false;
-        }
+        if (!isGrounded) return;
+
+        _isHookAllowedForAir = true;
+        _isDodgeAllowedForAir = true;
     }
     /// <summary>
     /// Checks for touching any walls
@@ -488,13 +529,12 @@ public class PlayerMovement : MonoBehaviour
         _isOnAttackOrAttackDeflectedMove = true;
         _isAllowedToVelocityForward = false;
         float startTime = Time.time;
-        while (startTime + 0.5f * 0.7f > Time.time)
+        while (startTime + 0.4f * 0.7f > Time.time)
         {
-            rb.velocity = Vector3.Lerp(rb.velocity, -(transform.forward * 2f * _AttackMoveSpeed * multiplier), Time.deltaTime * 12f);
+            rb.velocity = Vector3.Lerp(rb.velocity, -(transform.forward * 1.5f * _AttackMoveSpeed * multiplier), Time.deltaTime * 10f);
             yield return null;
         }
-        rb.velocity = -(transform.forward * 2f * _AttackMoveSpeed);
-        while (startTime + 0.5f > Time.time)
+        while (startTime + 0.4f > Time.time)
         {
             rb.velocity = Vector3.Lerp(rb.velocity, Vector3.zero, Time.deltaTime * 7f);
             yield return null;
@@ -504,7 +544,9 @@ public class PlayerMovement : MonoBehaviour
     }
     public void AttackMove(Rigidbody rb)
     {
-        if (!IsGrounded() && rb.velocity.y < 0f) return;
+        Vector3 tempVel = rb.velocity;
+        tempVel.y = 0f;
+        if ((!IsGrounded() && rb.velocity.y < 0f) || tempVel.magnitude < 7f) return;
 
         if (_attackMoveCoroutine != null)
             StopCoroutine(_attackMoveCoroutine);
@@ -512,15 +554,27 @@ public class PlayerMovement : MonoBehaviour
     }
     private IEnumerator AttackMoveCoroutine(Rigidbody rb)
     {
+        float moveTime = 0.2f;
+        //ArrangeIsVelocityToForward(moveTime / 2f);
         _isOnAttackOrAttackDeflectedMove = true;
         float startTime = Time.time;
         Vector3 tempVel = rb.velocity;
         tempVel.y = 0f;
-        while (startTime + 0.3f > Time.time)
+
+        //rb.velocity = transform.forward * 5f;
+        //yield return new WaitForFixedUpdate();
+        while (startTime + moveTime > Time.time)
         {
-            rb.velocity = Vector3.Lerp(rb.velocity, transform.forward * _AttackMoveSpeed * 1.35f + tempVel / 3f, Time.deltaTime * 42f);
+            rb.velocity = Vector3.Lerp(rb.velocity, rb.velocity.normalized * _AttackMoveSpeed * 0.75f, Time.deltaTime * 3f);
             yield return null;
         }
+
+        Vector3 velocityExceptY = rb.velocity;
+        velocityExceptY.y = 0f;
+        rb.velocity += transform.forward * velocityExceptY.magnitude / 2.5f;
+        if (velocityExceptY.magnitude == 0f) rb.velocity += transform.forward;
+        yield return new WaitForSeconds(0.3f);
+
         _isOnAttackOrAttackDeflectedMove = false;
     }
     public void Crouch(Rigidbody rb)
@@ -533,7 +587,7 @@ public class PlayerMovement : MonoBehaviour
         var moveState = PlayerStateController._instance._playerState as PlayerStates.Movement;
         if (moveState != null)
         {
-            moveState.isCrouching = true;
+            moveState._isCrouching = true;
         }
         PlayerStateController._instance.SlidingSoundObject = SoundManager._instance.PlaySound(SoundManager._instance.Sliding, transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         _crouchCoroutine = StartCoroutine("CrouchRoutine");
@@ -549,9 +603,9 @@ public class PlayerMovement : MonoBehaviour
             _fastLandCounter = 0f;
 
         FastLand(rb);
-        _fastLandCounter = Mathf.Clamp(_fastLandCounter + Time.deltaTime * 1.25f, 0.1f, 1.5f);
+        _fastLandCounter = Mathf.Clamp(_fastLandCounter + Time.deltaTime * 1.15f, 0.1f, 1f);
         _lastTimeFastLanded = Time.time;
-        rb.transform.eulerAngles = new Vector3(rb.transform.eulerAngles.x, rb.transform.eulerAngles.y + Time.deltaTime * 60f * 6f * _fastLandCounter, rb.transform.eulerAngles.z);
+        rb.transform.eulerAngles = new Vector3(rb.transform.eulerAngles.x, rb.transform.eulerAngles.y + Time.deltaTime * 60f * 12f * _fastLandCounter, rb.transform.eulerAngles.z);
     }
     private void FastLand(Rigidbody rb)
     {
@@ -603,7 +657,7 @@ public class PlayerMovement : MonoBehaviour
             direction += transform.forward / 2f;
         else if (vertical == 0)
             direction *= 0.5f;
-        Vector3 jumpVelocity = direction * PlayerMovement._instance._jumpPower * 2.4f - rb.velocity.y * Vector3.up / 2f;
+        Vector3 jumpVelocity = direction * PlayerMovement._instance._jumpPower * 1.35f - rb.velocity.y * Vector3.up / 2f;
 
         Vector2 tempVel = new Vector2(rb.velocity.x, rb.velocity.z);
         Vector2 tempDir = new Vector2(direction.x, direction.z);
@@ -651,12 +705,12 @@ public class PlayerMovement : MonoBehaviour
         _isHookAllowed = true;
         SoundManager._instance.PlaySound(SoundManager._instance.HookReady, transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
     }
-    private void ArrangeIsVelocityToForward()
+    private void ArrangeIsVelocityToForward(float time)
     {
         _isAllowedToVelocityForward = false;
         if (_openVelocityForwardCoroutine != null)
             StopCoroutine(_openVelocityForwardCoroutine);
-        _openVelocityForwardCoroutine = StartCoroutine(OpenIsAllowedToVelocityForward(0.7f));
+        _openVelocityForwardCoroutine = StartCoroutine(OpenIsAllowedToVelocityForward(time));
     }
     IEnumerator OpenIsAllowedToVelocityForward(float time)
     {
@@ -668,7 +722,7 @@ public class PlayerMovement : MonoBehaviour
     {
         //Vector3 offsetByRotation = transform.up * _HandOffsetForHook.position.y + transform.right * _HandOffsetForHook.position.x + transform.forward * _HandOffsetForHook.position.z;
         RaycastHit hit;
-        Physics.Raycast(_HandOffsetForHook.position, PlayerStateController._instance._cameraController.transform.forward, out hit, _MaxHookLenght);
+        Physics.Raycast(_HandOffsetForHook.position, PlayerStateController._instance._cameraController.transform.forward, out hit, _MaxHookLenght, GameManager._instance.LayerMaskForVisible);
         return hit;
     }
     public RaycastHit RaycastForUpHook()
@@ -699,7 +753,7 @@ public class PlayerMovement : MonoBehaviour
 
         //Vector3 offsetByRotation = transform.up * _HandOffsetForUpHook.position.y + transform.right * _HandOffsetForUpHook.position.x + transform.forward * _HandOffsetForUpHook.position.z;
         RaycastHit hit;
-        Physics.Raycast(_HandOffsetForUpHook.position, dir, out hit, _MaxHookLenght);
+        Physics.Raycast(_HandOffsetForUpHook.position, dir, out hit, _MaxHookLenght, GameManager._instance.LayerMaskForVisible);
         return hit;
     }
     private string GetThrowHookName()
@@ -709,7 +763,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (PlayerStateController._instance._playerState is PlayerStates.OnWall)
         {
-            isLeft = !(PlayerStateController._instance._playerState as PlayerStates.OnWall).isWallOnLeftSide;
+            isLeft = !(PlayerStateController._instance._playerState as PlayerStates.OnWall)._isWallOnLeftSide;
         }
         else
         {
@@ -751,7 +805,7 @@ public class PlayerMovement : MonoBehaviour
             _isHookDisabled = false;
 
             PlayerStateController._instance.ChangeAnimation("UpHookThrow");
-            SoundManager._instance.PlaySound(SoundManager._instance.ThrowHook, transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.ThrowHook, transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
             CameraController.ShakeCamera(3.5f, 1.2f, 0.15f, 0.7f);
 
             PlayerMovement._instance._hookConnectedTransform = hit.collider.transform;
@@ -797,7 +851,7 @@ public class PlayerMovement : MonoBehaviour
 
             PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.7f));
             PlayerStateController._instance.ChangeAnimation(GetThrowHookName());
-            SoundManager._instance.PlaySound(SoundManager._instance.ThrowHook, transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.ThrowHook, transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
             CameraController.ShakeCamera(3.5f, 1.2f, 0.15f, 0.7f);
 
             PlayerMovement._instance._hookConnectedTransform = hit.collider.transform;
@@ -823,17 +877,21 @@ public class PlayerMovement : MonoBehaviour
     }
     public void PullHook()
     {
-        if (_isAllowedHookCoroutine != null)
-            StopCoroutine(_isAllowedHookCoroutine);
         _isHookAllowed = false;
         _isHookDisabled = true;
+
+        if (_isAllowedHookCoroutine != null)
+            StopCoroutine(_isAllowedHookCoroutine);
         _isAllowedHookCoroutine = StartCoroutine("IsAllowedHookTimer");
-        StartCoroutine(PullHookPositionCoroutine());
+
+        if (_pullHookPositionCoroutine != null)
+            StopCoroutine(_pullHookPositionCoroutine);
+        _pullHookPositionCoroutine = StartCoroutine(PullHookPositionCoroutine());
     }
     private IEnumerator PullHookPositionCoroutine()
     {
         float startTime = Time.time;
-        float localAnimTime = _hookAnimTime * 2f;
+        float localAnimTime = _hookAnimTime * 1.5f;
         while (Time.time < startTime + localAnimTime)
         {
             PlayerStateController._instance._lineRenderer.SetPosition(1, Vector3.Lerp(_hookConnectedTransform.position + _hookConnectedPositionOffset, PlayerStateController._instance._lineRenderer.GetPosition(0), (Time.time - startTime) / localAnimTime));
@@ -846,15 +904,15 @@ public class PlayerMovement : MonoBehaviour
     }
     public void HookPullMovement(Rigidbody rb, bool isUpHook, RaycastHit hit)
     {
-        SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, hit.point, 0.5f, false, UnityEngine.Random.Range(0.8f, 0.9f));
+        SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, hit.point, 0.5f, false, UnityEngine.Random.Range(0.6f, 0.7f));
         GameObject decal = Instantiate(GameManager._instance.HoleDecal, hit.point, Quaternion.identity);
         decal.GetComponent<DecalProjector>().size *= UnityEngine.Random.Range(1.4f, 2.1f);
-        decal.transform.forward = hit.transform.right;
+        decal.transform.forward = hit.normal;
         decal.transform.localEulerAngles = new Vector3(decal.transform.localEulerAngles.x, decal.transform.localEulerAngles.y, UnityEngine.Random.Range(0f, 360f));
         GameObject smokeVFX = Instantiate(GameManager._instance.HitSmokeVFX, hit.point + hit.normal * 0.5f, Quaternion.identity);
         smokeVFX.transform.localScale *= 5f;
-        Color color = smokeVFX.GetComponentInChildren<SpriteRenderer>().color;
-        smokeVFX.GetComponentInChildren<SpriteRenderer>().color = new Color(color.r, color.g, color.b, color.a / 2.5f);
+        Color temp = smokeVFX.GetComponentInChildren<SpriteRenderer>().color;
+        smokeVFX.GetComponentInChildren<SpriteRenderer>().color = new Color(temp.r, temp.g, temp.b, 7.5f / 255f);
         Destroy(smokeVFX, 5f);
 
         _Stamina -= _hookStaminaUse;
@@ -878,7 +936,7 @@ public class PlayerMovement : MonoBehaviour
         if (dir.y > 0)
         {
             lerpSpeed *= 1f;
-            dir.y *= 1.2f;
+            dir.y *= 1.1f;
         }
         dir.y += 0.1f;
 
@@ -925,12 +983,18 @@ public class PlayerMovement : MonoBehaviour
         Vector3 tempForward = rb.transform.forward;
         tempForward.y = 0f;
         float angle = -Vector3.SignedAngle(tempForward, Vector3.forward, Vector3.up);
-        Vector3 direction = Quaternion.AngleAxis(angle, Vector3.up) * new Vector3(InputHandler.GetAxis("Horizontal"), 0f, InputHandler.GetAxis("Vertical")).normalized;
-        rb.velocity = direction * _DodgeSpeed;
+        Vector3 axis = new Vector3(InputHandler.GetAxis("Horizontal"), 0f, InputHandler.GetAxis("Vertical")).normalized;
+        if (axis == Vector3.zero)
+        {
+            if (IsGrounded()) axis = -Vector3.forward;
+            else axis = Vector3.forward;
+        }
+        Vector3 direction = Quaternion.AngleAxis(angle, Vector3.up) * axis;
+        rb.velocity = direction * _DodgeSpeed + rb.velocity * 0.5f;
 
         if (InputHandler.GetAxis("Vertical") > 0)
         {
-            rb.velocity *= 1.25f;
+            rb.velocity *= 1.3f;
         }
     }
     public void BlockedMove(Rigidbody rb, Vector3 direction)
@@ -972,9 +1036,21 @@ public class PlayerMovement : MonoBehaviour
         }
         rb.velocity = dir * _ForwardLeapSpeed;
     }
+    public void WallMovementStarted(Rigidbody rb)
+    {
+        rb.velocity += Vector3.up * 2f;
+        if (_touchingWallColliders.Count == 0) return;
+
+        Vector3 temp = rb.velocity;
+        temp.y = 0f;
+        temp=temp.magnitude * GetForwardDirectionForWall(transform, 1f);
+        Vector3 check1 = new Vector3(temp.x, rb.velocity.y, temp.z);
+        Vector3 check2 = -new Vector3(temp.x, rb.velocity.y, temp.z);
+        rb.velocity = Vector3.Angle(check1, temp) < Vector3.Angle(check2, temp) ? check1 : check2;
+    }
     public void Walk(Rigidbody rb)
     {
-        float lerpSpeed = rb.velocity.magnitude < _MoveSpeed? 40f : 20f;
+        float lerpSpeed = rb.velocity.magnitude < _MoveSpeed? 30f : 15f;
         Movement(rb, _MoveSpeed, lerpSpeed);
     }
     public void Run(Rigidbody rb)
@@ -993,9 +1069,9 @@ public class PlayerMovement : MonoBehaviour
         else if (directionToSpeedAngle > 7f)
             Movement(rb, _RunSpeed * 0.85f, 15f);
         else if (rb.velocity.magnitude < _MoveSpeed + (_RunSpeed - _MoveSpeed) / 2f)
-            Movement(rb, _RunSpeed, 6f);
+            Movement(rb, _RunSpeed, 4f);
         else
-            Movement(rb, _RunSpeed, 3f);
+            Movement(rb, _RunSpeed, 2f);
         _Stamina -= Time.deltaTime * _staminaDecreasePerSecond;
     }
     public void WallWalk(Rigidbody rb)
@@ -1039,7 +1115,6 @@ public class PlayerMovement : MonoBehaviour
         Vector3 forwardDirection = (rb.transform.forward * yInput);
         float rightDirDecreaseAmount = (0.3f + rb.velocity.magnitude / 15f * 0.1f);
         Vector3 direction = (forwardDirection + rightDirection).normalized - rightDirection * rightDirDecreaseAmount + (rightDirection * rightDirDecreaseAmount).magnitude * forwardDirection / 2f;
-
         if (yInput < 0)
         {
             direction -= forwardDirection * 0.38f;
@@ -1076,10 +1151,10 @@ public class PlayerMovement : MonoBehaviour
     {
         if (PlayerMovement._instance._touchingWallColliders.Count == 0) return Vector3.zero;
 
-        Vector2 first = new Vector2(PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.forward.x, PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.forward.z);
-        Vector2 second = new Vector2(transform.forward.x, transform.forward.z);
+        Vector3 first = new Vector3(PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.forward.x, 0f, PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.forward.z);
+        Vector3 second = new Vector3(transform.forward.x, 0f, transform.forward.z);
         float isForward = 0f;
-        if (Vector2.Dot(first, second) > 0)//angle lower than 90
+        if (Vector3.Angle(first, second) < 90)//angle lower than 90
         {
             isForward = 1;
         }
@@ -1104,6 +1179,7 @@ public class PlayerMovement : MonoBehaviour
         if (PlayerMovement._instance._touchingWallColliders.Count == 0) return;
 
         _constantForceUp.force = Vector3.up * 15f;
+        if (PlayerMovement._instance._isAllowedToWallRun) _constantForceUp.force *= 4f;
         GameManager._instance.CallForAction(() => { if (PlayerStateController._instance._playerState is Movement) return; _constantForceUp.force = Vector3.up * 7f; }, 0.25f);
 
         float yInput = InputHandler.GetAxis("Vertical");
@@ -1173,15 +1249,15 @@ public class PlayerMovement : MonoBehaviour
     }
     public void DeathMove(Vector3 dir, float killersVelocityMagnitude)
     {
-        float deathSpeed = 1f;
+        float deathSpeed = 2.5f;
         PlayerStateController._instance._rb.velocity += dir * deathSpeed + dir * killersVelocityMagnitude / 5f;
         StartCoroutine(DeathMoveCoroutine(PlayerStateController._instance._rb.velocity));
     }
     private IEnumerator DeathMoveCoroutine(Vector3 vel)
     {
+        float startTime = Time.time;
         while (true)
         {
-
             PlayerStateController._instance._rb.velocity = vel;
             yield return null;
         }

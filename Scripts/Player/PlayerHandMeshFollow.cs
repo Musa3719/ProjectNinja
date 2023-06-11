@@ -13,7 +13,7 @@ public class PlayerHandMeshFollow : MonoBehaviour
 
     private void LateUpdate()
     {
-        Vector3 targetRot = new Vector3(_camTransform.transform.eulerAngles.x, _camTransform.transform.eulerAngles.y, 0f);
+        Vector3 targetRot = new Vector3(_camTransform.transform.eulerAngles.x < 180 ? _camTransform.transform.eulerAngles.x / 1.6f : (_camTransform.transform.eulerAngles.x - 360) / 1.1f, _camTransform.transform.eulerAngles.y, 0f);
         transform.rotation = Quaternion.Euler(targetRot);
 
         Vector3 positionOffsetForward = _positionOffset.y * _camTransform.up + _positionOffset.z * _camTransform.forward;
@@ -23,30 +23,8 @@ public class PlayerHandMeshFollow : MonoBehaviour
         //ArrangeByCameraMovement();
 
         _lastCamAngle = _camTransform.transform.eulerAngles;
-
-        if (PlayerStateController._instance._playerState is PlayerStates.OnWall && PlayerMovement._instance._touchingWallColliders.Count > 0)
-        {
-            Collider wallCollider = PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1];
-
-            Vector3 tempCameraDirection = _camTransform.right;
-            tempCameraDirection.y = 0f;
-
-            Vector3 tempWallDirection = wallCollider.transform.right;
-            tempWallDirection.y = 0f;
-
-            float angle = Vector3.Angle(tempWallDirection, tempCameraDirection);
-            if (angle < 25f)
-                OnWallSparks();
-            else
-                PlayerMovement._instance._isAllowedToWallRun = false;
-        }
     }
-    private void OnWallSparks()
-    {
-        //sound and vfx
-        PlayerMovement._instance._isAllowedToWallRun = true;
-    }
-    
+   
     private void ArrangeByCameraMovement()
     {
         if(_lastCamAngle.x > _camTransform.transform.eulerAngles.x)

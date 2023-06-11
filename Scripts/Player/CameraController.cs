@@ -13,6 +13,8 @@ public class CameraController : MonoBehaviour
     [SerializeField]
     private PlayerHandMeshFollow HandMeshFollowScript;
 
+    public float RunCounter;
+
     private Transform _playerTransform;
 
     private Vector3 _playerForwardBefore;
@@ -27,6 +29,7 @@ public class CameraController : MonoBehaviour
 
     private bool _isHeadRotateValueIncreasing;
     private float _headRotateValue;
+    private bool _isRunningForCamera;
 
     void Awake()
     {
@@ -51,6 +54,12 @@ public class CameraController : MonoBehaviour
     void LateUpdate()
     {
         if (PlayerCombat._instance.IsDead) return;
+
+        if (PlayerStateController.IsRunning() && !_isRunningForCamera)
+        {
+            RunCounter = 1f;
+        }
+        _isRunningForCamera = PlayerStateController.IsRunning();
 
         Vector3 targetPosition = _playerTransform.position + _cameraOffset + _headBobber.bobOffset;
         transform.localPosition = Vector3.Lerp(transform.localPosition, targetPosition, Time.deltaTime * 25f);
@@ -90,14 +99,13 @@ public class CameraController : MonoBehaviour
     }
     private IEnumerator DeathMoveCoroutine()
     {
-        float xRotationSpeed = Random.Range(25f, 35f);
+        float xRotationSpeed = Random.Range(65f, 95f);
         float zRotationSpeed = Random.Range(12f, 18f);
         zRotationSpeed = Random.Range(0, 2) == 0 ? zRotationSpeed : -zRotationSpeed;
-        float fallSpeed = 2f;
+        float startTime = Time.time;
         while (true)
         {
             transform.eulerAngles = new Vector3(transform.eulerAngles.x - Time.deltaTime * xRotationSpeed, transform.eulerAngles.y, transform.eulerAngles.z + Time.deltaTime * zRotationSpeed);
-            transform.position -= Vector3.up * fallSpeed * Time.deltaTime + PlayerStateController._instance.transform.forward * fallSpeed * 0.85f * Time.deltaTime;
             HandMeshFollowScript._positionOffset.z -= Time.deltaTime * 0.65f;
             yield return null;
         }
@@ -117,10 +125,16 @@ public class CameraController : MonoBehaviour
         float xOffset = -InputHandler.GetAxis("Mouse Y") * Time.deltaTime * 60f / 12f * Options._instance.MouseSensitivity * _verticalCameraModifier * Mathf.Cos(speed.magnitude / PlayerMovement._instance._RunSpeed * Mathf.PI / 4f); // cos func for slowing camera 
         float yOffset = InputHandler.GetAxis("Mouse X") * Time.deltaTime * 60f / 12f * Options._instance.MouseSensitivity * Mathf.Cos(speed.magnitude / PlayerMovement._instance._RunSpeed * Mathf.PI / 4f);
 
+        if (RunCounter > 0)
+        {
+            xOffset += RunCounter * Time.deltaTime * 14f;
+            RunCounter = Mathf.Lerp(RunCounter, -0.025f, Time.deltaTime * 3f);
+        }
+
         if (PlayerCombat._instance._IsAttacking)
         {
-            xOffset /= 2f;
-            yOffset /= 2f;
+            /*xOffset *= 0.75f;
+            yOffset *= 0.75f;*/
         }
 
         float[] offsets = GetAvarageMouseOffsets(xOffset, yOffset, 2);
@@ -137,7 +151,7 @@ public class CameraController : MonoBehaviour
             transform.localEulerAngles = new Vector3(newX, transform.localEulerAngles.y, transform.localEulerAngles.z);
         }
 
-        if(isVelocityToForward && PlayerMovement._instance._isAllowedToVelocityForward)//is allowed is always true now except attackDeflectedMove
+        if(isVelocityToForward && PlayerMovement._instance._isAllowedToVelocityForward)
             VelocityToForward();
 
         ArrangeOnWallCamera();

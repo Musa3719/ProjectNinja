@@ -28,7 +28,9 @@ public class PlayerCombat : MonoBehaviour, IKillable
 
     private float _lastAttackTime;
     private int _lastAttackNumber;
-    
+
+    [SerializeField]
+    private Transform _sparkPosition;
     [SerializeField]
     private CapsuleCollider _attackColliderWarning;
     [SerializeField]
@@ -77,6 +79,8 @@ public class PlayerCombat : MonoBehaviour, IKillable
     private float _dodgeWaitTime;
     private float _dodgeTime;
 
+    public bool _isImmune { get; set; }
+
     private int _lastAttackDeflectedCounter;
     private float _lastAttackDeflectedTime;
 
@@ -98,8 +102,8 @@ public class PlayerCombat : MonoBehaviour, IKillable
         _isAllowedToForwardLeap = true;
         _isAllowedToThrow = true;
         _blockWaitTime = 0.1f;
-        _attackWaitTime = 0.6f;
-        _attackTime = 0.75f;
+        _attackWaitTime = 0.725f;
+        _attackTime = 0.7f;
         _forwardLeapWaitTime = 3f;
         _throwWaitTime = 0.8f;
         _dodgeWaitTime = 0.75f;
@@ -130,19 +134,19 @@ public class PlayerCombat : MonoBehaviour, IKillable
     }
     public void AttackDeflected(IKillable deflectedKillable)
     {
-        CameraController.ShakeCamera(2.2f, 1.4f, 0.1f, 0.3f);
+        CameraController.ShakeCamera(4f, 1.8f, 0.1f, 0.3f);
         PlayerMovement._instance._Stamina -= PlayerMovement._instance._attackDeflectedStaminaUse;
         PlayerStateController._instance.ChangeAnimation(GetAttackDeflectedName());
         SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.AttackDeflecteds), transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         _IsAttacking = false;
         _IsAttackInterrupted = true;
         PlayerMovement._instance.AttackDeflectedMove(PlayerStateController._instance._rb);
-        GameManager._instance.CallForAction(() => _IsAttackInterrupted = false, _attackWaitTime * 2f);
+        GameManager._instance.CallForAction(() => _IsAttackInterrupted = false, _attackWaitTime * 1.25f);
         _attackColliderWarning.gameObject.SetActive(false);
         _attackCollider.gameObject.SetActive(false);
 
         _isAllowedToAttack = false;
-        GameManager._instance.CallForAction(() => _isAllowedToAttack = true, _attackWaitTime * 2f);
+        GameManager._instance.CallForAction(() => _isAllowedToAttack = true, _attackWaitTime * 1.25f);
     }
 
     public void AddToThrowableInventory(IThrowableItem item)
@@ -211,14 +215,14 @@ public class PlayerCombat : MonoBehaviour, IKillable
     }
     public void DeflectWithBlock(Vector3 dir, IKillable attacker, bool isRangedAttack)
     {
-        _IsBlocking = false;
-
-
         if (Time.time - _blockStartTime > _blockTimingValue)
         {
-            if (PlayerMovement._instance._Stamina < PlayerMovement._instance._blockedStaminaUse) return;
+            if (PlayerMovement._instance._Stamina < PlayerMovement._instance._blockedStaminaUse)
+            {
+                Die(dir, attacker.Object.GetComponent<Rigidbody>().velocity.magnitude);
+                return;
+            }
 
-            Vector3 VFXposition = _meleeWeapon.transform.position - transform.forward * 1.5f;
             PlayerStateController._instance.ChangeAnimation(GetBlockedName());
             SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
             CameraController.ShakeCamera(4f, 1.15f, 0.15f, 0.65f);
@@ -230,7 +234,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
                 StopCoroutine(_isBlockedOrDeflectedCoroutine);
             _isBlockedOrDeflectedCoroutine = StartCoroutine(IsBlockedOrDeflectedCoroutine());
 
-            GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.SparksVFX), VFXposition, Quaternion.identity);
+            GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.SparksVFX), _sparkPosition.position, Quaternion.identity);
             Destroy(sparksVFX, 4f);
 
             Debug.Log("Blocked with bad timing...");
@@ -253,7 +257,6 @@ public class PlayerCombat : MonoBehaviour, IKillable
         }
         else
         {
-            Vector3 VFXposition = _meleeWeapon.transform.position + transform.forward * 0.5f;
             CameraController.ShakeCamera(3f, 1.1f, 0.2f, 0.5f);
             PlayerStateController._instance.ChangeAnimation(GetDeflectedName());
             SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
@@ -262,7 +265,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
                 StopCoroutine(_isBlockedOrDeflectedCoroutine);
             _isBlockedOrDeflectedCoroutine = StartCoroutine(IsBlockedOrDeflectedCoroutine());
 
-            GameObject sparksVFX = Instantiate(GameManager._instance.ShiningSparksVFX[1], VFXposition, Quaternion.identity);
+            GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.ShiningSparksVFX), _sparkPosition.position, Quaternion.identity);
             Destroy(sparksVFX, 4f);
 
             if (attacker != null && attacker.Object.CompareTag("Boss"))
@@ -310,18 +313,20 @@ public class PlayerCombat : MonoBehaviour, IKillable
     {
         if (!_isAllowedToAttack) return;
 
+        string attackName = GetAttackName();
+
         PlayerMovement._instance._Stamina -= PlayerMovement._instance._attackStaminaUse;
         _isAllowedToAttack = false;
         PlayerCombat._instance._IsAttacking = true;
 
-        CameraController.ShakeCamera(2f, 1.75f, 0.15f, 0.35f);
+        CameraController._instance.GetComponentInChildren<Animator>().CrossFade("CameraAttack" + attackName.Substring(attackName.Length - 1), 0.25f);
 
         GameManager._instance.PlayerAttackHandle();
         GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; _isAllowedToAttack = true; }, _attackWaitTime);
 
-        PlayerStateController._instance.ChangeAnimation(GetAttackName());
-        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.3f, false, UnityEngine.Random.Range(0.9f, 1f)), 0.3f);
-        SoundManager._instance.PlaySound(SoundManager._instance.BladeSlide, transform.position, 0.4f, false, UnityEngine.Random.Range(0.8f, 0.95f));
+        PlayerStateController._instance.ChangeAnimation(attackName);
+        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.125f, false, UnityEngine.Random.Range(1f, 1.1f)), 0.3f);
+        SoundManager._instance.PlaySound(SoundManager._instance.BladeSlide, transform.position, 0.2f, false, UnityEngine.Random.Range(0.65f, 0.75f));
 
 
         /*GameManager._instance.CallForAction(() =>
@@ -335,17 +340,17 @@ public class PlayerCombat : MonoBehaviour, IKillable
             _attackColliderWarning.gameObject.SetActive(false);
         _attackColliderWarning.gameObject.SetActive(true);
 
-        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackColliderWarning.gameObject.SetActive(false); }, _attackTime);
+        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackColliderWarning.gameObject.SetActive(false); }, _attackTime * 0.7f);
 
-        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(true);}, _attackTime * 0.5f);
+        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(true); CameraController.ShakeCamera(2f, 1.75f, 0.15f, 0.35f); }, _attackTime * 0.5f);
 
-        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(false); PlayerCombat._instance._IsAttacking = false; }, _attackTime);
+        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(false); PlayerCombat._instance._IsAttacking = false; }, _attackTime * 0.7f);
     }
     private void SelectAttackType()
     {
         if (PlayerStateController._instance._playerState is PlayerStates.OnWall)
         {
-            bool isLeft = !(PlayerStateController._instance._playerState as PlayerStates.OnWall).isWallOnLeftSide;
+            bool isLeft = !(PlayerStateController._instance._playerState as PlayerStates.OnWall)._isWallOnLeftSide;
             if(isLeft)
                 _attackType = AttackType.Left;
             else
@@ -466,7 +471,6 @@ public class PlayerCombat : MonoBehaviour, IKillable
     public string GetAttackName()
     {
         SelectAttackType();
-
         if (_attackType == AttackType.Both)
         {
             if (_lastAttackTime + 1.5f > Time.time)
@@ -485,9 +489,9 @@ public class PlayerCombat : MonoBehaviour, IKillable
             _lastAttackTime = Time.time;
             _lastAttackNumber = 0;
             if(_attackType == AttackType.Left)
-                return "LeftAttack" + UnityEngine.Random.Range(1, 2).ToString();
+                return "LeftAttack" + UnityEngine.Random.Range(1, 3).ToString();
             else
-                return "RightAttack" + UnityEngine.Random.Range(1, 2).ToString();
+                return "RightAttack" + UnityEngine.Random.Range(1, 3).ToString();
         }
     }
     public string GetThrowName()
@@ -496,7 +500,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
 
         if (PlayerStateController._instance._playerState is PlayerStates.OnWall)
         {
-            isLeft = !(PlayerStateController._instance._playerState as PlayerStates.OnWall).isWallOnLeftSide;
+            isLeft = !(PlayerStateController._instance._playerState as PlayerStates.OnWall)._isWallOnLeftSide;
         }
         else
         {
@@ -515,8 +519,23 @@ public class PlayerCombat : MonoBehaviour, IKillable
             return "RightThrow";
         }
     }
+    
     public void Die(Vector3 dir, float killersVelocityMagnitude)
     {
+        if (GameManager._instance.isPlayerDead) return;
+
+        if (_isImmune)
+        {
+            PlayerStateController._instance.ChangeAnimation("Born");
+            PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.6f));
+            SoundManager._instance.PlaySound(SoundManager._instance.Die, transform.position, 0.1f, false, UnityEngine.Random.Range(0.5f, 0.6f));
+            GameObject deathVfx = Instantiate(GameManager._instance.DeathVFX, Camera.main.transform);
+            deathVfx.transform.localPosition = new Vector3(0f, 0f, 0.1f);
+            deathVfx.GetComponentInChildren<SpriteRenderer>().color = new Color(1f, 1f, 1f, 0.5f);
+            Destroy(deathVfx, 1f);
+            return;
+        }
+
         CameraController.ShakeCamera(3.25f, 1.4f, 0.15f, 2.25f);
 
         PlayerStateController._instance._Animator.SetTrigger("Death");

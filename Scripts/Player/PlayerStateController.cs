@@ -126,16 +126,16 @@ public class PlayerStateController : MonoBehaviour
         {
             if ((_playerAnimState as PlayerAnimations.OnWall).isWallOnTheLeftSide && !_Animator.IsInTransition(2))
             {
-                if (PlayerMovement._instance._lastTimeOnWallFastLanded + 0.1f >= Time.time && !_Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand"))
+                if (PlayerMovement._instance._lastTimeOnWallFastLanded + 0.1f >= Time.time && _Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall"))
                     ChangeAnimation("LeftOnWallFastLand");
-                else if(PlayerMovement._instance._lastTimeOnWallFastLanded + 0.1f < Time.time && !_Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall"))
+                else if(PlayerMovement._instance._lastTimeOnWallFastLanded + 0.1f < Time.time && _Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand"))
                     ChangeAnimation("LeftOnWall");
             }
             else if (!(_playerAnimState as PlayerAnimations.OnWall).isWallOnTheLeftSide && !_Animator.IsInTransition(3))
             {
-                if (PlayerMovement._instance._lastTimeOnWallFastLanded + 0.1f >= Time.time && !_Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWallFastLand"))
+                if (PlayerMovement._instance._lastTimeOnWallFastLanded + 0.1f >= Time.time && _Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWall"))
                     ChangeAnimation("RightOnWallFastLand");
-                else if (PlayerMovement._instance._lastTimeOnWallFastLanded + 0.1f < Time.time && !_Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWall"))
+                else if (PlayerMovement._instance._lastTimeOnWallFastLanded + 0.1f < Time.time && _Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWallFastLand"))
                     ChangeAnimation("RightOnWall");
             }
         }
@@ -166,7 +166,7 @@ public class PlayerStateController : MonoBehaviour
         _attackBufferTime = 0.7f;
         _forwardLeapBufferTime = 0.4f;
         _throwBufferTime = 0.4f;
-        _coyoteTime = 0.4f;
+        _coyoteTime = 0.2f;
         //Debug.Log(UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale.name);
         _rb = GetComponent<Rigidbody>();
         _cameraController = Camera.main.transform.parent.parent.GetComponent<CameraController>();
@@ -182,10 +182,19 @@ public class PlayerStateController : MonoBehaviour
         _playerState.DoState(_rb);
         _playerAnimState.DoState(_rb);
         ArrangeAnimStateParameter();
+        CheckForCanDoWallMovement();
 
         UIArrangements();
         ArrangeAttackBlockedCounter();
         CheckForLoopSounds();
+    }
+    private void CheckForCanDoWallMovement()
+    {
+        if (InputHandler.GetButtonDown("LeaveWall"))
+        {
+            PlayerMovement._instance._canDoWallMovement = !PlayerMovement._instance._canDoWallMovement;
+            GameManager._instance.CanDoWallMovementUI.SetActive(!GameManager._instance.CanDoWallMovementUI.activeInHierarchy);
+        }
     }
     private void ArrangeAttackBlockedCounter()
     {
@@ -304,24 +313,23 @@ public class PlayerStateController : MonoBehaviour
 
     public static void CheckForBlock()
     {
-        if (InputHandler.GetButton("Block") && PlayerCombat._instance._isAllowedToBlock && !PlayerCombat._instance._IsStunned && !PlayerCombat._instance._IsAttacking)
+        if (InputHandler.GetButton("Block") && PlayerCombat._instance._isAllowedToBlock && !PlayerCombat._instance._IsStunned && !PlayerCombat._instance._IsAttacking && PlayerMovement._instance._Stamina >= PlayerMovement._instance._blockedStaminaUse)
         {
             if (!PlayerCombat._instance._IsBlocking)
-                SoundManager._instance.PlaySound(SoundManager._instance.BladeSlide, PlayerStateController._instance.transform.position, 0.18f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                SoundManager._instance.PlaySound(SoundManager._instance.BladeSlide, PlayerStateController._instance.transform.position, 0.07f, false, UnityEngine.Random.Range(0.75f, 0.85f));
             PlayerCombat._instance._IsBlocking = true;
         }
         else
         {
             if (PlayerCombat._instance._IsBlocking)
-                SoundManager._instance.PlaySound(SoundManager._instance.BladeSlide, PlayerStateController._instance.transform.position, 0.18f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                SoundManager._instance.PlaySound(SoundManager._instance.BladeSlide, PlayerStateController._instance.transform.position, 0.07f, false, UnityEngine.Random.Range(0.75f, 0.85f));
             PlayerCombat._instance._IsBlocking = false;
         }
 
     }
     public static bool CheckForDodge()
     {
-        float direction = new Vector3(InputHandler.GetAxis("Horizontal"), 0f, InputHandler.GetAxis("Vertical")).magnitude;
-        if (InputHandler.GetButtonDown("Dodge") && PlayerCombat._instance._isAllowedToDodge && PlayerMovement._instance._isDodgeAllowedForAir && !PlayerCombat._instance._IsDodgingOrForwardLeap && direction > 0 && PlayerMovement._instance._Stamina >= PlayerMovement._instance._dodgeStaminaUse)
+        if (InputHandler.GetButtonDown("Dodge") && PlayerCombat._instance._isAllowedToDodge && PlayerMovement._instance._isDodgeAllowedForAir && !PlayerCombat._instance._IsDodgingOrForwardLeap && PlayerMovement._instance._Stamina >= PlayerMovement._instance._dodgeStaminaUse)
         {
             return true;
         }
@@ -330,7 +338,7 @@ public class PlayerStateController : MonoBehaviour
     }
     public static bool CheckForOnWall()
     {
-        bool onWall = !PlayerMovement._instance.IsGrounded() && PlayerMovement._instance.IsTouching() && !PlayerMovement._instance._isJumped && !InputHandler.GetButton("LeaveWall") && !PlayerCombat._instance._IsBlocking;
+        bool onWall = !PlayerMovement._instance.IsGrounded() && PlayerMovement._instance.IsTouching() && !PlayerMovement._instance._isJumped && PlayerMovement._instance._canDoWallMovement && !PlayerCombat._instance._IsBlocking && PlayerMovement._instance._lastExitWallTime + 0.35f < Time.time;
         return onWall;
     }
     public static bool CheckForHookTrigger()
@@ -348,6 +356,16 @@ public class PlayerStateController : MonoBehaviour
             return false;
         }
         bool isRayHit = hit.collider.gameObject.layer == LayerMask.NameToLayer("Grounds") || hit.collider.CompareTag("Wall");
+
+        if ((hit.point - PlayerStateController._instance.transform.position).magnitude < 3f)
+        {
+            if (PlayerMovement._instance._lastHookNotReadyTime + 0.5f < Time.time)
+            {
+                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                PlayerMovement._instance._lastHookNotReadyTime = Time.time;
+            }
+            return false;
+        }
 
         if (!(PlayerMovement._instance._isHookAllowed && PlayerMovement._instance._isHookAllowedForAir && isRayHit && PlayerMovement._instance._Stamina >= PlayerMovement._instance._hookStaminaUse) && PlayerMovement._instance._lastHookTime + 0.5 < Time.time)
         {
@@ -543,7 +561,7 @@ public class PlayerStateController : MonoBehaviour
             PlayerStateController._instance.StaminaRegenSoundObject.transform.position = transform.position;
         }
 
-        if ((!(_playerState is Movement) || !(_playerState as Movement).isCrouching || _rb.velocity.magnitude < 1.5f) && PlayerStateController._instance.SlidingSoundObject != null)
+        if ((!(_playerState is Movement) || !(_playerState as Movement)._isCrouching || _rb.velocity.magnitude < 1.5f) && PlayerStateController._instance.SlidingSoundObject != null)
             Destroy(PlayerStateController._instance.SlidingSoundObject);
     }
 
@@ -573,7 +591,7 @@ public class PlayerStateController : MonoBehaviour
     }
     public static bool CheckForCrouch()
     {
-        if ((PlayerStateController._instance._playerState as Movement).isCrouching) return false;
+        if ((PlayerStateController._instance._playerState as Movement)._isCrouching) return false;
         return InputHandler.GetButton("Crouch") && !PlayerMovement._instance._isJumped && PlayerMovement._instance.IsGrounded() && PlayerStateController._instance._rb.velocity.magnitude > PlayerMovement._instance._MoveSpeed - 1.5f;
     }
     public static bool CheckForSlideWall()
@@ -587,7 +605,7 @@ public class PlayerStateController : MonoBehaviour
     public static void CheckForDisableCrouch()
     {
         if (!(PlayerStateController._instance._playerState is PlayerStates.Movement)) return;
-        if (!((PlayerStateController._instance._playerState as PlayerStates.Movement).isCrouching)) return;
+        if (!((PlayerStateController._instance._playerState as PlayerStates.Movement)._isCrouching)) return;
 
         Vector3 frontVector = PlayerStateController._instance._rb.transform.forward;
         frontVector.y = 0f;
@@ -611,7 +629,7 @@ public class PlayerStateController : MonoBehaviour
         var moveState = PlayerStateController._instance._playerState as PlayerStates.Movement;
         if (moveState != null)
         {
-            moveState.isCrouching = false;
+            moveState._isCrouching = false;
         }
     }
 
@@ -621,6 +639,6 @@ public class PlayerStateController : MonoBehaviour
     }
     private static bool IsRunningStateCheck()
     {
-        return (PlayerStateController._instance._playerState is PlayerStates.OnWall && PlayerMovement._instance._isAllowedToWallRun) || (PlayerStateController._instance._playerState is PlayerStates.Movement && !(PlayerStateController._instance._playerState as PlayerStates.Movement).isCrouching);
+        return (PlayerStateController._instance._playerState is PlayerStates.OnWall && PlayerMovement._instance._isAllowedToWallRun) || (PlayerStateController._instance._playerState is PlayerStates.Movement && !(PlayerStateController._instance._playerState as PlayerStates.Movement)._isCrouching);
     }
 }

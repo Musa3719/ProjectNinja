@@ -12,6 +12,7 @@ namespace PlayerAnimations
 
     public class Idle : IPlayerAnimState
     {
+        private float lastVelocityValueFrom;
         public void Enter(Rigidbody rb, IPlayerAnimState oldState)
         {
            
@@ -24,15 +25,15 @@ namespace PlayerAnimations
 
         public void DoState(Rigidbody rb)
         {
-            if (PlayerStateController._instance._playerState is PlayerStates.Movement && (PlayerStateController._instance._playerState as PlayerStates.Movement).isCrouching)
+            if (PlayerStateController._instance._playerState is PlayerStates.Movement && (PlayerStateController._instance._playerState as PlayerStates.Movement)._isCrouching)
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Sliding());
             }
-            else if (!PlayerMovement._instance.IsGrounded() && !PlayerCombat._instance._IsBlocking)
+            else if (!PlayerMovement._instance.IsGrounded(1.5f) && !PlayerCombat._instance._IsBlocking)
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.InAir());
             }
-            else if (rb.velocity.magnitude > 0.25f)
+            else if (lastVelocityValueFrom > 0.25f)
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Walk());
             }
@@ -48,7 +49,7 @@ namespace PlayerAnimations
 
         public void DoStateFixedUpdate(Rigidbody rb)
         {
-
+            lastVelocityValueFrom = rb.velocity.magnitude;
         }
 
         public void DoStateLateUpdate(Rigidbody rb)
@@ -66,6 +67,7 @@ namespace PlayerAnimations
     
     public class Walk : IPlayerAnimState
     {
+        private float lastVelocityValueFrom;
         public void Enter(Rigidbody rb, IPlayerAnimState oldState)
         {
            
@@ -78,19 +80,19 @@ namespace PlayerAnimations
 
         public void DoState(Rigidbody rb)
         {
-            if (PlayerStateController._instance._playerState is PlayerStates.Movement && (PlayerStateController._instance._playerState as PlayerStates.Movement).isCrouching)
+            if (PlayerStateController._instance._playerState is PlayerStates.Movement && (PlayerStateController._instance._playerState as PlayerStates.Movement)._isCrouching)
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Sliding());
             }
-            else if (!PlayerMovement._instance.IsGrounded() && !PlayerCombat._instance._IsBlocking)
+            else if (!PlayerMovement._instance.IsGrounded(1.5f) && !PlayerCombat._instance._IsBlocking)
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.InAir());
             }
-            else if (rb.velocity.magnitude <= 0.25f)
+            else if (lastVelocityValueFrom <= 0.25f)
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Idle());
             }
-            else if (rb.velocity.magnitude > PlayerMovement._instance._MoveSpeed + 1.5f)
+            else if (lastVelocityValueFrom > PlayerMovement._instance._MoveSpeed + 1.5f)
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Run());
             }
@@ -109,7 +111,7 @@ namespace PlayerAnimations
 
         public void DoStateFixedUpdate(Rigidbody rb)
         {
-
+            lastVelocityValueFrom = rb.velocity.magnitude;
         }
 
         public void DoStateLateUpdate(Rigidbody rb)
@@ -129,6 +131,7 @@ namespace PlayerAnimations
 
     public class Run : IPlayerAnimState
     {
+        private float lastVelocityValueFrom;
         public void Enter(Rigidbody rb, IPlayerAnimState oldState)
         {
             
@@ -141,15 +144,15 @@ namespace PlayerAnimations
 
         public void DoState(Rigidbody rb)
         {
-            if (PlayerStateController._instance._playerState is PlayerStates.Movement && (PlayerStateController._instance._playerState as PlayerStates.Movement).isCrouching)
+            if (PlayerStateController._instance._playerState is PlayerStates.Movement && (PlayerStateController._instance._playerState as PlayerStates.Movement)._isCrouching)
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Sliding());
             }
-            else if (!PlayerMovement._instance.IsGrounded() && !PlayerCombat._instance._IsBlocking)
+            else if (!PlayerMovement._instance.IsGrounded(1.5f) && !PlayerCombat._instance._IsBlocking)
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.InAir());
             }
-            else if (rb.velocity.magnitude <= PlayerMovement._instance._MoveSpeed)
+            else if (lastVelocityValueFrom <= PlayerMovement._instance._MoveSpeed)
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Walk());
             }
@@ -168,7 +171,7 @@ namespace PlayerAnimations
 
         public void DoStateFixedUpdate(Rigidbody rb)
         {
-
+            lastVelocityValueFrom = rb.velocity.magnitude;
         }
 
         public void DoStateLateUpdate(Rigidbody rb)
@@ -197,7 +200,7 @@ namespace PlayerAnimations
 
         public void DoState(Rigidbody rb)
         {
-            if (PlayerStateController._instance._playerState is PlayerStates.Movement && (PlayerStateController._instance._playerState as PlayerStates.Movement).isCrouching)
+            if (PlayerStateController._instance._playerState is PlayerStates.Movement && (PlayerStateController._instance._playerState as PlayerStates.Movement)._isCrouching)
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Sliding());
             }
@@ -352,7 +355,7 @@ namespace PlayerAnimations
 
         public void DoState(Rigidbody rb)
         {
-            if (!(PlayerStateController._instance._playerState is PlayerStates.Movement) || !(PlayerStateController._instance._playerState as PlayerStates.Movement).isCrouching)
+            if (!(PlayerStateController._instance._playerState is PlayerStates.Movement) || !(PlayerStateController._instance._playerState as PlayerStates.Movement)._isCrouching)
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Walk());
             }
@@ -384,7 +387,7 @@ namespace PlayerAnimations
         {
             if(PlayerStateController._instance._playerState is PlayerStates.OnWall)
             {
-                isWallOnTheLeftSide = (PlayerStateController._instance._playerState as PlayerStates.OnWall).isWallOnLeftSide;
+                isWallOnTheLeftSide = (PlayerStateController._instance._playerState as PlayerStates.OnWall)._isWallOnLeftSide;
             }
         }
 

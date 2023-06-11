@@ -13,17 +13,14 @@ namespace PlayerStates
 
     public class Movement : IPlayerState
     {
-        public bool isCrouching { get; set; }
-        private bool inAirFlag { get; set; }
-        private bool fastLandToGroundAnimationTriggered { get; set; }
-
+        public bool _isCrouching { get; set; }
         public void Enter(Rigidbody rb, IPlayerState oldState)
         {
             GameManager._instance.MidScreenDot.color = GameManager._instance.MidScreenDotMovementColor;
         }
         public void Exit(Rigidbody rb, IPlayerState newState)
         {
-            if (isCrouching)
+            if (_isCrouching)
             {
                 Debug.LogError("exiting with isCrouching");
                 PlayerStateController.DisableCrouch();
@@ -75,7 +72,7 @@ namespace PlayerStates
                 PlayerStateController._instance._attackBuffer = false;
 
                 PlayerCombat._instance.Attack();
-                //PlayerMovement._instance.AttackMove(PlayerStateController._instance._rb);
+                PlayerMovement._instance.AttackMove(PlayerStateController._instance._rb);
             }
             else if (PlayerStateController.CheckForForwardLeap())
             {
@@ -134,20 +131,7 @@ namespace PlayerStates
             }
             else if (PlayerMovement._instance.IsGrounded())
             {
-                if(PlayerMovement._instance._lastTimeFastLanded +0.25f > Time.time && !fastLandToGroundAnimationTriggered)
-                {
-                    fastLandToGroundAnimationTriggered = true;
-                    GameManager._instance.CallForAction(() => fastLandToGroundAnimationTriggered = false, 0.5f);
-                    inAirFlag = false;
-                    PlayerStateController._instance.ChangeAnimation("FastLandToGround");
-                }
-                else if(inAirFlag == true)
-                {
-                    inAirFlag = false;
-                    PlayerStateController._instance.ChangeAnimation("AirToGround");
-                }
-
-                if (isCrouching)
+                if (_isCrouching)
                 {
                     PlayerMovement._instance.CrouchMovement(rb);
                     CameraController._instance.LookAround(false);
@@ -167,8 +151,7 @@ namespace PlayerStates
             }
             else//in the air
             {
-                inAirFlag = true;
-                if (isCrouching)
+                if (_isCrouching)
                 {
                     Debug.LogError("crouch in the air deactivated");
                     PlayerStateController.DisableCrouch();
@@ -184,7 +167,7 @@ namespace PlayerStates
                 }
             }
 
-            if (!isCrouching)
+            if (!_isCrouching)
                 CameraController._instance.LookAround(true);
 
         }
@@ -201,13 +184,15 @@ namespace PlayerStates
     }
     public class OnWall : IPlayerState
     {
-        private float firstLerpTime;
-        public bool isWallOnLeftSide { get; private set; }
+        private float _firstLerpTime;
+        private float _endWallMovementCounter;
+        public bool _isWallOnLeftSide { get; private set; }
         
         
         public void Enter(Rigidbody rb, IPlayerState oldState)
         {
             PlayerStateController._instance._isSpinEnding = false;
+            PlayerMovement._instance.WallMovementStarted(rb);
 
             if (PlayerMovement._instance._touchingWallColliders.Count > 0)
             {
@@ -219,22 +204,22 @@ namespace PlayerStates
                 
                 if (Vector3.Dot(a.normalized, playerLeftVector) > 0)
                 {
-                    isWallOnLeftSide = true;
+                    _isWallOnLeftSide = true;
                     PlayerStateController._instance.ChangeAnimation("LeftOnWall");
                 }
                 else
                 {
-                    isWallOnLeftSide = false;
+                    _isWallOnLeftSide = false;
                     PlayerStateController._instance.ChangeAnimation("RightOnWall");
                 }
             }
-            firstLerpTime = 0f;
+            _firstLerpTime = 0f;
             PlayerCombat._instance._IsBlocking = false;
             GameManager._instance.MidScreenDot.color = GameManager._instance.MidScreenDotOnWallColor;
 
             PlayerStateController._instance.BladeSpinSoundObject = SoundManager._instance.PlaySound(SoundManager._instance.BladeSpin, PlayerStateController._instance.transform.position, 0.25f, true, 1f);
 
-            CreateSpark();
+            CreateSparkAndCheckDirection();
         }
         public void Exit(Rigidbody rb, IPlayerState newState)
         {
@@ -243,6 +228,8 @@ namespace PlayerStates
 
             GameObject.Destroy(PlayerStateController._instance.BladeSpinSoundObject, 2f);
             PlayerStateController._instance._isSpinEnding = true;
+
+            PlayerMovement._instance._lastExitWallTime = Time.time;
         }
         public void DoState(Rigidbody rb)
         {
@@ -259,13 +246,13 @@ namespace PlayerStates
 
             if (PlayerStateController._instance.OnWallSpark == null)
             {
-                CreateSpark();
+                CreateSparkAndCheckDirection();
             }
             else
             {
                 Vector3 leftPos = GameManager._instance.PlayerLeftHandTransform.position + PlayerStateController._instance.transform.up * -0.3f + PlayerStateController._instance.transform.right * -0.3f;
                 Vector3 rightPos = GameManager._instance.PlayerRightHandTransform.position + PlayerStateController._instance.transform.up * -0.3f + PlayerStateController._instance.transform.right * 0.3f;
-                PlayerStateController._instance.OnWallSpark.transform.position = isWallOnLeftSide ? leftPos : rightPos;
+                PlayerStateController._instance.OnWallSpark.transform.position = _isWallOnLeftSide ? leftPos : rightPos;
             }
             
             if (!PlayerStateController.CheckForOnWall())
@@ -330,13 +317,13 @@ namespace PlayerStates
 
                 PlayerMovement._instance.JumpFromWall(rb);
             }
-            else if (firstLerpTime > 0f)
+            else if (_firstLerpTime > 0f)
             {
                 float lerpSpeed = 8f;
                 Vector3 targetDirection = (PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.forward);
                 Vector3 targetVelocity = targetDirection * rb.velocity.magnitude * 7f / 10f;
                 rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed / (targetVelocity - rb.velocity).magnitude);
-                firstLerpTime -= Time.deltaTime;
+                _firstLerpTime -= Time.deltaTime;
             }
             else if (PlayerMovement._instance.IsTouching())
             {
@@ -358,8 +345,10 @@ namespace PlayerStates
             CameraController._instance.LookAround(false);
 
         }
-        private void CreateSpark()
+        private void CreateSparkAndCheckDirection()
         {
+            PlayerMovement._instance._isAllowedToWallRun = false;
+
             if (PlayerMovement._instance._touchingWallColliders.Count == 0) return;
             Collider wallCollider = PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1];
 
@@ -368,19 +357,78 @@ namespace PlayerStates
 
             Vector3 tempWallDirection = wallCollider.transform.right;
             tempWallDirection.y = 0f;
-            float angle = Vector3.SignedAngle(tempWallDirection, tempCameraDirection, Vector3.up);
-            if (isWallOnLeftSide)
+            float angle = Vector3.Angle(tempWallDirection, tempCameraDirection);
+            float signedAngle = Vector3.SignedAngle(tempWallDirection, tempCameraDirection, Vector3.up);
+
+            if (_isWallOnLeftSide)
             {
-                if (angle > 20f) return;
+                if (angle < 30f && angle >= 0f)
+                {
+                    if (!PlayerStateController._instance._Animator.IsInTransition(2) && PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("EmptyLeft"))
+                    {
+                        PlayerStateController._instance.ChangeAnimation("LeftOnWall");
+                        PlayerStateController._instance.ChangeAnimation("EmptyRight");
+                        PlayerStateController._instance.ChangeAnimation("Idle");
+                    }
+                }
+                else if (angle < 90f)
+                {
+                    if (!PlayerStateController._instance._Animator.IsInTransition(2) && PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall"))
+                        PlayerStateController._instance.ChangeAnimation("EmptyLeft");
+                    if (signedAngle > 0)
+                        CheckForEndMovement();
+                    return;
+                }
+                else if (angle < 160f)
+                {
+                    if (signedAngle > 0)
+                        CheckForEndMovement();
+                    return;
+                }
+                else if (angle > 160f && angle <= 180f)
+                {
+                    _isWallOnLeftSide = false;
+                    //PlayerStateController._instance.ChangeAnimation("RightOnWall");
+                    return;
+                }
             }
             else
             {
-                if (angle > 0f && angle < 160f) return;
+                if (angle > 150f && angle <= 180f)
+                {
+                    if (!PlayerStateController._instance._Animator.IsInTransition(3) && PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("EmptyRight"))
+                    {
+                        PlayerStateController._instance.ChangeAnimation("RightOnWall");
+                        PlayerStateController._instance.ChangeAnimation("EmptyLeft");
+                        PlayerStateController._instance.ChangeAnimation("Idle");
+                    }
+                }
+                else if (angle > 90f)
+                {
+                    if (!PlayerStateController._instance._Animator.IsInTransition(3) && PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWall"))
+                        PlayerStateController._instance.ChangeAnimation("EmptyRight");
+                    if (signedAngle > 0)
+                        CheckForEndMovement();
+                    return;
+                }
+                else if (angle > 20f)
+                {
+                    if (signedAngle > 0)
+                        CheckForEndMovement();
+                    return;
+                }
+                else if (angle < 20f && angle >= 0f)
+                {
+                    _isWallOnLeftSide = true;
+                    //PlayerStateController._instance.ChangeAnimation("LeftOnWall");
+                    return;
+                }
             }
+            PlayerMovement._instance._isAllowedToWallRun = true;
 
             //Vector3 pos = isWallOnLeftSide ? GameManager._instance.PlayerLeftHandTransform.position + PlayerStateController._instance.transform.right / 2f : GameManager._instance.PlayerRightHandTransform.position - PlayerStateController._instance.transform.right / 2f;
-            Vector3 pos = isWallOnLeftSide ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
-            pos += isWallOnLeftSide ? PlayerStateController._instance.transform.right * 0.75f : PlayerStateController._instance.transform.right * -0.75f;
+            Vector3 pos = _isWallOnLeftSide ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
+            pos += _isWallOnLeftSide ? PlayerStateController._instance.transform.right * 0.75f : PlayerStateController._instance.transform.right * -0.75f;
             PlayerStateController._instance.OnWallSpark = GameObject.Instantiate(GameManager._instance.SparksVFX[0], pos, Quaternion.identity);
             PlayerStateController._instance.OnWallSpark.GetComponentInChildren<Animator>().speed *= 4.5f;
             PlayerStateController._instance.OnWallSpark.transform.localScale *= 0.4f;
@@ -392,16 +440,34 @@ namespace PlayerStates
             decal.transform.forward = wallCollider.transform.right;
             decal.transform.localEulerAngles = new Vector3(decal.transform.localEulerAngles.x, decal.transform.localEulerAngles.y, UnityEngine.Random.Range(0f, 360f));
             */
-            pos = isWallOnLeftSide ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
+            pos = _isWallOnLeftSide ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
             //pos += isWallOnLeftSide ? PlayerStateController._instance.transform.right * 0.25f : -PlayerStateController._instance.transform.right * 0.25f;
             GameObject hitSmoke = GameObject.Instantiate(GameManager._instance.HitSmokeVFX, pos, Quaternion.identity);
-            hitSmoke.transform.localScale *= 1.1f;
-            hitSmoke.GetComponentInChildren<Animator>().speed = 4f;
+            hitSmoke.GetComponentInChildren<Animator>().speed = 1.5f;
+            hitSmoke.transform.localScale *= 2f;
             Color temp = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
-            hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(temp.r, temp.g, temp.b, 25f / 255f);
-            GameObject.Destroy(hitSmoke, 1f);
+            hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(temp.r, temp.g, temp.b, 7f / 255f);
+            GameObject.Destroy(hitSmoke, 2f);
         }
-
+        private void CheckForEndMovement()
+        {
+            if (InputHandler.GetAxis("Vertical") > 0f)
+            {
+                if(_endWallMovementCounter > 0.2f)
+                {
+                    PlayerStateController._instance.EnterState(new Movement());
+                    _endWallMovementCounter = 0f;
+                }
+                else
+                {
+                    _endWallMovementCounter += Time.deltaTime;
+                }
+            }
+            else
+            {
+                _endWallMovementCounter = 0f;
+            }
+        }
         public void DoStateFixedUpdate(Rigidbody rb)
         {
 
