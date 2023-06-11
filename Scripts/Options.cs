@@ -54,6 +54,21 @@ public class Options : MonoBehaviour
             MouseSensitivity = newValue * MaxSensitivity;
         }
     }
+    public void SetQuality(int number)
+    {
+        int oldQuality = PlayerPrefs.GetInt("Quality");
+        QualitySettings.SetQualityLevel(number);
+        PlayerPrefs.SetInt("Quality", number);
+
+        if (oldQuality == 2 && number != 2 && GameObject.Find("Level") != null)
+        {
+            GameManager._instance.GraphicsBackToNormal();
+        }
+        else if (oldQuality != 2 && number == 2 && GameObject.Find("Level") != null)
+        {
+            GameManager._instance.ArrangeGraphicsToLow();
+        }
+    }
 
     private void ArrangeActiveSoundVolumes(float newValue)
     {
@@ -64,6 +79,12 @@ public class Options : MonoBehaviour
                 if (newValue != 0f)
                     sound.GetComponent<AudioSource>().volume = newValue * sound.transform.localEulerAngles.x;
             }
+        }
+
+        if (SoundManager._instance != null && SoundManager._instance.CurrentAtmosphereObject != null)
+        {
+            if (newValue != 0f)
+                SoundManager._instance.CurrentAtmosphereObject.GetComponent<AudioSource>().volume = newValue * SoundManager._instance.CurrentAtmosphereObject.transform.localEulerAngles.x;
         }
     }
     private void ArrangeActiveMusicVolumes(float newValue)

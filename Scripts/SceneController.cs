@@ -8,11 +8,13 @@ public class SceneController : MonoBehaviour
 {
     [SerializeField]
     private GameObject LevelNotReachedObject;
+    [SerializeField]
+    public GameObject LoadingObject;
 
     private Coroutine LevelNotReachedCoroutine;
 
     public static SceneController _instance;
-
+    public static AsyncOperation NextSceneAsyncOperation;
     private void Awake()
     {
         _instance = this;
@@ -41,11 +43,6 @@ public class SceneController : MonoBehaviour
                 }
             }
 
-            if (levelReached >= 30)
-            {
-                GameObject.Find("Canvas").transform.Find("BossRun").gameObject.GetComponent<Button>().interactable = true;
-            }
-
         }
         else
         {
@@ -63,24 +60,30 @@ public class SceneController : MonoBehaviour
     {
         GameObject.Find("Canvas").transform.Find("MainMenu").gameObject.SetActive(false);
         GameObject.Find("Canvas").transform.Find("BackToMenuScreen").gameObject.SetActive(true);
-        GameObject.Find("Canvas").transform.Find("BossRun").gameObject.SetActive(true);
         GameObject.Find("Canvas").transform.Find("SelectEpisode").gameObject.SetActive(true);
     }
     public void CloseEpisodeSelectScreen()
     {
         GameObject.Find("Canvas").transform.Find("MainMenu").gameObject.SetActive(true);
         GameObject.Find("Canvas").transform.Find("BackToMenuScreen").gameObject.SetActive(false);
-        GameObject.Find("Canvas").transform.Find("BossRun").gameObject.SetActive(false);
         GameObject.Find("Canvas").transform.Find("SelectEpisode").gameObject.SetActive(false);
     }
     public void ContinueGameFromLastRoom()
     {
+        LoadingObject.SetActive(true);
+
         int levelReached = PlayerPrefs.GetInt("Level", 1);
-        SceneManager.LoadScene(levelReached);
+        SceneManager.LoadSceneAsync(levelReached);
     }
     public void NextScene()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
+        LoadingObject.SetActive(true);
+        SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().buildIndex + 1);
+    }
+    public void LoadNextSceneAsync()
+    {
+        NextSceneAsyncOperation = SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().buildIndex + 1);
+        NextSceneAsyncOperation.allowSceneActivation = false;
     }
     public void LoadScene(int index)
     {
@@ -92,7 +95,8 @@ public class SceneController : MonoBehaviour
             return;
         }
 
-        SceneManager.LoadScene(index);
+        LoadingObject.SetActive(true);
+        SceneManager.LoadSceneAsync(index);
     }
     private IEnumerator LevelNotReached()
     {
@@ -102,10 +106,12 @@ public class SceneController : MonoBehaviour
     }
     public void RestartLevel()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().buildIndex);
     }
     public void ToMenu()
     {
+        LoadingObject.SetActive(true);
+
         Cursor.visible = true;
 
         if (GameObject.FindGameObjectWithTag("PhaseCounter") != null)
@@ -120,8 +126,12 @@ public class SceneController : MonoBehaviour
         {
             Destroy(SoundManager._instance.CurrentMusicObject);
         }
+        if (SoundManager._instance.CurrentAtmosphereObject != null)
+        {
+            Destroy(SoundManager._instance.CurrentAtmosphereObject);
+        }
 
-        SceneManager.LoadScene(0);
+        SceneManager.LoadSceneAsync(0);
     }
     public void QuitGame()
     {

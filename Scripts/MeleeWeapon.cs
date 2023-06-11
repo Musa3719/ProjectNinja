@@ -16,7 +16,7 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
             return killables;
         }
     }
-
+    public bool IsHardHitWeapon;
     private Collider IgnoreCollisionCollider;
     private bool _isRanged;
     private bool _isDecalCreatedForThisAttack;
@@ -40,6 +40,7 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
 
     public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude)
     {
+        if (IsHardHitWeapon) SoundManager._instance.PlaySound(SoundManager._instance.HardHit, transform.position, 0.25f, false, Random.Range(0.9f, 1f));
         killable.Die(dir, killersVelocityMagnitude);
     }
 
@@ -50,13 +51,13 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
         if (other.CompareTag("BreakableObject"))
         {
             other.GetComponent<BreakableObject>().BrakeObject((other.transform.position - GetParent(transform).position).normalized);
-            SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, transform.position, 0.7f, false, UnityEngine.Random.Range(0.7f, 0.9f));
+            SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, transform.position, 0.7f, false, UnityEngine.Random.Range(0.6f, 0.7f));
             return;
         }
-        if ((other.CompareTag("Wall") || other.CompareTag("Prop")) && !_isDecalCreatedForThisAttack)
+        else if ((other.CompareTag("Wall") || IsProp(other)) && !_isDecalCreatedForThisAttack)
         {
             _isDecalCreatedForThisAttack = true;
-            SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, IgnoreCollisionCollider.transform.position + IgnoreCollisionCollider.transform.forward * 0.5f, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, IgnoreCollisionCollider.transform.position + IgnoreCollisionCollider.transform.forward * 0.5f, 0.4f, false, UnityEngine.Random.Range(0.6f, 0.7f));
             GameObject decal = Instantiate(GameManager._instance.HoleDecal, transform.position, Quaternion.identity);
 
             if (other.CompareTag("Wall"))
@@ -67,18 +68,39 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
             
             if (IgnoreCollisionCollider.CompareTag("Player"))
             {
-                GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, IgnoreCollisionCollider.transform.position + IgnoreCollisionCollider.transform.forward * 0.7f, Quaternion.identity);
+                GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, IgnoreCollisionCollider.transform.position + IgnoreCollisionCollider.transform.forward * 0.4f + IgnoreCollisionCollider.transform.up * 0.1f, Quaternion.identity);
                 hitSmoke.transform.position = new Vector3(hitSmoke.transform.position.x, GameManager._instance.PlayerLeftHandTransform.position.y, hitSmoke.transform.position.z);
+                hitSmoke.transform.localScale *= 3f;
+                Color temp = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
+                hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(temp.r, temp.g, temp.b, 15f / 255f);
                 Destroy(hitSmoke, 5f);
 
                 decal.transform.position = new Vector3(decal.transform.position.x, GameManager._instance.PlayerLeftHandTransform.position.y, decal.transform.position.z);
             }
             else
             {
-                Destroy(Instantiate(GameManager._instance.HitSmokeVFX, IgnoreCollisionCollider.transform.position + IgnoreCollisionCollider.transform.forward * 0.7f + Vector3.up * 0.35f, Quaternion.identity), 5f);
+                GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, IgnoreCollisionCollider.transform.position + IgnoreCollisionCollider.transform.forward * 0.7f + Vector3.up * 0.35f, Quaternion.identity);
+                hitSmoke.transform.localScale *= 3f;
+                Color temp = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
+                hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(temp.r, temp.g, temp.b, 9f / 255f);
+                Destroy(hitSmoke, 5f);
             }
 
+            if (IsProp(other)) Destroy(decal);
 
+        }
+        else if (other.CompareTag("Door"))
+        {
+            other.GetComponentInChildren<Rigidbody>().AddForce((other.transform.position - IgnoreCollisionCollider.transform.position).normalized * 25f, ForceMode.Impulse);
+
+            Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.3f, false, UnityEngine.Random.Range(0.55f, 0.65f)), 2f);
+            GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, IgnoreCollisionCollider.transform.position + IgnoreCollisionCollider.transform.forward * 0.7f, Quaternion.identity);
+            hitSmoke.transform.position = new Vector3(hitSmoke.transform.position.x, GameManager._instance.PlayerLeftHandTransform.position.y, hitSmoke.transform.position.z) + IgnoreCollisionCollider.transform.right * 0.6f + IgnoreCollisionCollider.transform.up * 0.3f;
+            hitSmoke.GetComponentInChildren<Animator>().speed = 1f;
+            hitSmoke.transform.localScale *= 6f;
+            Color temp = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
+            hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(temp.r, temp.g, temp.b, 6.5f / 255f);
+            Destroy(hitSmoke, 5f);
         }
 
         if (!other.CompareTag("HitBox")) return;
@@ -104,16 +126,16 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
             }
             else if (isTargetBlocking)
             {
-                if (_isRanged) return;
-
                 if (IsInAngle(other))
                 {
+                    if (_isRanged) return;
                     otherKillable.DeflectWithBlock((GetParent(transform).position - otherKillable.Object.transform.position).normalized, IgnoreCollisionCollider.GetComponent<IKillable>(), false);
                 }
                 else
                 {
                     if (otherKillable.Object.CompareTag("Boss"))
                     {
+                        if (_isRanged) return;
                         otherKillable.StopBlockingAndDodge();
                     }
                     else
@@ -123,6 +145,17 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
                 }
             }
         }
+    }
+    private bool IsProp(Collider other)
+    {
+        if (other == null || other.CompareTag("Door")) return false;
+        Transform temp = other.transform;
+        while (temp.parent != null)
+        {
+            if (temp.CompareTag("Prop")) return true;
+            temp = temp.parent;
+        }
+        return false;
     }
     private bool IsInAngle(Collider other)
     {

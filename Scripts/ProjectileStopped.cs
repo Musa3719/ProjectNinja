@@ -20,7 +20,8 @@ public class ProjectileStopped : MonoBehaviour
             if (_stopCounter >= 1f)
             {
                 _rb.isKinematic = true;
-                GetComponent<Collider>().enabled = false;
+                if (GetComponent<Collider>() == null) GetComponentInChildren<Collider>().enabled = false;
+                else GetComponent<Collider>().enabled = false;
             }
         }
         else

@@ -19,6 +19,7 @@ public class Localization : MonoBehaviour
     public List<string> Paintings;
     public List<string> Dialogues;
     public List<string> UI;
+    public List<string> Tutorial;
 
     public static event Action _LanguageChangedEvent;
 
@@ -30,6 +31,7 @@ public class Localization : MonoBehaviour
         Paintings = new List<string>();
         Dialogues = new List<string>();
         UI = new List<string>();
+        Tutorial = new List<string>();
         SetLanguage(_ActiveLanguage);
     }
 
@@ -53,6 +55,7 @@ public class Localization : MonoBehaviour
         ArrangeList("/Newspapers/", Newspapers);
         ArrangeList("/Paintings/", Paintings);
         ArrangeList("/Dialogues/", Dialogues);
+        ArrangeList("/Tutorial/", Tutorial);
         ArrangeUI();
 
         _LanguageChangedEvent?.Invoke();
@@ -87,7 +90,7 @@ public class Localization : MonoBehaviour
     {
         UI.Clear();
         string fileName = "";
-        if (SceneManager.GetActiveScene().buildIndex == 0)
+        if (SceneManager.GetActiveScene().buildIndex == 0 || SceneManager.GetActiveScene().name=="DemoEnded" || SceneManager.GetActiveScene().name == "GameEnded")
             fileName = "Menu.txt";
         else
             fileName = "Game.txt";

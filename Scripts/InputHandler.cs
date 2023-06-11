@@ -36,9 +36,9 @@ public class InputHandler : MonoBehaviour
             case "Dodge":
                 if (Keyboard.current == null) return false;
                 return isCheckingButtonDown ? Keyboard.current.altKey.wasPressedThisFrame : Keyboard.current.altKey.isPressed;
-            case "LeaveWall":
+            /*case "LeaveWall":
                 if (Keyboard.current == null) return false;
-                return isCheckingButtonDown ? Keyboard.current.xKey.wasPressedThisFrame : Keyboard.current.xKey.isPressed;
+                return isCheckingButtonDown ? Keyboard.current.xKey.wasPressedThisFrame : Keyboard.current.xKey.isPressed;*/
             case "Throw":
                 if (Keyboard.current == null) return false;
                 return isCheckingButtonDown ? Keyboard.current.qKey.wasPressedThisFrame : Keyboard.current.qKey.isPressed;
@@ -47,10 +47,10 @@ public class InputHandler : MonoBehaviour
                 return isCheckingButtonDown ? Mouse.current.rightButton.wasPressedThisFrame : Mouse.current.rightButton.isPressed;
             case "Teleport":
                 if (Keyboard.current == null) return false;
-                return isCheckingButtonDown ? Keyboard.current.digit1Key.wasPressedThisFrame : Keyboard.current.digit1Key.isPressed;
+                return isCheckingButtonDown ? Keyboard.current.digit2Key.wasPressedThisFrame : Keyboard.current.digit2Key.isPressed;
             case "IceSkill":
                 if (Keyboard.current == null) return false;
-                return isCheckingButtonDown ? Keyboard.current.digit2Key.wasPressedThisFrame : Keyboard.current.digit2Key.isPressed;
+                return isCheckingButtonDown ? Keyboard.current.digit1Key.wasPressedThisFrame : Keyboard.current.digit1Key.isPressed;
             case "InvertedMirror":
                 if (Keyboard.current == null) return false;
                 return isCheckingButtonDown ? Keyboard.current.digit3Key.wasPressedThisFrame : Keyboard.current.digit3Key.isPressed;
@@ -83,8 +83,8 @@ public class InputHandler : MonoBehaviour
                 return isCheckingButtonDown ? Gamepad.current.yButton.wasPressedThisFrame : Gamepad.current.yButton.isPressed;
             case "Dodge":
                 return isCheckingButtonDown ? Gamepad.current.bButton.wasPressedThisFrame : Gamepad.current.bButton.isPressed;
-            case "LeaveWall":
-                return isCheckingButtonDown ? Gamepad.current.rightStickButton.wasPressedThisFrame : Gamepad.current.rightStickButton.isPressed;
+            /*case "LeaveWall":
+                return isCheckingButtonDown ? Gamepad.current.rightStickButton.wasPressedThisFrame : Gamepad.current.rightStickButton.isPressed;*/
             case "Throw":
                 return isCheckingButtonDown ? Gamepad.current.dpad.up.wasPressedThisFrame : Gamepad.current.dpad.up.isPressed;
             case "Block":
@@ -128,8 +128,9 @@ public class InputHandler : MonoBehaviour
         float value = 0f;
         if (Mouse.current == null)
         {
-            value += Gamepad.current.selectButton.wasPressedThisFrame ? 1f : 0f;
-            return value;
+            //value += Gamepad.current.selectButton.wasPressedThisFrame ? 1f : 0f;
+            //return value;
+            return Gamepad.current.dpad.left.wasPressedThisFrame ? 1f : 0f;
         }
 
         if(Gamepad.current == null)

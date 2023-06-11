@@ -28,7 +28,9 @@ public class BreakableObject : MonoBehaviour
         transform.parent.Find("Broken").gameObject.SetActive(true);
 
         GameObject hitSmoke = GameObject.Instantiate(GameManager._instance.HitSmokeVFX, transform.position + Vector3.up * 1f, Quaternion.identity);
-        hitSmoke.transform.localScale *= 2f;
+        hitSmoke.transform.localScale *= 6f;
+        Color temp = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
+        hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(temp.r, temp.g, temp.b, 6.5f / 255f);
         GameObject.Destroy(hitSmoke, 3f);
 
         foreach (var brokenRb in _rigidbodies)

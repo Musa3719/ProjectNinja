@@ -14,7 +14,9 @@ public class SoundManager : MonoBehaviour
     public static Action<Vector3, float> ProjectileTriggeredSoundArtificial;
 
     public GameObject CurrentMusicObject { get; private set; }
+    public GameObject CurrentAtmosphereObject { get; private set; }
     private Coroutine StopCurrentMusicCoroutine;
+    private Coroutine StopCurrentAtmosphereCoroutine;
 
 
     #region Sounds
@@ -80,6 +82,15 @@ public class SoundManager : MonoBehaviour
     public AudioClip HitWallWithWeapon;
     [SerializeField]
     public AudioClip RoomPassed;
+    [SerializeField]
+    public AudioClip LightFlicker;
+    [SerializeField]
+    public AudioClip TutorialText;
+    [SerializeField]
+    public AudioClip DoorKeyUsed;
+
+    [SerializeField]
+    public AudioClip HardHit;
 
     [SerializeField]
     public List<AudioClip> Blocks;
@@ -91,6 +102,8 @@ public class SoundManager : MonoBehaviour
     public List<AudioClip> AttackDeflecteds;
     [SerializeField]
     public List<AudioClip> PlayerAttacks;
+    [SerializeField]
+    public List<AudioClip> EnemyDeathSounds;
 
     [SerializeField]
     public List<AudioClip> EnemyGrumbles;//different for each level
@@ -101,6 +114,11 @@ public class SoundManager : MonoBehaviour
     public List<AudioClip> ArmorHitSounds;
     [SerializeField]
     public List<AudioClip> WeaponHitSounds;
+
+    [SerializeField]
+    public List<AudioClip> DoorHitSounds;
+    [SerializeField]
+    public AudioClip DoorSound;
 
     [SerializeField]
     public List<AudioClip> ArmorWalkSounds;
@@ -134,6 +152,9 @@ public class SoundManager : MonoBehaviour
 
     #endregion
 
+    [SerializeField]
+    private List<AudioClip> AtmosphereSounds;
+
     #region Musics
 
     [SerializeField]
@@ -145,39 +166,21 @@ public class SoundManager : MonoBehaviour
     [SerializeField]
     private List<AudioClip> BossMusics;
 
+    private AudioClip Boss4Phase2Music;
+    private AudioClip Boss5Phase2Music;
+
     [SerializeField]
     private AudioClip EndingMusic;
 
     #endregion
 
-    private bool IsBossLevel(int sceneNumber)
-    {
-        return sceneNumber == GameManager.Boss1LevelIndex || sceneNumber == GameManager.Boss2LevelIndex || sceneNumber == GameManager.Boss3LevelIndex || sceneNumber == GameManager.Boss4LevelIndex || sceneNumber == GameManager.Boss5LevelIndex || sceneNumber == GameManager.Boss6LevelIndex;
-    }
-    private int GetBossNumberFromLevel(int sceneNumber)
-    {
-        switch (sceneNumber)
-        {
-            case GameManager.Boss1LevelIndex:
-                return 1;
-            case GameManager.Boss2LevelIndex:
-                return 2;
-            case GameManager.Boss3LevelIndex:
-                return 3;
-            case GameManager.Boss4LevelIndex:
-                return 4;
-            case GameManager.Boss5LevelIndex:
-                return 5;
-            case GameManager.Boss6LevelIndex:
-                return 6;
-            default:
-                return GameManager.Boss1LevelIndex;
-        }
-    }
+    
     private void Awake()
     {
         _instance = this;
         int sceneNumber = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex;
+
+        if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "DemoEnded") return;
 
         if(sceneNumber == 0)
         {
@@ -193,19 +196,11 @@ public class SoundManager : MonoBehaviour
 
         if (sceneNumber < GameManager.Level2Index)
         {
-            PlayMusic(LevelMusics[0]);
+            PlayMusic(LevelMusics[0], AtmosphereSounds[0]);
         }
         else if (sceneNumber < GameManager.Level3Index)
         {
-            PlayMusic(LevelMusics[1]);
-        }
-        else if (sceneNumber < GameManager.Level4Index)
-        {
-            PlayMusic(LevelMusics[2]);
-        }
-        else if (sceneNumber < GameManager.Level5Index)
-        {
-            PlayMusic(LevelMusics[3]);
+            PlayMusic(LevelMusics[1], AtmosphereSounds[1]);
         }
         else if(sceneNumber == GameManager.LastLevelIndex)
         {
@@ -213,7 +208,36 @@ public class SoundManager : MonoBehaviour
         }
         else
         {
-            PlayMusic(LevelMusics[4]);
+            PlayMusic(LevelMusics[2], AtmosphereSounds[2]);
+        }
+    }
+    private void LateUpdate()
+    {
+        if (SoundManager._instance.CurrentMusicObject != null)
+        {
+            CurrentMusicObject.transform.position = GameManager._instance.MainCamera.transform.position;
+        }
+        if (SoundManager._instance.CurrentAtmosphereObject != null)
+        {
+            CurrentAtmosphereObject.transform.position = GameManager._instance.MainCamera.transform.position;
+        }
+    }
+    private bool IsBossLevel(int sceneNumber)
+    {
+        return sceneNumber == GameManager.Boss1LevelIndex || sceneNumber == GameManager.Boss2LevelIndex || sceneNumber == GameManager.Boss3LevelIndex;
+    }
+    private int GetBossNumberFromLevel(int sceneNumber)
+    {
+        switch (sceneNumber)
+        {
+            case GameManager.Boss1LevelIndex:
+                return 1;
+            case GameManager.Boss2LevelIndex:
+                return 2;
+            case GameManager.Boss3LevelIndex:
+                return 3;
+            default:
+                return GameManager.Boss1LevelIndex;
         }
     }
     /// <summary>
@@ -304,8 +328,22 @@ public class SoundManager : MonoBehaviour
     {
         PlayMusic(BossMusics[bossNumber - 1]);
     }
-    public void PlayMusic(AudioClip clip)
+    public void PlayMusic(AudioClip clip, AudioClip atmosphere = null)
     {
+        if (atmosphere != null)
+        {
+            if (CurrentAtmosphereObject == null)
+            {
+                PlayAtmosphereArrangement(atmosphere);
+            }
+            else
+            {
+                if (StopCurrentAtmosphereCoroutine != null)
+                    StopCoroutine(StopCurrentAtmosphereCoroutine);
+                StopCurrentAtmosphereCoroutine = StartCoroutine(StopCurrentAtmosphereAndPlay(atmosphere));
+            }
+        }
+
         if (CurrentMusicObject != null)
         {
             if (StopCurrentMusicCoroutine != null)
@@ -316,6 +354,18 @@ public class SoundManager : MonoBehaviour
         {
             PlayMusicArrangement(clip);
         }
+    }
+    private IEnumerator StopCurrentAtmosphereAndPlay(AudioClip clip)
+    {
+        AudioSource source = CurrentAtmosphereObject.GetComponent<AudioSource>();
+        while (source.volume > 0.05f)
+        {
+            source.volume -= Time.deltaTime * 3f;
+            yield return null;
+        }
+        Destroy(CurrentAtmosphereObject);
+
+        PlayAtmosphereArrangement(clip);
     }
     /// <summary>
     /// Stops current music AND plays the next.
@@ -334,15 +384,22 @@ public class SoundManager : MonoBehaviour
     }
     private void PlayMusicArrangement(AudioClip clip)
     {
-        CurrentMusicObject = PlaySound(clip, Vector3.zero, 1f, true, 1f);
+        CurrentMusicObject = PlaySound(clip, Vector3.zero, 1f, true, 1f, true);
         if (CurrentMusicObject != null)
             DontDestroyOnLoad(CurrentMusicObject);
+    }
+
+    private void PlayAtmosphereArrangement(AudioClip clip)
+    {
+        CurrentAtmosphereObject = PlaySound(clip, Vector3.zero, 0.1f, true, 1f, true);
+        if (CurrentAtmosphereObject != null)
+            DontDestroyOnLoad(CurrentAtmosphereObject);
     }
 
     /// <summary>
     /// Play Sound by creating a AudioSourcePrefab Object.
     /// </summary>
-    public GameObject PlaySound(AudioClip clip, Vector3 position, float volume = 1f, bool isLooping = false, float pitch = 1f)
+    public GameObject PlaySound(AudioClip clip, Vector3 position, float volume = 1f, bool isLooping = false, float pitch = 1f, bool isMusicOrAtmosphere = false)
     {
         if (clip == null) return null;
 
@@ -353,7 +410,8 @@ public class SoundManager : MonoBehaviour
         audioSource.loop = isLooping;
         audioSource.pitch = pitch;
         audioSource.Play();
-        audioSource.gameObject.transform.SetParent(SoundObjectsParent.transform);
+        if (!isMusicOrAtmosphere)
+            audioSource.gameObject.transform.SetParent(SoundObjectsParent.transform);
 
         if (!isLooping)
             Destroy(audioSource.gameObject, audioSource.clip.length / Mathf.Clamp(pitch, 0.1f, 1f) + 1f);
@@ -380,22 +438,30 @@ public class SoundManager : MonoBehaviour
     {
         if (CurrentMusicObject != null)
             CurrentMusicObject.GetComponent<AudioSource>().Pause();
+        if (CurrentAtmosphereObject != null)
+            CurrentAtmosphereObject.GetComponent<AudioSource>().Pause();
     }
     public void ContinueMusic()
     {
         if (CurrentMusicObject != null)
             CurrentMusicObject.GetComponent<AudioSource>().UnPause();
+        if (CurrentAtmosphereObject != null)
+            CurrentAtmosphereObject.GetComponent<AudioSource>().UnPause();
     }
 
     public void SlowDownMusic()
     {
         if (CurrentMusicObject != null)
             CurrentMusicObject.GetComponent<AudioSource>().pitch = 0.82f;
+        if (CurrentAtmosphereObject != null)
+            CurrentAtmosphereObject.GetComponent<AudioSource>().pitch = 0.82f;
     }
     public void UnSlowDownMusic()
     {
         if (CurrentMusicObject != null)
             CurrentMusicObject.GetComponent<AudioSource>().pitch = 1f;
+        if (CurrentAtmosphereObject != null)
+            CurrentAtmosphereObject.GetComponent<AudioSource>().pitch = 1f;
     }
 
     public void SlowDownAllSound()

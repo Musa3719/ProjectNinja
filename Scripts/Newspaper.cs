@@ -8,13 +8,11 @@ public class Newspaper : MonoBehaviour
 {
     public string _Text;
     public int _Number;
-    public Sprite _Image;
 
     public void OpenNewspaper()
     {
         GameManager._instance.NewspaperUI.SetActive(true);
         GameManager._instance.NewspaperUI.GetComponentInChildren<TextMeshProUGUI>().text = _Text;
-        GameManager._instance.NewspaperUI.transform.Find("NewspaperImage").Find("NewspaperTopImage").GetComponent<Image>().sprite = _Image;
         GameManager._instance.InGameScreen.SetActive(false);
     }
     private void OnEnable()

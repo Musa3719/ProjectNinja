@@ -40,7 +40,7 @@ public class Knife : IThrowableItem
         else
             throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 30f;
         throwable.transform.forward = throwable.GetComponentInChildren<Rigidbody>().velocity.normalized;
-        throwable.GetComponentInChildren<Rigidbody>().angularVelocity = new Vector3(10f, 0f, 0f);
+        throwable.GetComponentInChildren<Rigidbody>().angularVelocity = throwable.transform.right * 15f;
         throwable.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = IgnoredCollider;
         throwable.GetComponentInChildren<Projectile>().WhenTriggered = throwable.GetComponentInChildren<Projectile>().WhenTriggeredForKnife;
 
@@ -137,7 +137,7 @@ public class Shuriken : IThrowableItem
         else
             throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 30f;
         throwable.transform.forward = throwable.GetComponentInChildren<Rigidbody>().velocity.normalized;
-        throwable.GetComponentInChildren<Rigidbody>().angularVelocity = new Vector3(0f, 7f, 0f);
+        throwable.GetComponentInChildren<Rigidbody>().angularVelocity = throwable.transform.up * 7f;
         throwable.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = IgnoredCollider;
         throwable.GetComponentInChildren<Projectile>().WhenTriggered = throwable.GetComponentInChildren<Projectile>().WhenTriggeredForShuriken;
 
