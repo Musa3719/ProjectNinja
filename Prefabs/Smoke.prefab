@@ -50,16 +50,16 @@ VisualEffect:
   m_PropertySheet:
     m_Float:
       m_Array:
-      - m_Value: 0.025
+      - m_Value: 0.2
         m_Name: Size
         m_Overridden: 1
-      - m_Value: 350
+      - m_Value: 200
         m_Name: Rate
         m_Overridden: 1
       - m_Value: 4.5
         m_Name: YSpeed
         m_Overridden: 1
-      - m_Value: 4.5
+      - m_Value: 4.25
         m_Name: Speed
         m_Overridden: 1
     m_Vector2f:
@@ -304,10 +304,10 @@ VisualEffect:
   m_PropertySheet:
     m_Float:
       m_Array:
-      - m_Value: 0.25
+      - m_Value: 0.4
         m_Name: Size
         m_Overridden: 1
-      - m_Value: 325
+      - m_Value: 150
         m_Name: Rate
         m_Overridden: 1
       - m_Value: 4
@@ -429,16 +429,16 @@ VisualEffect:
   m_PropertySheet:
     m_Float:
       m_Array:
-      - m_Value: 0.01
+      - m_Value: 0.15
         m_Name: Size
         m_Overridden: 1
-      - m_Value: 25000
+      - m_Value: 500
         m_Name: Rate
         m_Overridden: 1
       - m_Value: 5.5
         m_Name: YSpeed
         m_Overridden: 1
-      - m_Value: 4.75
+      - m_Value: 4.5
         m_Name: Speed
         m_Overridden: 1
     m_Vector2f:
