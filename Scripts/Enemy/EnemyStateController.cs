@@ -48,6 +48,7 @@ public class EnemyStateController : MonoBehaviour
     private float _pushCounter;
 
     public bool _isHearTriggered;
+    public float _lastTimeCheckForPlayerInSeenCalled;
 
     private List<GameObject> SmokeTriggers;
 
@@ -177,7 +178,6 @@ public class EnemyStateController : MonoBehaviour
         _enemyAnimState.DoState(_rb);
         ArrangeAnimStateParameter();
         CheckForPush();
-
     }
     void LateUpdate()
     {
@@ -295,27 +295,27 @@ public class EnemyStateController : MonoBehaviour
         {
             if (_animator.GetCurrentAnimatorStateInfo(1).IsName("Empty"))
             {
-                _animator.SetLayerWeight(4, 0f);
-                _animator.SetLayerWeight(5, 1f);
+                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
+                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 1f, Time.deltaTime * 3f));
             }
             else
             {
-                _animator.SetLayerWeight(4, 0f);
-                _animator.SetLayerWeight(5, 0f);
+                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
+                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 3f));
             }
         }
         else
         {
-            /*if (_animator.GetCurrentAnimatorStateInfo(1).IsName("Empty"))
+            if (_animator.GetCurrentAnimatorStateInfo(1).IsName("Empty"))
             {
-                _animator.SetLayerWeight(4, 0f);
-                _animator.SetLayerWeight(5, 1f);
+                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
+                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 1f, Time.deltaTime * 3f));
             }
             else
             {
-                _animator.SetLayerWeight(4, 1f);
-                _animator.SetLayerWeight(5, 0f);
-            }*/
+                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0.75f, Time.deltaTime * 3f));
+                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 3f));
+            }
         }
         
     }
@@ -458,7 +458,7 @@ public class EnemyStateController : MonoBehaviour
                 localCheckDistance = _checkDistance;
 
             RaycastHit hit;
-            Physics.Raycast(_rb.transform.position, (playerTransform.position - _rb.transform.position).normalized, out hit, localCheckDistance, GameManager._instance.LayerMaskWithoutTriggerColliders);
+            Physics.Raycast(_rb.transform.position, (playerTransform.position - _rb.transform.position).normalized, out hit, localCheckDistance, GameManager._instance.LayerMaskForVisible);
 
             if (hit.collider != null && hit.collider.gameObject.CompareTag("Player"))
             {

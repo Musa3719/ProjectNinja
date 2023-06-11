@@ -118,6 +118,11 @@ public class EnemyAI : MonoBehaviour
             }
         }
 
+        if (selectedAnimNames.Count == 1)
+        {
+            if (lastSelectedIndex + 1 < attackAnimCount)
+                selectedAnimNames.Add("Attack" + (lastSelectedIndex + 2));
+        }
         if (selectedAnimNames.Count == 0)
         {
             selectedAnimNames.Add("Attack" + (Random.Range(0, attackAnimCount) + 1).ToString());
@@ -151,7 +156,7 @@ public class EnemyAI : MonoBehaviour
     }
     public Vector3 GetStepBackPosition(NavMeshAgent agent)
     {
-        Vector3 relativePos = -_rb.transform.forward * Random.Range(0.5f, 3f) + Random.Range(-1f, 1f) * _rb.transform.right * Random.Range(2f, 4.5f);
+        Vector3 relativePos = -_rb.transform.forward * Random.Range(1.25f, 3f) + Random.Range(-1f, 1f) * _rb.transform.right * Random.Range(2.5f, 5f);
         return relativePos + agent.transform.position;
     }
     public Vector3 GetIdleMovementPosition(NavMeshAgent agent)
@@ -200,7 +205,7 @@ public class EnemyAI : MonoBehaviour
                 xTemp = 0;
                 break;
         }
-        return new Vector3(xTemp, 0f, Random.Range(-0.8f, -0.6f) + extraZ);
+        return transform.right * xTemp + transform.forward * (Random.Range(-0.8f, -0.6f) + extraZ);
     }
     
     public bool CheckForStepBack()
@@ -290,10 +295,10 @@ public class EnemyAI : MonoBehaviour
         if (_controller._enemyCombat._IsRanged)
         {
             Vector3 direction = (GameManager._instance.PlayerRb.transform.position - transform.position).normalized;
-            Physics.Raycast(transform.position + direction, direction, out RaycastHit hit, _controller._enemyCombat.AttackRange);
+            Physics.Raycast(transform.position + direction, direction, out RaycastHit hit, _controller._enemyCombat.AttackRange, GameManager._instance.LayerMaskForVisible);
             if (IsRayHitPlayer(hit) && _controller._enemyCombat._IsAllowedToAttack)
             {
-                if (_AgressiveValue * 50f * Time.deltaTime * 60f > Random.Range(0, 1000))
+                if (_AgressiveValue * 50f * Time.deltaTime * 60f > Random.Range(0, 1000) && !CheckForAttackFriendlyFire())
                 {
                     return true;
                 }
@@ -317,6 +322,23 @@ public class EnemyAI : MonoBehaviour
         }
         
     }
+    public bool CheckForAttackFriendlyFire()
+    {
+        Vector3 direction = (GameManager._instance.PlayerRb.transform.position - transform.position).normalized;
+        Physics.Raycast(transform.position + direction, direction, out RaycastHit hit, _controller._enemyCombat.AttackRange * 1.5f, GameManager._instance.LayerMaskForVisible);
+        if (hit.collider!=null && hit.collider.CompareTag("HitBox") && GetParent(hit.collider.transform).CompareTag("Enemy"))
+            return true;
+        return false;
+    }
+    private Transform GetParent(Transform tr)
+    {
+        Transform parentTransform = tr.transform;
+        while (parentTransform.parent != null)
+        {
+            parentTransform = parentTransform.parent;
+        }
+        return parentTransform;
+    }
     public void HearArtificialSound(Vector3 position)
     {
         if (_hearSoundCounter <= 0f)
@@ -334,7 +356,7 @@ public class EnemyAI : MonoBehaviour
             if ((position - nearEnemy.transform.position).magnitude < radius)
             {
                 RaycastHit hit;
-                Physics.Raycast(nearEnemy.transform.position, (position - nearEnemy.transform.position).normalized, out hit);
+                Physics.Raycast(nearEnemy.transform.position, (position - nearEnemy.transform.position).normalized, out hit, GameManager._instance.LayerMaskForVisible);
 
                 if ((hit.point - position).magnitude < 0.5f)
                     enemyAIs[nearEnemy].HearArtificialSound(position);
@@ -347,7 +369,7 @@ public class EnemyAI : MonoBehaviour
         if((position-transform.position).magnitude <= radius)
         {
             RaycastHit hit;
-            Physics.Raycast(position, (transform.position - position).normalized, out hit);
+            Physics.Raycast(position, (transform.position - position).normalized, out hit, GameManager._instance.LayerMaskForVisible);
 
             if ((hit.point - transform.position).magnitude < 0.5f)
                 HearArtificialSound(position);

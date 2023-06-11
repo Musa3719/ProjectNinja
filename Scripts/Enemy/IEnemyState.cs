@@ -22,11 +22,11 @@ namespace EnemyStates
         {
             _enemyStateController = rb.GetComponent<EnemyStateController>();
             _enemyStateController.HalfHeadAim();
-            _enemyStateController._animator.SetFloat("LocomotionSpeedMultiplier", 0.5f);
+            _enemyStateController._animator.SetFloat("LocomotionSpeedMultiplier", 0.5f + (_enemyStateController._enemyMovement._runSpeed - 10.5f) / 10f);
         }
         public void Exit(Rigidbody rb, IEnemyState newState)
         {
-            _enemyStateController._animator.SetFloat("LocomotionSpeedMultiplier", 1f);
+            _enemyStateController._animator.SetFloat("LocomotionSpeedMultiplier", 1f + (_enemyStateController._enemyMovement._runSpeed - 10.5f) / 10f);
         }
         public void DoState(Rigidbody rb)
         {
@@ -45,8 +45,9 @@ namespace EnemyStates
                 return;
             }
 
-            if (_enemyStateController.CheckForPlayerInSeen())
+            if (_enemyStateController._lastTimeCheckForPlayerInSeenCalled + 0.25f < Time.time && _enemyStateController.CheckForPlayerInSeen())
             {
+                _enemyStateController._lastTimeCheckForPlayerInSeenCalled = Time.time;
                 _enemyStateController.EnterState(new Chasing());
             }
             else if (_enemyStateController._isHearTriggered)
@@ -110,8 +111,9 @@ namespace EnemyStates
                 return;
             }
 
-            if (_enemyStateController.CheckForPlayerInSeen())
+            if (_enemyStateController._lastTimeCheckForPlayerInSeenCalled + 0.25f < Time.time && _enemyStateController.CheckForPlayerInSeen())
             {
+                _enemyStateController._lastTimeCheckForPlayerInSeenCalled = Time.time;
                 _enemyStateController.EnterState(new Chasing());
             }
             else if (_enemyStateController._isHearTriggered)
@@ -176,8 +178,9 @@ namespace EnemyStates
                 return;
             }
 
-            if (!_enemyStateController.CheckForPlayerInSeen())
+            if (_enemyStateController._lastTimeCheckForPlayerInSeenCalled + 0.25f < Time.time && !_enemyStateController.CheckForPlayerInSeen())
             {
+                _enemyStateController._lastTimeCheckForPlayerInSeenCalled = Time.time;
                 _enemyStateController.SearchingFromChasing();
                 _enemyStateController.EnterState(new Searching());
             }
@@ -254,6 +257,7 @@ namespace EnemyStates
             stepBackTimer = Random.Range(2.5f, 5f);
             targetPos = _enemyStateController._enemyAI.GetStepBackPosition(_enemyStateController._agent);
             _enemyStateController.EnableHeadAim();
+            _enemyStateController.ChangeAnimation("Stance");
         }
         public void Exit(Rigidbody rb, IEnemyState newState)
         {
@@ -277,7 +281,7 @@ namespace EnemyStates
                 return;
             }
 
-            if (stepBackTimer <= 0f)
+            if (stepBackTimer <= 0f || StepBackCompleted())
                 _enemyStateController.EnterState(new Searching());
             else if (_enemyStateController._enemyAI.CheckForDodgeOrBlock())
             {
@@ -313,6 +317,16 @@ namespace EnemyStates
         public void DoStateLateUpdate(Rigidbody rb)
         {
 
+        }
+        private bool StepBackCompleted()
+        {
+            Vector3 tempTarget = targetPos;
+            tempTarget.y = 0f;
+            Vector3 tempPos = _enemyStateController.transform.position;
+            tempPos.y = 0f;
+            if ((tempPos - tempTarget).magnitude < 0.4f)
+                return true;
+            return false;
         }
     }
 

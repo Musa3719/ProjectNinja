@@ -72,6 +72,10 @@ public class EnemyCombat : MonoBehaviour, IKillable
     public bool _IsRanged { get; private set; }
 
     [SerializeField]
+    private Transform _sparkPosition;
+    [SerializeField]
+    private float _enemyTypeSpeedMultiplier;
+    [SerializeField]
     private WeaponTypeEnum _weaponType;
     public WeaponTypeEnum WeaponType => _weaponType;
 
@@ -134,6 +138,8 @@ public class EnemyCombat : MonoBehaviour, IKillable
         {
             case WeaponTypeEnum.Sword:
                 _attackRange = 8f;
+                _enemyStateController._enemyMovement._moveSpeed = 4f * _enemyTypeSpeedMultiplier;
+                _enemyStateController._enemyMovement._runSpeed = 11f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.SwordPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0.01773758f, 0.06871963f, -0.00327652f);
@@ -146,10 +152,12 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 break;
             case WeaponTypeEnum.Axe:
                 _attackRange = 9f;
+                _enemyStateController._enemyMovement._moveSpeed = 3.5f * _enemyTypeSpeedMultiplier;
+                _enemyStateController._enemyMovement._runSpeed = 10f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.AxePrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
-                _weaponObject.transform.localPosition = new Vector3(0f, 0f, 0f);
-                _weaponObject.transform.localEulerAngles = new Vector3(180f, 0f, 0f);
+                _weaponObject.transform.localPosition = new Vector3(0.013f, -0.002f, 0.005f);
+                _weaponObject.transform.localEulerAngles = new Vector3(-188.181f, -182.17f, 11.242f);
                 _enemyStateController._enemyAI.SetValuesForAI(0.85f, 0.55f, 0.1f, 0.65f, 0.3f);
                 _attackNameToPrepareName = GameManager._instance.AttackNameToPrepareName;
                 _attackNameToHitOpenTime = GameManager._instance.AxeAttackNameToHitOpenTime;
@@ -157,10 +165,12 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 break;
             case WeaponTypeEnum.Halberd:
                 _attackRange = 11f;
+                _enemyStateController._enemyMovement._moveSpeed = 3f * _enemyTypeSpeedMultiplier;
+                _enemyStateController._enemyMovement._runSpeed = 8.5f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.HalberdPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
-                _weaponObject.transform.localPosition = new Vector3(0.013f, -0.002f, 0.005f);
-                _weaponObject.transform.localEulerAngles = new Vector3(-188.181f, -182.17f, 11.242f);
+                _weaponObject.transform.localPosition = new Vector3(0.006f, 0.035f, 0.01f);
+                _weaponObject.transform.localEulerAngles = new Vector3(5.095f, -2.786f, -171.695f);
                 _enemyStateController._enemyAI.SetValuesForAI(0.9f, 0.65f, 0.05f, 0.7f, 0.2f);
                 _attackNameToPrepareName = GameManager._instance.AttackNameToPrepareName;
                 _attackNameToHitOpenTime = GameManager._instance.HalberdAttackNameToHitOpenTime;
@@ -168,9 +178,12 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 break;
             case WeaponTypeEnum.Mace:
                 _attackRange = 6f;
+                _enemyStateController._enemyMovement._moveSpeed = 3.5f * _enemyTypeSpeedMultiplier;
+                _enemyStateController._enemyMovement._runSpeed = 10f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.MacePrefab, _weaponHolderTransform);
+                _weaponObject.transform.Find("AttackCollider").GetComponent<MeleeWeapon>().IsHardHitWeapon = true;
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
-                _weaponObject.transform.localPosition = new Vector3(0f, 0f, 0f);
+                _weaponObject.transform.localPosition = new Vector3(0f, 0.08f, 0f);
                 _weaponObject.transform.localEulerAngles = new Vector3(180f, 0f, 0f);
                 _enemyStateController._enemyAI.SetValuesForAI(0.35f, 0.7f, 0.1f, 0.75f, 0.3f);
                 _attackNameToPrepareName = GameManager._instance.AttackNameToPrepareName;
@@ -179,10 +192,13 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 break;
             case WeaponTypeEnum.Hammer:
                 _attackRange = 6f;
+                _enemyStateController._enemyMovement._moveSpeed = 3.5f * _enemyTypeSpeedMultiplier;
+                _enemyStateController._enemyMovement._runSpeed = 10f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.HammerPrefab, _weaponHolderTransform);
+                _weaponObject.transform.Find("AttackCollider").GetComponent<MeleeWeapon>().IsHardHitWeapon = true;
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
-                _weaponObject.transform.localPosition = new Vector3(0f, 0f, 0f);
-                _weaponObject.transform.localEulerAngles = new Vector3(180f, 0f, 0f);
+                _weaponObject.transform.localPosition = new Vector3(0.05f, -0.319f, 0.063f);
+                _weaponObject.transform.localEulerAngles = new Vector3(18.326f, 1.483f, 96.699f);
                 _enemyStateController._enemyAI.SetValuesForAI(0.9f, 0.5f, 0.05f, 0.75f, 0.15f);
                 _attackNameToPrepareName = GameManager._instance.AttackNameToPrepareName;
                 _attackNameToHitOpenTime = GameManager._instance.HammerAttackNameToHitOpenTime;
@@ -190,6 +206,8 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 break;
             case WeaponTypeEnum.Bow:
                 _attackRange = 25f;
+                _enemyStateController._enemyMovement._moveSpeed = 3f * _enemyTypeSpeedMultiplier;
+                _enemyStateController._enemyMovement._runSpeed = 8f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.BowPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(-0.007174938f, -0.01599412f, -0.02786018f);
@@ -201,6 +219,8 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 break;
             case WeaponTypeEnum.Crossbow:
                 _attackRange = 35f;
+                _enemyStateController._enemyMovement._moveSpeed = 2f * _enemyTypeSpeedMultiplier;
+                _enemyStateController._enemyMovement._runSpeed = 7.5f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.CrossbowPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0.155f, 0.075f, -0.093f);
@@ -212,6 +232,8 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 break;
             case WeaponTypeEnum.Gun:
                 _attackRange = 13f;
+                _enemyStateController._enemyMovement._moveSpeed = 6f * _enemyTypeSpeedMultiplier;
+                _enemyStateController._enemyMovement._runSpeed = 14f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.GunPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0.085f, 0.02f, -0.022f);
@@ -223,6 +245,8 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 break;
             case WeaponTypeEnum.Katana:
                 _attackRange = 9f;
+                _enemyStateController._enemyMovement._moveSpeed = 6f * _enemyTypeSpeedMultiplier;
+                _enemyStateController._enemyMovement._runSpeed = 14f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.KatanaPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0.01773758f, 0.06871963f, -0.00327652f);
@@ -385,17 +409,15 @@ public class EnemyCombat : MonoBehaviour, IKillable
         Action CloseIsDodging = () => {
             _IsDodging = false;
         };
-        GameManager._instance.CallForAction(CloseIsDodging, _dodgeTime);
+        GameManager._instance.CallForAction(CloseIsDodging, _dodgeTime / 2);
     }
     public void DeflectWithBlock(Vector3 dir, IKillable attacker, bool isRangedAttack)
     {
         _IsBlocking = false;
 
-        Vector3 VFXposition = _meleeWeapon.transform.position - transform.forward * 1.25f;
-
         if (UnityEngine.Random.Range(0, 100) < 75)
         {
-            GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.SparksVFX), VFXposition, Quaternion.identity);
+            GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.SparksVFX), _sparkPosition.position, Quaternion.identity);
             Destroy(sparksVFX, 4f);
 
             _enemyStateController.ChangeAnimation(GetBlockAnimName(), 0.2f, true);
@@ -406,11 +428,11 @@ public class EnemyCombat : MonoBehaviour, IKillable
             _IsAllowedToAttack = false;
             if (_openIsAllowedToAttackCoroutine != null)
                 StopCoroutine(_openIsAllowedToAttackCoroutine);
-            _openIsAllowedToAttackCoroutine = StartCoroutine(OpenIsAllowedToAttackCoroutine(_attackWaitTime * 0.6f));
+            _openIsAllowedToAttackCoroutine = StartCoroutine(OpenIsAllowedToAttackCoroutine(_attackWaitTime * 0.8f));
         }
         else
         {
-            GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.ShiningSparksVFX), VFXposition, Quaternion.identity);
+            GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.ShiningSparksVFX), _sparkPosition.position, Quaternion.identity);
             if (attacker != null && !isRangedAttack)
                 attacker.AttackDeflected(this as IKillable);
             _enemyStateController.ChangeAnimation(GetDeflectAnimName(), 0.2f, true);
@@ -420,11 +442,12 @@ public class EnemyCombat : MonoBehaviour, IKillable
             _IsAllowedToAttack = false;
             if (_openIsAllowedToAttackCoroutine != null)
                 StopCoroutine(_openIsAllowedToAttackCoroutine);
-            _openIsAllowedToAttackCoroutine = StartCoroutine(OpenIsAllowedToAttackCoroutine(_attackWaitTime * 0.25f));
+            _openIsAllowedToAttackCoroutine = StartCoroutine(OpenIsAllowedToAttackCoroutine(_attackWaitTime * 0.35f));
         }
     }
     private void PrepareAttack(string attackName)
     {
+        return;
         if (WeaponType == WeaponTypeEnum.Katana) return;
         if (!_attackNameToPrepareName.TryGetValue(attackName, out string x)) return;
 
@@ -526,7 +549,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
             if (lastTimeAttacked + 0.7f > Time.time)
                 yield return new WaitForSeconds(0.7f - Mathf.Abs(Time.time - lastTimeAttacked));
             lastTimeAttacked = Time.time;
-            if ((GameManager._instance.PlayerRb.transform.position-transform.position).magnitude > 8.5f)
+            if ((GameManager._instance.PlayerRb.transform.position - transform.position).magnitude > 8.5f || _enemyStateController._enemyAI.CheckForAttackFriendlyFire())
             {
                 break;
             }
@@ -617,16 +640,17 @@ public class EnemyCombat : MonoBehaviour, IKillable
         if (isUsingCurrent)
         {
             animTime = _enemyStateController._animator.GetCurrentAnimatorClipInfo(animLayer)[0].clip.length / _enemyStateController._animator.GetCurrentAnimatorStateInfo(animLayer).speed;
-            animTime = animTime * 0.95f;
+            animTime = animTime * 0.7f;
             animTime -= time;
         }
         else
         {
             animTime = _enemyStateController._animator.GetNextAnimatorClipInfo(animLayer)[0].clip.length / _enemyStateController._animator.GetNextAnimatorStateInfo(animLayer).speed;
-            animTime = animTime * 0.95f;
+            animTime = animTime * 0.7f;
             animTime -= time;
         }
-        
+
+        animTime = WeaponType == WeaponTypeEnum.Katana ? animTime * 0.55f : animTime;
 
         Action CloseIsAttacking = () => {
             if (_isAttackInterrupted) return;
@@ -642,9 +666,11 @@ public class EnemyCombat : MonoBehaviour, IKillable
         Action OpenAttackCollider = () => {
             if (_enemyStateController._isDead || _isAttackInterrupted) return;
             _attackCollider.gameObject.SetActive(true);
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.6f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            
         };
         GameManager._instance.CallForAction(OpenAttackCollider, hitOpenTime);
+
+        GameManager._instance.CallForAction(() => { SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f)); }, hitOpenTime * 1.75f);
 
         Action CloseAttackCollider = () => {
             if (_isAttackInterrupted) return;
@@ -683,8 +709,9 @@ public class EnemyCombat : MonoBehaviour, IKillable
             RangedAttackLookToPlayer();
             yield return null;
         }
-
-        float animTime = _enemyStateController._animator.GetNextAnimatorClipInfo(1)[0].clip.length;
+        float animTime;
+        if (_enemyStateController._animator.GetNextAnimatorClipInfo(1).Length == 0) animTime = _enemyStateController._animator.GetCurrentAnimatorClipInfo(1)[0].clip.length;
+        else animTime = _enemyStateController._animator.GetNextAnimatorClipInfo(1)[0].clip.length;
 
         _IsAllowedToAttack = false;
         if (_openIsAllowedToAttackCoroutine != null)
@@ -864,28 +891,31 @@ public class EnemyCombat : MonoBehaviour, IKillable
 
         _rangedWarning.SetActive(false);
 
-        if (!GameManager._instance._isInBossLevel)
+        _enemyStateController._isDead = true;
+
+        if (!GameManager._instance._isInBossLevel && !GameManager._instance.isPlayerDead)
         {
             GameManager._instance.EnemyDied();
         }
         GameManager._instance.allEnemies.Remove(gameObject);
 
         //_enemyStateController._animator.SetTrigger("Death");
-        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.PlayerAttacks), transform.position, 0.3f, false, UnityEngine.Random.Range(1.1f, 1.25f));
+        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.EnemyDeathSounds), transform.position, 0.12f, false, UnityEngine.Random.Range(0.95f, 1.05f)), 1f);
         //die vfx, blood and sound etc
-        Vector3 VFXposition = transform.position + transform.forward * 0.5f;
+        Vector3 VFXposition = transform.position + transform.forward * 0.85f;
         GameObject bloodVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.BloodVFX), VFXposition, Quaternion.identity);
         bloodVFX.GetComponentInChildren<Rigidbody>().velocity = Vector3.up * 2f + transform.right * UnityEngine.Random.Range(-1f, 1f) + dir * UnityEngine.Random.Range(4f, 6f);
         Destroy(bloodVFX, 5f);
 
         GameObject bloodPrefab = GameManager._instance.BloodDecalPrefabs[UnityEngine.Random.Range(0, GameManager._instance.BloodDecalPrefabs.Count)];
         GameObject decal = Instantiate(bloodPrefab, transform);
-        float size = UnityEngine.Random.Range(0.75f, 1.5f);
+        float size = UnityEngine.Random.Range(1.5f, 2.5f);
         decal.GetComponent<DecalProjector>().size = new Vector3(size, size, decal.GetComponent<DecalProjector>().size.z);
         decal.GetComponent<DecalFollow>().FollowingTransform = _decalFollowTransform;
         decal.GetComponent<DecalFollow>().LocalPosition = new Vector3(UnityEngine.Random.Range(-0.2f, 0.2f), UnityEngine.Random.Range(0.2f, 0.7f), 0f);
 
-        _enemyStateController._isDead = true;
         if (_attackCollider != null)
             _attackCollider.gameObject.SetActive(false);
         Vector3 currentVelocity = GetComponent<NavMeshAgent>().velocity;
@@ -896,7 +926,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
         if (!GameManager._instance.isPlayerDead)
         {
             GameManager._instance.SlowTime();
-            GameManager._instance.ActivateWarningUI();
+            //GameManager._instance.ActivateWarningUI();
         }
     }
     private void ArrangeRagdoll()
@@ -919,8 +949,8 @@ public class EnemyCombat : MonoBehaviour, IKillable
     {
         if (!IsDead) return;
 
-        float forceMultiplier = 700f;
-        float forceUpMultiplier = 20f;
+        float forceMultiplier = 400f;
+        float forceUpMultiplier = 12f;
 
         _enemyStateController._animator.enabled = false;
         //_enemyStateController._animator.avatar = null;
