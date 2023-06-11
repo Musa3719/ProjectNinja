@@ -9,7 +9,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5295506828318245526}
-  - component: {fileID: 73341887170970055}
   - component: {fileID: 69941998328862721}
   - component: {fileID: 1408259320316462504}
   m_Layer: 7
@@ -35,19 +34,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &73341887170970055
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1584210555609443282}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 1
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Size: {x: 0.80249166, y: 1.6539291, z: 1.3792835}
-  m_Center: {x: 0.002385626, y: 0.30243725, z: -0.0011162956}
 --- !u!114 &69941998328862721
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -61,6 +47,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   IgnoreCollisionCollider: {fileID: 0}
+  isTrap: 0
 --- !u!54 &1408259320316462504
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -76,7 +63,7 @@ Rigidbody:
   m_IsKinematic: 0
   m_Interpolate: 1
   m_Constraints: 0
-  m_CollisionDetection: 1
+  m_CollisionDetection: 2
 --- !u!1 &2404216491457371939
 GameObject:
   m_ObjectHideFlags: 0
@@ -88,6 +75,7 @@ GameObject:
   - component: {fileID: 3032803288199431577}
   - component: {fileID: 2141871813344135740}
   - component: {fileID: 4205660945912725238}
+  - component: {fileID: 6205089395825972464}
   m_Layer: 0
   m_Name: Glass
   m_TagString: Untagged
@@ -160,3 +148,17 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!64 &6205089395825972464
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2404216491457371939}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 1
+  m_Enabled: 1
+  serializedVersion: 4
+  m_Convex: 1
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 3357834972882811847, guid: 76deb147ef5f15a4b87e923564001256, type: 3}

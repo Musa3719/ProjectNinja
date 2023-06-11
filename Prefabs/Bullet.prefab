@@ -111,6 +111,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   IgnoreCollisionCollider: {fileID: 0}
+  isTrap: 0
 --- !u!1 &3287667115737014934
 GameObject:
   m_ObjectHideFlags: 0
@@ -162,7 +163,7 @@ Rigidbody:
   m_IsKinematic: 0
   m_Interpolate: 1
   m_Constraints: 96
-  m_CollisionDetection: 1
+  m_CollisionDetection: 2
 --- !u!2083052967 &3357332110680923774
 VisualEffect:
   m_ObjectHideFlags: 0
@@ -294,6 +295,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15cc8248a43d85441aa6c9056e80363b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  isMeleeWeapon: 0
 --- !u!135 &3119465571000415454
 SphereCollider:
   m_ObjectHideFlags: 0

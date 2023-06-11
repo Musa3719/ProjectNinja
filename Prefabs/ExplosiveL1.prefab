@@ -64,7 +64,7 @@ GameObject:
   - component: {fileID: 5693918205578304637}
   - component: {fileID: 6198451197184811411}
   - component: {fileID: 998484147}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: ExplosiveL1Projectile
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -157,7 +157,7 @@ SphereCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1784432962143523240}
   m_Material: {fileID: 0}
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_Enabled: 1
   serializedVersion: 2
   m_Radius: 0.25
