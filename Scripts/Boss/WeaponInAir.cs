@@ -28,6 +28,9 @@ public class WeaponInAir : MonoBehaviour
     {
         SoundManager._instance.PlaySound(SoundManager._instance.WeaponStickGround, transform.position, 0.6f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, transform.position + Vector3.up * 0.75f, Quaternion.identity);
+        hitSmoke.GetComponentInChildren<Animator>().speed = 0.7f;
+        Color color = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
+        hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(color.r, color.g, color.b, 10f / 255f);
         hitSmoke.transform.localScale *= 10f;
         Destroy(hitSmoke, 5f);
         yield return new WaitForSeconds(0.02f);

@@ -61,6 +61,8 @@ public class BossStateController : MonoBehaviour
     public List<GameObject> TouchingRoofs { get; private set; }
     public List<GameObject> TouchingWalls { get; private set; }
 
+    public GameObject EyeObject;
+
     private void Awake()
     {
         TouchingGrounds = new List<GameObject>();
@@ -95,6 +97,8 @@ public class BossStateController : MonoBehaviour
     }
     private IEnumerator DissolveCoroutine(bool hasMovedAlready)
     {
+        if (EyeObject != null) EyeObject.SetActive(false);
+
         _mesh.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         _mesh.material = _dissolveMaterial;
 
@@ -148,6 +152,8 @@ public class BossStateController : MonoBehaviour
             weapon.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
             weapon.GetComponent<MeshRenderer>().material = weapon.GetComponent<PlaySoundOnCollision>()._normalMaterial;
         }
+
+        if (EyeObject != null) EyeObject.SetActive(true);
     }
     private void ArrangeIsInSmoke()
     {
@@ -298,16 +304,16 @@ public class BossStateController : MonoBehaviour
             }
         }
 
-        /*if (_animator.GetCurrentAnimatorStateInfo(1).IsName("Empty"))
+        if (_animator.GetCurrentAnimatorStateInfo(1).IsName("Empty"))
         {
-            _animator.SetLayerWeight(4, 0f);
-            _animator.SetLayerWeight(5, 1f);
+            _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
+            _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 1f, Time.deltaTime * 3f));
         }
         else
         {
-            _animator.SetLayerWeight(4, 1f);
-            _animator.SetLayerWeight(5, 0f);
-        }*/
+            _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0.75f, Time.deltaTime * 3f));
+            _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 3f));
+        }
     }
     private void ArrangeCombatStamina()
     {
@@ -455,7 +461,7 @@ public class BossStateController : MonoBehaviour
                 localCheckDistance = _checkDistance;
 
             RaycastHit hit;
-            Physics.Raycast(_rb.transform.position, (playerTransform.position - _rb.transform.position).normalized, out hit, localCheckDistance, GameManager._instance.LayerMaskWithoutTriggerColliders);
+            Physics.Raycast(_rb.transform.position, (playerTransform.position - _rb.transform.position).normalized, out hit, localCheckDistance, GameManager._instance.LayerMaskForVisible);
 
             if (hit.collider != null && hit.collider.gameObject.CompareTag("Player"))
             {
@@ -512,13 +518,14 @@ public class BossStateController : MonoBehaviour
 
         if (_bossCombat._IsInAttackPattern)
         {
-            if (UnityEngine.Random.Range(0,101) >= 30)
+            /*if (UnityEngine.Random.Range(0,101) >= 30)
             {
                 _bossMovement.Teleport();
                 return;
             }
             else
-                _bossCombat.StopAttackInstantly();
+                _bossCombat.StopAttackInstantly();*/
+            _bossCombat.StopAttackInstantly();
         }
 
         _bossCombat._IsBlocking = true;

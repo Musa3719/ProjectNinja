@@ -62,65 +62,15 @@ public class BossAI : MonoBehaviour
                 _controller._bossCombat._attackNameToHitOpenTime = GameManager._instance.NameToHitOpenTimeBoss2;
                 _controller._animatorController = GameManager._instance.Boss2AnimatorGetter;
                 break;
-            case 31:
-                _bossSpecial = new Boss31Special(_controller);
+            case 3:
+                _bossSpecial = new Boss3Special(_controller);
                 _AgressiveValue = 0.8f;
                 _DodgeOverBlockValue = 0.2f;
                 _RetreatValue = 0.4f;
                 _IdleValue = 0.5f;
                 _controller._bossCombat._attackNameToPrepareName = GameManager._instance.AttackNameToPrepareNameBoss;
-                _controller._bossCombat._attackNameToHitOpenTime = GameManager._instance.NameToHitOpenTimeBoss31;
-                _controller._animatorController = GameManager._instance.Boss31AnimatorGetter;
-                break;
-            case 32:
-                _bossSpecial = new Boss32Special(_controller);
-                _AgressiveValue = 0.8f;
-                _DodgeOverBlockValue = 0.2f;
-                _RetreatValue = 0.4f;
-                _IdleValue = 0.5f;
-                _controller._bossCombat._attackNameToPrepareName = GameManager._instance.AttackNameToPrepareNameBoss;
-                _controller._bossCombat._attackNameToHitOpenTime = GameManager._instance.NameToHitOpenTimeBoss32;
-                _controller._animatorController = GameManager._instance.Boss32AnimatorGetter;
-                break;
-            case 33:
-                _bossSpecial = new Boss33Special(_controller);
-                _AgressiveValue = 0.8f;
-                _DodgeOverBlockValue = 0.4f;
-                _RetreatValue = 0.4f;
-                _IdleValue = 0.5f;
-                _controller._bossCombat._attackNameToPrepareName = GameManager._instance.AttackNameToPrepareNameBoss;
-                _controller._bossCombat._attackNameToHitOpenTime = GameManager._instance.NameToHitOpenTimeBoss33;
-                _controller._animatorController = GameManager._instance.Boss33AnimatorGetter;
-                break;
-            case 4:
-                _bossSpecial = new Boss4Special(_controller);
-                _AgressiveValue = 0.8f;
-                _DodgeOverBlockValue = 0.25f;
-                _RetreatValue = 0.4f;
-                _IdleValue = 0.5f;
-                _controller._bossCombat._attackNameToPrepareName = GameManager._instance.AttackNameToPrepareNameBoss;
-                _controller._bossCombat._attackNameToHitOpenTime = GameManager._instance.NameToHitOpenTimeBoss4;
-                _controller._animatorController = GameManager._instance.Boss4AnimatorGetter;
-                break;
-            case 5:
-                _bossSpecial = new Boss5Special(_controller);
-                _AgressiveValue = 0.8f;
-                _DodgeOverBlockValue = 0.25f;
-                _RetreatValue = 0.4f;
-                _IdleValue = 0.5f;
-                _controller._bossCombat._attackNameToPrepareName = GameManager._instance.AttackNameToPrepareNameBoss;
-                _controller._bossCombat._attackNameToHitOpenTime = GameManager._instance.NameToHitOpenTimeBoss5;
-                _controller._animatorController = GameManager._instance.Boss5AnimatorGetter;
-                break;
-            case 6:
-                _bossSpecial = new Boss6Special(_controller);
-                _AgressiveValue = 0.8f;
-                _DodgeOverBlockValue = 0.12f;
-                _RetreatValue = 0.4f;
-                _IdleValue = 0.5f;
-                _controller._bossCombat._attackNameToPrepareName = GameManager._instance.AttackNameToPrepareNameBoss;
-                _controller._bossCombat._attackNameToHitOpenTime = GameManager._instance.NameToHitOpenTimeBoss6;
-                _controller._animatorController = GameManager._instance.Boss6AnimatorGetter;
+                _controller._bossCombat._attackNameToHitOpenTime = GameManager._instance.NameToHitOpenTimeBoss3;
+                _controller._animatorController = GameManager._instance.Boss3AnimatorGetter;
                 break;
             default:
                 break;
@@ -361,6 +311,11 @@ public class BossAI : MonoBehaviour
             }
         }
 
+        if (selectedAnimNames.Count == 1)
+        {
+            if (lastSelectedIndex + 1 < attackAnimCount)
+                selectedAnimNames.Add("Attack" + (lastSelectedIndex + 2));
+        }
         if (selectedAnimNames.Count == 0)
         {
             selectedAnimNames.Add("Attack" + (Random.Range(0, attackAnimCount) + 1).ToString());
@@ -440,7 +395,7 @@ public class BossAI : MonoBehaviour
                 xTemp = 0;
                 break;
         }
-        return new Vector3(xTemp, 0f, Random.Range(-0.8f, -0.6f) + extraZ);
+        return transform.right * xTemp + transform.forward * (Random.Range(-0.8f, -0.6f) + extraZ);
     }
     public bool CheckForIdle()
     {

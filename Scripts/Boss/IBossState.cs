@@ -22,12 +22,12 @@ namespace BossStates
         {
             _bossStateController = rb.GetComponent<BossStateController>();
             _bossStateController.EnableHeadAim();
-            _bossStateController._animator.SetFloat("LocomotionSpeedMultiplier", 0.5f);
+            _bossStateController._animator.SetFloat("LocomotionSpeedMultiplier", 0.5f + (_bossStateController._bossMovement._runSpeed - 10.5f) / 10f);
             _targetPos = _bossStateController._bossAI.GetIdleMovementPosition(_bossStateController._agent);
         }
         public void Exit(Rigidbody rb, IBossState newState)
         {
-            _bossStateController._animator.SetFloat("LocomotionSpeedMultiplier", 1f);
+            _bossStateController._animator.SetFloat("LocomotionSpeedMultiplier", 1f + (_bossStateController._bossMovement._runSpeed - 10.5f) / 10f);
         }
         public void DoState(Rigidbody rb)
         {
