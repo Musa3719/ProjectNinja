@@ -6,42 +6,55 @@ public class NailTrap : MonoBehaviour, ITrap
 {
     public bool _Activated { get; set; }
     public bool _CheckForActivate { get; set; }
-
-    private Coroutine OpenTrapCoroutine;
+    private bool _isOpenTrapCoroutineActive;
 
     public void Activate()
     {
-        OpenTrapCoroutine = StartCoroutine(OpenTrap());
+        StartCoroutine(OpenTrap());
     }
 
     private void OnTriggerEnter(Collider other)
     {
         if (other != null && other.CompareTag("HitBox"))
         {
-            if (OpenTrapCoroutine == null)
+            if (!_isOpenTrapCoroutineActive)
                 Activate();
         }
     }
     private IEnumerator OpenTrap()
     {
-        yield return new WaitForSeconds(0.6f);
+        _isOpenTrapCoroutineActive = true;
+        yield return new WaitForSeconds(0.4f);
 
-        while (transform.localPosition.y <= 0.42f)
+        Transform childTransform = transform.Find("WalkTrapBlade");
+        Transform childTransform2 = transform.Find("NailTrapKiller");
+
+        //open
+        while (childTransform.localPosition.y <= 0.32f || childTransform2.localPosition.y <= 1.1f)
         {
-            transform.localPosition = new Vector3(transform.localPosition.x, Mathf.Lerp(transform.localPosition.y, 0.5f, Time.deltaTime * 25f), transform.localPosition.z);
+            if(childTransform.localPosition.y <= 0.32f)
+                childTransform.localPosition = new Vector3(childTransform.localPosition.x, Mathf.Lerp(childTransform.localPosition.y, 0.4f, Time.deltaTime * 25f), childTransform.localPosition.z);
+            if(childTransform2.localPosition.y <= 1.4f)
+                childTransform2.localPosition = new Vector3(childTransform2.localPosition.x, Mathf.Lerp(childTransform2.localPosition.y, 1.5f, Time.deltaTime * 25f), childTransform2.localPosition.z);
             yield return null;
         }
-        transform.localPosition = new Vector3(transform.localPosition.x, 0.5f, transform.localPosition.z);
+        childTransform.localPosition = new Vector3(childTransform.localPosition.x, 0.4f, childTransform.localPosition.z);
+        childTransform2.localPosition = new Vector3(childTransform2.localPosition.x, 1.5f, childTransform2.localPosition.z);
 
         //wait for close
-        yield return new WaitForSeconds(1.2f);
+        yield return new WaitForSeconds(0.7f);
 
         //close it
-        while (transform.localPosition.y >= 0.22f)
+        while (childTransform.localPosition.y >= -2f || childTransform2.localPosition.y >= 0.22f)
         {
-            transform.localPosition = new Vector3(transform.localPosition.x, Mathf.Lerp(transform.localPosition.y, 0.15f, Time.deltaTime * 25f), transform.localPosition.z);
+            if(childTransform.localPosition.y >= -2f)
+                childTransform.localPosition = new Vector3(childTransform.localPosition.x, Mathf.Lerp(childTransform.localPosition.y, -2.06f, Time.deltaTime * 4f), childTransform.localPosition.z);
+            if(childTransform2.localPosition.y >= 0.22f)
+                childTransform2.localPosition = new Vector3(childTransform2.localPosition.x, Mathf.Lerp(childTransform2.localPosition.y, 0.15f, Time.deltaTime * 25f), childTransform2.localPosition.z);
             yield return null;
         }
-        transform.localPosition = new Vector3(transform.localPosition.x, 0.15f, transform.localPosition.z);
+        childTransform.localPosition = new Vector3(childTransform.localPosition.x, -2.06f, childTransform.localPosition.z);
+        childTransform2.localPosition = new Vector3(childTransform2.localPosition.x, 0.15f, childTransform2.localPosition.z);
+        _isOpenTrapCoroutineActive = false;
     }
 }

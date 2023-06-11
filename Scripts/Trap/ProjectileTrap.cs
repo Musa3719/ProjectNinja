@@ -28,8 +28,9 @@ public class ProjectileTrap : MonoBehaviour, ITrap
     public void Activate()
     {
         GameObject newArrow = Instantiate(GameManager._instance.ArrowPrefab, transform.position, Quaternion.identity);
-        newArrow.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = transform.parent.GetComponent<Collider>();
+        newArrow.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = null;
         newArrow.GetComponentInChildren<Projectile>().WhenTriggered = newArrow.GetComponentInChildren<Projectile>().WhenTriggeredForKnife;
+        newArrow.GetComponentInChildren<Projectile>().isTrap = true;
         newArrow.GetComponentInChildren<Rigidbody>().velocity = transform.forward * _projectileSpeed;
         newArrow.transform.forward = transform.forward;
         Destroy(newArrow, 10f);

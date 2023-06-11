@@ -8,10 +8,7 @@ public class TrapTrigger : MonoBehaviour
     {
         if (other != null && other.gameObject.layer == LayerMask.NameToLayer("Killable"))
         {
-            if(transform.parent.GetComponentInChildren<ITrap>()!=null)
-                transform.parent.GetComponentInChildren<ITrap>()._CheckForActivate = true;
-            else
-                transform.parent.GetComponent<ITrap>()._CheckForActivate = true;
+            transform.parent.GetComponentInChildren<ITrap>()._CheckForActivate = true;
         }
     }
 }

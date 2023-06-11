@@ -28,11 +28,12 @@ public class SphereTrap : MonoBehaviour, ITrap, IKillObject
     {
         killable.Die(dir, killersVelocityMagnitude);
     }
-    private void OnCollisionEnter(Collision collision)
+   
+    private void OnTriggerEnter(Collider other)
     {
-        if (_Activated && collision.collider != null && collision.collider.CompareTag("HitBox"))
+        if (_Activated && other != null && other.CompareTag("HitBox"))
         {
-            Kill(GameManager._instance.GetHitBoxIKillable(collision.collider), Vector3.zero, 0f);
+            Kill(GameManager._instance.GetHitBoxIKillable(other), GetComponent<Rigidbody>().velocity.normalized, GetComponent<Rigidbody>().velocity.magnitude);
         }
     }
 }
