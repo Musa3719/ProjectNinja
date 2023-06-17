@@ -12,7 +12,7 @@ public class Newspaper : MonoBehaviour
     public void OpenNewspaper()
     {
         GameManager._instance.NewspaperUI.SetActive(true);
-        GameManager._instance.NewspaperUI.GetComponentInChildren<TextMeshProUGUI>().text = _Text;
+        GameManager._instance.NewspaperUI.transform.Find("NewspaperImage").GetComponentInChildren<TextMeshProUGUI>().text = _Text;
         GameManager._instance.InGameScreen.SetActive(false);
     }
     private void OnEnable()

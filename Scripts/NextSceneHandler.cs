@@ -15,22 +15,14 @@ public class NextSceneHandler : MonoBehaviour
         _isInInteract = true;
         GameManager._instance.isGameStopped = true;
         Time.timeScale = 0f;
-        SceneController._instance.LoadNextSceneAsync();
         GetComponent<Newspaper>().OpenNewspaper();
-        SoundManager._instance.PlaySound(SoundManager._instance.RoomPassed, transform.position, 0.5f, false, Random.Range(0.9f, 1.1f));
-    }
-    
-    private void ToNextScene()//escape or UI button
-    {
-        Time.timeScale = 0.05f;
-        if (SceneController.NextSceneAsyncOperation != null)
-            SceneController.NextSceneAsyncOperation.allowSceneActivation = true;
+        SoundManager._instance.PlaySound(SoundManager._instance.RoomPassed, transform.position, 0.1f, false, Random.Range(0.9f, 1.1f));
     }
     private void Update()
     {
         if (_isInInteract && InputHandler.GetButtonDown("Esc"))
         {
-            ToNextScene();
+            SceneController._instance.NextScene();
         }
     }
 }

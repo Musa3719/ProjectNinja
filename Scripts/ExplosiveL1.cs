@@ -89,7 +89,7 @@ public class ExplosiveL1 : MonoBehaviour
         _isAboutToExplode = true;
 
         GetComponent<Animator>().SetTrigger("Exploding");
-        explodingSound = SoundManager._instance.PlaySound(SoundManager._instance.ReadyForExplosion, transform.position, 0.2f, false, 1f);
+        explodingSound = SoundManager._instance.PlaySound(SoundManager._instance.ReadyForExplosion, transform.position, 0.12f, false, 1f);
         float waitTime = Random.Range(1f, 2f);
         float startTime = Time.time;
         AudioSource explodingSource = explodingSound.GetComponent<AudioSource>();
@@ -148,20 +148,12 @@ public class ExplosiveL1 : MonoBehaviour
         Destroy(explodingSound);
         Destroy(transform.parent.gameObject);
     }
-    private void OnCollisionEnter(Collision collision)
-    {
-        Collider other = collision.collider;
-        if (other.name == "AttackCollider" || other.GetComponentInChildren<Projectile>() != null)
-        {
-            DestroyWithoutExploding(other.transform);
-        }
-    }
     public void DestroyWithoutExploding(Transform other)
     {
         if (_explodeCoroutine != null)
             StopCoroutine(_explodeCoroutine);
 
-        SoundManager._instance.PlaySound(SoundManager._instance.SmokeExplode, transform.position, 0.2f, false, Random.Range(1f, 1.25f));
+        SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, transform.position, 0.3f, false, Random.Range(0.7f, 0.9f));
         GameObject broken = Instantiate(PrefabHolder._instance.L1ExplosiveBroken, transform.position, transform.rotation);
         foreach (Transform item in broken.transform)
         {

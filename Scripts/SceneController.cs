@@ -1,5 +1,7 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -10,13 +12,27 @@ public class SceneController : MonoBehaviour
     private GameObject LevelNotReachedObject;
     [SerializeField]
     public GameObject LoadingObject;
+    [SerializeField]
+    public GameObject OpeningCinematic;
+
+    [SerializeField]
+    private Sprite CinematicImage1;
+    [SerializeField]
+    private Sprite CinematicImage2;
+    [SerializeField]
+    private Sprite CinematicImage3;
+    [SerializeField]
+    private Sprite CinematicImage4;
 
     private Coroutine LevelNotReachedCoroutine;
+    private Coroutine _cinematicImageChangeCoroutine;
+    private Coroutine _openingCinematicArrangementCoroutine;
 
     public static SceneController _instance;
     public static AsyncOperation NextSceneAsyncOperation;
     private void Awake()
     {
+        if (SceneManager.GetActiveScene().buildIndex == 7) Cursor.visible = true;
         _instance = this;
         Time.timeScale = 1f;
         if (SceneManager.GetActiveScene().buildIndex == 0)
@@ -56,6 +72,99 @@ public class SceneController : MonoBehaviour
         if (debug != null)
             debug.SetActive(false);
     }
+    public void CallForAction(Action action, float time)
+    {
+        StartCoroutine(CallForActionCoroutine(action, time));
+    }
+    private IEnumerator CallForActionCoroutine(Action action, float time)
+    {
+        yield return new WaitForSecondsRealtime(time);
+        action?.Invoke();
+    }
+    public void PlayButtonSound()
+    {
+        GameObject cam = GameManager._instance == null ? Camera.main.gameObject : GameManager._instance.MainCamera;
+        SoundManager._instance.PlaySound(SoundManager._instance.Button, cam.transform.position, 0.1f, false, UnityEngine.Random.Range(0.65f, 0.75f));
+    }
+    private IEnumerator OpeningCinematicArrangement()
+    {
+        Destroy(SoundManager._instance.CurrentMusicObject);
+        OpeningCinematic.SetActive(true);
+        GameObject.Find("Canvas").SetActive(false);
+
+        if (_cinematicImageChangeCoroutine != null)
+            StopCoroutine(_cinematicImageChangeCoroutine);
+        _cinematicImageChangeCoroutine = StartCoroutine(CinematicImageChangeCoroutine(CinematicImage1, "Cutter"));
+
+        yield return new WaitForSeconds(4f);
+
+        if (_cinematicImageChangeCoroutine != null)
+            StopCoroutine(_cinematicImageChangeCoroutine);
+        _cinematicImageChangeCoroutine = StartCoroutine(CinematicImageChangeCoroutine(CinematicImage2, "Samurai"));
+
+        yield return new WaitForSeconds(3f);
+
+        if (_cinematicImageChangeCoroutine != null)
+            StopCoroutine(_cinematicImageChangeCoroutine);
+        _cinematicImageChangeCoroutine = StartCoroutine(CinematicImageChangeCoroutine(CinematicImage3, "Grave Digger"));
+
+        yield return new WaitForSeconds(3f);
+
+        if (_cinematicImageChangeCoroutine != null)
+            StopCoroutine(_cinematicImageChangeCoroutine);
+        _cinematicImageChangeCoroutine = StartCoroutine(CinematicImageChangeCoroutine(CinematicImage4, "Traitor"));
+
+        yield return new WaitForSeconds(3f);
+
+        OpeningCinematic.transform.Find("Loading").gameObject.SetActive(true);
+
+        yield return null;
+
+        LoadSceneAsync(1);
+    }
+    private IEnumerator CinematicImageChangeCoroutine(Sprite newImage, string text)
+    {
+        SoundManager._instance.PlaySound(SoundManager._instance.TutorialText, Camera.main.transform.position, 0.25f, false, UnityEngine.Random.Range(0.55f, 0.65f));
+
+        OpeningCinematic.GetComponentInChildren<TextMeshProUGUI>().text = text;
+
+        var cinematicObjects = OpeningCinematic.GetComponentsInChildren<Image>();
+
+        OpeningCinematic.transform.Find("Image").GetComponent<RectTransform>().anchoredPosition = new Vector2(200f, OpeningCinematic.transform.Find("Image").GetComponent<RectTransform>().anchoredPosition.y);
+
+        foreach (var item in cinematicObjects)
+        {
+            item.sprite = newImage;
+            item.color = new Color(item.color.r, item.color.g, item.color.b, 0f);
+        }
+        float startTime = Time.time;
+        while (Time.time < startTime + 1f)
+        {
+            foreach (var item in cinematicObjects)
+            {
+                item.color = new Color(item.color.r, item.color.g, item.color.b, item.color.a + Time.deltaTime * 2f);
+                if (item.name == "Image")
+                    item.GetComponent<RectTransform>().anchoredPosition = new Vector2(item.GetComponent<RectTransform>().anchoredPosition.x - Time.deltaTime * 50f, item.GetComponent<RectTransform>().anchoredPosition.y);
+            }
+            yield return null;
+        }
+
+        foreach (var item in cinematicObjects)
+        {
+            item.color = new Color(item.color.r, item.color.g, item.color.b, 1f);
+        }
+
+        while (true)
+        {
+            foreach (var item in cinematicObjects)
+            {
+                if (item.name == "Image")
+                    item.GetComponent<RectTransform>().anchoredPosition = new Vector2(item.GetComponent<RectTransform>().anchoredPosition.x - Time.deltaTime * 50f, item.GetComponent<RectTransform>().anchoredPosition.y);
+            }
+            yield return null;
+        }
+    }
+    
     public void OpenEpisodeSelectScreen()
     {
         GameObject.Find("Canvas").transform.Find("MainMenu").gameObject.SetActive(false);
@@ -70,24 +179,32 @@ public class SceneController : MonoBehaviour
     }
     public void ContinueGameFromLastRoom()
     {
-        LoadingObject.SetActive(true);
-
-        int levelReached = PlayerPrefs.GetInt("Level", 1);
-        SceneManager.LoadSceneAsync(levelReached);
+        int levelReached = PlayerPrefs.GetInt("Level", 0);
+        if (levelReached == 0)
+        {
+            if (_openingCinematicArrangementCoroutine == null)
+                _openingCinematicArrangementCoroutine = StartCoroutine(OpeningCinematicArrangement());
+        }
+        else
+        {
+            LoadSceneAsync(levelReached);
+        }
     }
     public void NextScene()
     {
-        LoadingObject.SetActive(true);
-        SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().buildIndex + 1);
+        LoadSceneAsync(SceneManager.GetActiveScene().buildIndex + 1);
     }
-    public void LoadNextSceneAsync()
+    public void LoadSceneAsync(int index)
     {
-        NextSceneAsyncOperation = SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().buildIndex + 1);
-        NextSceneAsyncOperation.allowSceneActivation = false;
+        if (LoadingObject.activeInHierarchy) return;
+
+        LoadingObject.SetActive(true);
+        CallForAction(() => SceneManager.LoadSceneAsync(index), 0.25f);
     }
     public void LoadScene(int index)
     {
-        if (PlayerPrefs.GetInt("Level", 0) < index)
+        int levelReached = PlayerPrefs.GetInt("Level", 0);
+        if (levelReached < index)
         {
             if (LevelNotReachedCoroutine != null)
                 StopCoroutine(LevelNotReachedCoroutine);
@@ -95,8 +212,15 @@ public class SceneController : MonoBehaviour
             return;
         }
 
-        LoadingObject.SetActive(true);
-        SceneManager.LoadSceneAsync(index);
+        if (levelReached == 0)
+        {
+            if (_openingCinematicArrangementCoroutine == null)
+                _openingCinematicArrangementCoroutine = StartCoroutine(OpeningCinematicArrangement());
+        }
+        else
+        {
+            LoadSceneAsync(index);
+        }
     }
     private IEnumerator LevelNotReached()
     {
@@ -106,12 +230,10 @@ public class SceneController : MonoBehaviour
     }
     public void RestartLevel()
     {
-        SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().buildIndex);
+        LoadSceneAsync(SceneManager.GetActiveScene().buildIndex);
     }
     public void ToMenu()
     {
-        LoadingObject.SetActive(true);
-
         Cursor.visible = true;
 
         if (GameObject.FindGameObjectWithTag("PhaseCounter") != null)
@@ -130,8 +252,7 @@ public class SceneController : MonoBehaviour
         {
             Destroy(SoundManager._instance.CurrentAtmosphereObject);
         }
-
-        SceneManager.LoadSceneAsync(0);
+        CallForAction(() => LoadSceneAsync(0), 0.25f);
     }
     public void QuitGame()
     {

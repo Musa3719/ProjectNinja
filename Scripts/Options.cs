@@ -22,15 +22,15 @@ public class Options : MonoBehaviour
         Debug.unityLogger.logEnabled = Debug.isDebugBuild;
         _instance = this;
         MaxSensitivity = 3f;
-        SoundVolume = PlayerPrefs.GetFloat("Sound", 0.5f);
-        MusicVolume = PlayerPrefs.GetFloat("Music", 0.5f);
+        SoundVolume = PlayerPrefs.GetFloat("Sound", 0.33f);
+        MusicVolume = PlayerPrefs.GetFloat("Music", 0.33f);
         SoundSlider.value = SoundVolume;
         MusicSlider.value = MusicVolume;
     }
 
     private void Start()
     {
-        SensitivitySlider.value = PlayerPrefs.GetFloat("Sensitivity", 0.75f);
+        SensitivitySlider.value = PlayerPrefs.GetFloat("Sensitivity", 0.3f);
         MouseSensitivity = SensitivitySlider.value * MaxSensitivity;
     }
     public void SoundVolumeChanged(float newValue)
@@ -85,6 +85,8 @@ public class Options : MonoBehaviour
         {
             if (newValue != 0f)
                 SoundManager._instance.CurrentAtmosphereObject.GetComponent<AudioSource>().volume = newValue * SoundManager._instance.CurrentAtmosphereObject.transform.localEulerAngles.x;
+            else
+                SoundManager._instance.CurrentAtmosphereObject.GetComponent<AudioSource>().volume = 0f;
         }
     }
     private void ArrangeActiveMusicVolumes(float newValue)
@@ -93,6 +95,8 @@ public class Options : MonoBehaviour
         {
             if (newValue != 0f)
                 SoundManager._instance.CurrentMusicObject.GetComponent<AudioSource>().volume = newValue * SoundManager._instance.CurrentMusicObject.transform.localEulerAngles.x;
+            else
+                SoundManager._instance.CurrentMusicObject.GetComponent<AudioSource>().volume = 0f;
         }
     }
 }

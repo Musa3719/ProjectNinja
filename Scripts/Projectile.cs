@@ -49,7 +49,13 @@ public class Projectile : MonoBehaviour, IKillObject
     }
     private void Update()
     {
-        soundObj.transform.position = transform.position;
+        if (soundObj != null)
+        {
+            if (soundObj.transform.position == transform.position)
+                Destroy(soundObj);
+            else
+                soundObj.transform.position = transform.position;
+        }
     }
     private void OnEnable()
     {
@@ -168,7 +174,7 @@ public class Projectile : MonoBehaviour, IKillObject
         }
         else if (other.CompareTag("Door"))
         {
-            Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.3f, false, UnityEngine.Random.Range(0.55f, 0.65f)), 2f);
+            Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.25f, false, UnityEngine.Random.Range(0.55f, 0.65f)), 2f);
             GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, transform.position, Quaternion.identity);
             hitSmoke.transform.localScale *= 3f;
             hitSmoke.GetComponentInChildren<Animator>().speed = 1f;
@@ -335,7 +341,7 @@ public class Projectile : MonoBehaviour, IKillObject
         }
         else if (other.CompareTag("Door"))
         {
-            Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.3f, false, UnityEngine.Random.Range(0.55f, 0.65f)), 2f);
+            Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.25f, false, UnityEngine.Random.Range(0.55f, 0.65f)), 2f);
             GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, transform.position, Quaternion.identity);
             hitSmoke.transform.localScale *= 3f;
             Color temp = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;

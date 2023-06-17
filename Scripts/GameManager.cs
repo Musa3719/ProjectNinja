@@ -6,6 +6,8 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.Rendering;
 using System;
+using UnityEngine.Animations.Rigging;
+using UnityEngine.AI;
 
 public class GameManager : MonoBehaviour
 {
@@ -236,6 +238,8 @@ public class GameManager : MonoBehaviour
 
     public float RunSpeedAdditionActiveTime;
 
+    public bool _isPlayerInSmoke { get; set; }
+
     public GameObject BossPhaseCounterBetweenScenes { get; private set; }
     public GameObject LevelNumberObject { get; private set; }
 
@@ -253,12 +257,30 @@ public class GameManager : MonoBehaviour
     {
         return list[UnityEngine.Random.Range(0, list.Count)];
     }
-    
+    public static void Shuffle(List<string> list)
+    {
+        System.Random rng = new System.Random();
+        int n = list.Count;
+        while (n > 1)
+        {
+            n--;
+            int k = rng.Next(n + 1);
+            string value = list[k];
+            list[k] = list[n];
+            list[n] = value;
+        }
+    }
     private void Awake()
     {
         _instance = this;
-
+        BlurVolume.enabled = false;
         ArrangeGraphicsToLow();
+        
+        GameObject[] carpets = GameObject.FindGameObjectsWithTag("Carpet");
+        foreach (var item in carpets)
+        {
+            item.GetComponent<MeshRenderer>().material = CarpetLowSetting;
+        }
 
         _AvailableColor = new Color(77f / 255f, 156f / 255f, 70f / 255f, 1f);
         _NotAvailableColor = new Color(114f / 255f, 44f / 255f, 44f / 255f, 1f);
@@ -314,6 +336,47 @@ public class GameManager : MonoBehaviour
         }
         LevelNumberObject.transform.position = new Vector3(SceneManager.GetActiveScene().buildIndex, 0f, 0f);
     }
+    private void Update()
+    {
+        //if (InputHandler.GetButtonDown("PastLevelDebug")) SceneController._instance.LoadNextSceneAsync();
+        _isGroundedWorkedThisFrameEvent?.Invoke();
+        if (InputHandler.GetButtonDown("Esc") && !isPlayerDead)
+        {
+            if (isOnCutscene)
+            {
+                if (isGameStopped)
+                {
+                    CloseStopScreen();
+                }
+                else
+                {
+                    OpenStopScreen();
+                    PassCutsceneButton.SetActive(true);
+                }
+            }
+            else if (_nextSceneHandler._isInInteract)
+            {
+                //nothing
+            }
+            else if (lookingToPainting != null)
+            {
+                lookingToPainting.ClosePainting();
+                lookingToPainting = null;
+            }
+            else
+            {
+                if (isGameStopped)
+                {
+                    CloseStopScreen();
+                }
+                else
+                {
+                    OpenStopScreen();
+                }
+            }
+        }
+
+    }
     public void ArrangeGraphicsToLow()
     {
         if (PlayerPrefs.GetInt("Quality") == 2 && GameObject.Find("Level") != null)
@@ -338,11 +401,11 @@ public class GameManager : MonoBehaviour
                 }
             }
 
-            GameObject[] carpets = GameObject.FindGameObjectsWithTag("Carpet");
+            /*GameObject[] carpets = GameObject.FindGameObjectsWithTag("Carpet");
             foreach (var item in carpets)
             {
                 item.GetComponent<MeshRenderer>().material = CarpetLowSetting;
-            }
+            }*/
         }
     }
     public void GraphicsBackToNormal()
@@ -353,11 +416,11 @@ public class GameManager : MonoBehaviour
     }
     private IEnumerator GraphicsBackToNormalCoroutine()
     {
-        GameObject[] carpets = GameObject.FindGameObjectsWithTag("Carpet");
+        /*GameObject[] carpets = GameObject.FindGameObjectsWithTag("Carpet");
         foreach (var item in carpets)
         {
             item.GetComponent<MeshRenderer>().material = CarpetNormalSetting;
-        }
+        }*/
 
         Transform lights = GameObject.Find("Level").transform.Find("Lights");
         foreach (Transform light in lights)
@@ -429,17 +492,16 @@ public class GameManager : MonoBehaviour
         HammerAttackNameToHitOpenTime = new Dictionary<string, float> { ["Attack1"] = GetAttackAnimationOpenTime("Attack1", HammerAnimator), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", HammerAnimator), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", HammerAnimator), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", HammerAnimator), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", HammerAnimator), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", HammerAnimator) };
         KatanaAttackNameToHitOpenTime = new Dictionary<string, float> { ["Attack1"] = GetAttackAnimationOpenTime("Attack1", KatanaAnimator), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", KatanaAnimator), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", KatanaAnimator), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", KatanaAnimator), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", KatanaAnimator), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", KatanaAnimator) };
 
-        NameToHitOpenTimeBoss1 = new Dictionary<string, float> { ["JumpAttack"] = GetAttackAnimationOpenTime("JumpAttack", Boss1Animator), ["Attack1"] = GetAttackAnimationOpenTime("Attack1", Boss1Animator), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", Boss1Animator), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", Boss1Animator), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", Boss1Animator), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", Boss1Animator), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", Boss1Animator), ["Attack7"] = GetAttackAnimationOpenTime("Attack7", Boss1Animator), ["Attack8"] = GetAttackAnimationOpenTime("Attack8", Boss1Animator), ["Attack9"] = GetAttackAnimationOpenTime("Attack9", Boss1Animator), ["Attack10"] = GetAttackAnimationOpenTime("Attack10", Boss1Animator) };
-        NameToHitOpenTimeBoss2 = new Dictionary<string, float> { ["JumpAttack"] = GetAttackAnimationOpenTime("JumpAttack", Boss2Animator), ["Attack1"] = GetAttackAnimationOpenTime("Attack1", Boss2Animator), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", Boss2Animator), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", Boss2Animator), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", Boss2Animator), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", Boss2Animator), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", Boss2Animator), ["Attack7"] = GetAttackAnimationOpenTime("Attack7", Boss2Animator), ["Attack8"] = GetAttackAnimationOpenTime("Attack8", Boss2Animator), ["Attack9"] = GetAttackAnimationOpenTime("Attack9", Boss2Animator), ["Attack10"] = GetAttackAnimationOpenTime("Attack10", Boss2Animator) };
-        NameToHitOpenTimeBoss3 = new Dictionary<string, float> { ["JumpAttack"] = GetAttackAnimationOpenTime("JumpAttack", Boss3Animator), ["Attack1"] = GetAttackAnimationOpenTime("Attack1", Boss3Animator), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", Boss3Animator), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", Boss3Animator), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", Boss3Animator), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", Boss3Animator), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", Boss3Animator), ["Attack7"] = GetAttackAnimationOpenTime("Attack7", Boss3Animator), ["Attack8"] = GetAttackAnimationOpenTime("Attack8", Boss3Animator), ["Attack9"] = GetAttackAnimationOpenTime("Attack9", Boss3Animator), ["Attack10"] = GetAttackAnimationOpenTime("Attack10", Boss3Animator) };
-
+        NameToHitOpenTimeBoss1 = new Dictionary<string, float> { ["JumpAttack"] = GetAttackAnimationOpenTime("JumpAttack", Boss1Animator, 0.25f), ["Attack1"] = GetAttackAnimationOpenTime("Attack1", Boss1Animator, 0.25f), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", Boss1Animator, 0.25f), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", Boss1Animator, 0.25f), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", Boss1Animator, 0.25f), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", Boss1Animator, 0.25f), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", Boss1Animator, 0.25f), ["Attack7"] = GetAttackAnimationOpenTime("Attack7", Boss1Animator, 0.25f), ["Attack8"] = GetAttackAnimationOpenTime("Attack8", Boss1Animator, 0.25f), ["Attack9"] = GetAttackAnimationOpenTime("Attack9", Boss1Animator, 0.25f), ["Attack10"] = GetAttackAnimationOpenTime("Attack10", Boss1Animator, 0.25f) };
+        NameToHitOpenTimeBoss2 = new Dictionary<string, float> { ["JumpAttack"] = GetAttackAnimationOpenTime("JumpAttack", Boss2Animator, 0.25f), ["Attack1"] = GetAttackAnimationOpenTime("Attack1", Boss2Animator, 0.25f), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", Boss2Animator, 0.25f), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", Boss2Animator, 0.25f), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", Boss2Animator, 0.25f), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", Boss2Animator, 0.25f), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", Boss2Animator, 0.25f), ["Attack7"] = GetAttackAnimationOpenTime("Attack7", Boss2Animator, 0.25f), ["Attack8"] = GetAttackAnimationOpenTime("Attack8", Boss2Animator, 0.25f), ["Attack9"] = GetAttackAnimationOpenTime("Attack9", Boss2Animator, 0.25f), ["Attack10"] = GetAttackAnimationOpenTime("Attack10", Boss2Animator, 0.25f) };
+        NameToHitOpenTimeBoss3 = new Dictionary<string, float> { ["JumpAttack"] = GetAttackAnimationOpenTime("JumpAttack", Boss3Animator, 0.25f), ["Attack1"] = GetAttackAnimationOpenTime("Attack1", Boss3Animator, 0.25f), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", Boss3Animator, 0.25f), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", Boss3Animator, 0.25f), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", Boss3Animator, 0.25f), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", Boss3Animator, 0.25f), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", Boss3Animator, 0.25f), ["Attack7"] = GetAttackAnimationOpenTime("Attack7", Boss3Animator, 0.25f), ["Attack8"] = GetAttackAnimationOpenTime("Attack8", Boss3Animator, 0.25f), ["Attack9"] = GetAttackAnimationOpenTime("Attack9", Boss3Animator, 0.25f), ["Attack10"] = GetAttackAnimationOpenTime("Attack10", Boss3Animator, 0.25f) };
     }
 
     /// <returns>attack anim time multiplied by 0.35</returns>
-    private float GetAttackAnimationOpenTime(string name, RuntimeAnimatorController animator)
+    private float GetAttackAnimationOpenTime(string name, RuntimeAnimatorController animator, float openTimeNormalized = 0.385f)
     {
         float lenght = GetAnimationTime(name, animator);
-        return lenght * 0.35f;
+        return lenght * openTimeNormalized;
     }
     public float GetAnimationTime(string name, RuntimeAnimatorController animator)
     {
@@ -538,7 +600,8 @@ public class GameManager : MonoBehaviour
             CallForAction(OpenBossUI, 1f);
             _isInBossLevel = true;
         }
-        _isInBossLevel = false;
+        else
+            _isInBossLevel = false;
     }
 
     public void CallForAction(Action action, float time)
@@ -614,11 +677,33 @@ public class GameManager : MonoBehaviour
     }
     public void SIGNALOpenLockAndFightSound()
     {
-        SoundManager._instance.PlaySound(SoundManager._instance.DoorKeyUsed, MainCamera.transform.position, 1f, false, 1f);
+        SoundManager._instance.PlaySound(SoundManager._instance.DoorKeyUsed, MainCamera.transform.position, 0.5f, false, 1f);
         CallForAction(() => { if (!isOnCutscene) return; SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), MainCamera.transform.position, 0.12f, false, 0.8f);}, 1f);
         CallForAction(() => { if (!isOnCutscene) return; SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), MainCamera.transform.position, 0.12f, false, 0.8f);}, 2.5f);
         CallForAction(() => { if (!isOnCutscene) return; SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), MainCamera.transform.position, 0.12f, false, 0.8f);}, 3.2f);
         CallForAction(() => { if (!isOnCutscene) return; SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), MainCamera.transform.position, 0.12f, false, 1.1f);}, 4.5f);
+    }
+    public void SIGNALBoss1Enter()
+    {
+        GameObject boss = GameObject.FindGameObjectWithTag("Boss");
+        boss.transform.position = new Vector3(-15.284f, 3.925f, 45.679f);
+        boss.transform.Find("Model").Find("Armature").Find("RL_BoneRoot").Find("CC_Base_Hip").Find("CC_Base_Waist").Find("CC_Base_Spine01").Find("CC_Base_Spine02").Find("CC_Base_NeckTwist01").Find("CC_Base_NeckTwist02").Find("CC_Base_Head").Find("EyeObj").gameObject.SetActive(false);
+        boss.transform.Find("Model").GetComponent<Animator>().Play("Cutscene");
+        boss.GetComponent<NavMeshAgent>().enabled = false;
+        boss.transform.Find("Model").Find("AnimationRigging").GetComponent<Rig>().weight = 0f;
+    }
+    public void SIGNALBoss1EyesOpen()
+    {
+        GameObject.FindGameObjectWithTag("Boss").transform.Find("Model").Find("Armature").Find("RL_BoneRoot").Find("CC_Base_Hip").Find("CC_Base_Waist").Find("CC_Base_Spine01").Find("CC_Base_Spine02").Find("CC_Base_NeckTwist01").Find("CC_Base_NeckTwist02").Find("CC_Base_Head").Find("EyeObj").gameObject.SetActive(true);
+    }
+    public void SIGNALBoss1End()
+    {
+        GameObject boss = GameObject.FindGameObjectWithTag("Boss");
+        boss.transform.Find("Model").Find("Armature").Find("RL_BoneRoot").Find("CC_Base_Hip").position = new Vector3(-0.0003641245f, 0.03000933f, 0.9237275f);
+        boss.transform.position = new Vector3(-11.726f, 3.411f, 45.679f);
+
+        boss.GetComponent<NavMeshAgent>().enabled = true;
+        boss.transform.Find("Model").Find("AnimationRigging").GetComponent<Rig>().weight = 1f;
     }
     public void TriggerTutorialText(string text, int number)
     {
@@ -777,46 +862,7 @@ public class GameManager : MonoBehaviour
         yield return new WaitForSeconds(0.8f);
         isPlayerAttacking = false;
     }
-    private void Update()
-    {
-        _isGroundedWorkedThisFrameEvent?.Invoke();
-        if (InputHandler.GetButtonDown("Esc") && !isPlayerDead)
-        {
-            if (isOnCutscene)
-            {
-                if (isGameStopped)
-                {
-                    CloseStopScreen();
-                }
-                else
-                {
-                    OpenStopScreen();
-                    PassCutsceneButton.SetActive(true);
-                }
-            }
-            else if (_nextSceneHandler._isInInteract)
-            {
-                //nothing
-            }
-            else if (lookingToPainting != null)
-            {
-                lookingToPainting.ClosePainting();
-                lookingToPainting = null;
-            }
-            else
-            {
-                if (isGameStopped)
-                {
-                    CloseStopScreen();
-                }
-                else
-                {
-                    OpenStopScreen();
-                }
-            }
-        }
-        
-    }
+    
     public void EffectPlayerByDark()
     {
         SoundManager._instance.PlaySound(SoundManager._instance.Darken, PlayerRb.transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
@@ -981,6 +1027,20 @@ public class GameManager : MonoBehaviour
     }
     public void ExitCutscene()
     {
+        if (SceneManager.GetActiveScene().buildIndex == Boss1LevelIndex)
+        {
+            SIGNALBoss1EyesOpen();
+            SIGNALBoss1End();
+        }
+        else if (SceneManager.GetActiveScene().buildIndex == Boss2LevelIndex)
+        {
+
+        }
+        else if (SceneManager.GetActiveScene().buildIndex == Boss3LevelIndex)
+        {
+
+        }
+
         Instantiate(WaitingScreenPrefab, InGameScreen.transform.parent);
         PlayerHands.SetActive(true);
 
@@ -1058,7 +1118,7 @@ public class GameManager : MonoBehaviour
         loader.allowSceneActivation = true;
     }
 
-    public void SlowTime(float waitTime = 0.1f)
+    public void SlowTime(float waitTime = 0.2f)
     {
         if (_slowTimeCoroutine != null)
             StopCoroutine(_slowTimeCoroutine);

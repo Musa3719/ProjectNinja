@@ -21,6 +21,8 @@ public class SoundManager : MonoBehaviour
 
     #region Sounds
     [SerializeField]
+    public AudioClip Button;
+    [SerializeField]
     public AudioClip Jump;
     [SerializeField]
     public AudioClip Sliding;
@@ -61,7 +63,7 @@ public class SoundManager : MonoBehaviour
     [SerializeField]
     public AudioClip Stab;
     [SerializeField]
-    public List<AudioClip> Cuts;//Sword etc
+    public List<AudioClip> Cuts;
     [SerializeField]
     public AudioClip Throw;
     [SerializeField]
@@ -104,11 +106,6 @@ public class SoundManager : MonoBehaviour
     public List<AudioClip> PlayerAttacks;
     [SerializeField]
     public List<AudioClip> EnemyDeathSounds;
-
-    [SerializeField]
-    public List<AudioClip> EnemyGrumbles;//different for each level
-    [SerializeField]
-    public List<AudioClip> BossGrumbles;//different for each level
 
     [SerializeField]
     public List<AudioClip> ArmorHitSounds;
@@ -166,8 +163,11 @@ public class SoundManager : MonoBehaviour
     [SerializeField]
     private List<AudioClip> BossMusics;
 
-    private AudioClip Boss4Phase2Music;
-    private AudioClip Boss5Phase2Music;
+    [SerializeField]
+    public List<AudioClip> BossGrunts;
+
+    private AudioClip Boss2Phase2Music;
+    private AudioClip Boss3Phase2Music;
 
     [SerializeField]
     private AudioClip EndingMusic;
@@ -180,6 +180,9 @@ public class SoundManager : MonoBehaviour
         _instance = this;
         int sceneNumber = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex;
 
+        CurrentMusicObject = GameObject.Find("MusicObject");
+        CurrentAtmosphereObject = GameObject.Find("AtmosphereObject");
+
         if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "DemoEnded") return;
 
         if(sceneNumber == 0)
@@ -188,13 +191,11 @@ public class SoundManager : MonoBehaviour
             return;
         }
 
-        if (IsBossLevel(sceneNumber) && CurrentMusicObject == null)
+        if (IsBossLevel(sceneNumber))
         {
             PlayBossMusic(GetBossNumberFromLevel(sceneNumber));
-            return;
         }
-
-        if (sceneNumber < GameManager.Level2Index)
+        else if (sceneNumber < GameManager.Level2Index)
         {
             PlayMusic(LevelMusics[0], AtmosphereSounds[0]);
         }
@@ -213,11 +214,11 @@ public class SoundManager : MonoBehaviour
     }
     private void LateUpdate()
     {
-        if (SoundManager._instance.CurrentMusicObject != null)
+        if (SoundManager._instance.CurrentMusicObject != null && GameManager._instance != null)
         {
             CurrentMusicObject.transform.position = GameManager._instance.MainCamera.transform.position;
         }
-        if (SoundManager._instance.CurrentAtmosphereObject != null)
+        if (SoundManager._instance.CurrentAtmosphereObject != null && GameManager._instance != null)
         {
             CurrentAtmosphereObject.transform.position = GameManager._instance.MainCamera.transform.position;
         }
@@ -243,7 +244,7 @@ public class SoundManager : MonoBehaviour
     /// <summary>
     /// Arranges Movement Sounds.
     /// </summary>
-    public void PlayPlaneOrWallSound(PlaneSoundType type, float speed, float pitchMultiplier = 1f, float volumeMultiplier = 1f)
+    public void PlayPlaneOrWallSound(PlaneSoundType type, float speed, float pitchMultiplier = 1f, float volumeMultiplier = 0.75f)
     {
         float pitchFromSpeed = speed / 45f + 0.8f;
         pitchFromSpeed *= pitchMultiplier;
@@ -358,6 +359,9 @@ public class SoundManager : MonoBehaviour
     private IEnumerator StopCurrentAtmosphereAndPlay(AudioClip clip)
     {
         AudioSource source = CurrentAtmosphereObject.GetComponent<AudioSource>();
+
+        if (clip.name == source.clip.name) yield break;
+
         while (source.volume > 0.05f)
         {
             source.volume -= Time.deltaTime * 3f;
@@ -373,6 +377,9 @@ public class SoundManager : MonoBehaviour
     private IEnumerator StopCurrentMusicAndPlay(AudioClip clip)
     {
         AudioSource source = CurrentMusicObject.GetComponent<AudioSource>();
+
+        if (clip.name == source.clip.name) yield break;
+
         while (source.volume > 0.05f)
         {
             source.volume -= Time.deltaTime * 3f;
@@ -384,34 +391,48 @@ public class SoundManager : MonoBehaviour
     }
     private void PlayMusicArrangement(AudioClip clip)
     {
-        CurrentMusicObject = PlaySound(clip, Vector3.zero, 1f, true, 1f, true);
+        float volume = 0.25f;
+        if (clip.name == "MenuForDemo") volume = 0.35f;
+        if (clip.name == "SongForDemo") volume = 0.35f;
+        CurrentMusicObject = PlaySound(clip, Vector3.zero, volume, true, 1f, true, false);
         if (CurrentMusicObject != null)
+        {
+            CurrentMusicObject.name = "MusicObject";
             DontDestroyOnLoad(CurrentMusicObject);
+        }
     }
 
     private void PlayAtmosphereArrangement(AudioClip clip)
     {
-        CurrentAtmosphereObject = PlaySound(clip, Vector3.zero, 0.1f, true, 1f, true);
+        CurrentAtmosphereObject = PlaySound(clip, Vector3.zero, 0.045f, true, 1f, false, true);
         if (CurrentAtmosphereObject != null)
+        {
+            CurrentAtmosphereObject.name = "AtmosphereObject";
             DontDestroyOnLoad(CurrentAtmosphereObject);
+        }
     }
 
     /// <summary>
     /// Play Sound by creating a AudioSourcePrefab Object.
     /// </summary>
-    public GameObject PlaySound(AudioClip clip, Vector3 position, float volume = 1f, bool isLooping = false, float pitch = 1f, bool isMusicOrAtmosphere = false)
+    public GameObject PlaySound(AudioClip clip, Vector3 position, float volume = 1f, bool isLooping = false, float pitch = 1f, bool isMusic = false, bool isAtmosphere = false)
     {
         if (clip == null) return null;
 
         AudioSource audioSource = Instantiate(AudioSourcePrefab, position, Quaternion.identity).GetComponent<AudioSource>();
         audioSource.clip = clip;
-        audioSource.volume = Options._instance.SoundVolume * volume;
+        if(isMusic)
+            audioSource.volume = Options._instance.MusicVolume * volume;
+        else
+            audioSource.volume = Options._instance.SoundVolume * volume;
         audioSource.transform.localEulerAngles = new Vector3(volume, 0f, 0f);
         audioSource.loop = isLooping;
         audioSource.pitch = pitch;
         audioSource.Play();
-        if (!isMusicOrAtmosphere)
+        if (!isMusic && !isAtmosphere)
             audioSource.gameObject.transform.SetParent(SoundObjectsParent.transform);
+        if (isMusic || isAtmosphere)
+            audioSource.spatialBlend = 0f;
 
         if (!isLooping)
             Destroy(audioSource.gameObject, audioSource.clip.length / Mathf.Clamp(pitch, 0.1f, 1f) + 1f);
@@ -452,9 +473,9 @@ public class SoundManager : MonoBehaviour
     public void SlowDownMusic()
     {
         if (CurrentMusicObject != null)
-            CurrentMusicObject.GetComponent<AudioSource>().pitch = 0.82f;
+            CurrentMusicObject.GetComponent<AudioSource>().pitch = 0.95f;
         if (CurrentAtmosphereObject != null)
-            CurrentAtmosphereObject.GetComponent<AudioSource>().pitch = 0.82f;
+            CurrentAtmosphereObject.GetComponent<AudioSource>().pitch = 0.95f;
     }
     public void UnSlowDownMusic()
     {

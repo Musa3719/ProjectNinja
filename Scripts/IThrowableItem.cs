@@ -34,7 +34,7 @@ public class Knife : IThrowableItem
         GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
         {
-            throwable.GetComponentInChildren<Rigidbody>().velocity = Camera.main.transform.forward * 45f;
+            throwable.GetComponentInChildren<Rigidbody>().velocity = GameManager._instance.MainCamera.transform.forward * 45f;
             throwable.transform.position = GameManager._instance.IsLeftThrowing ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
         }
         else
@@ -67,7 +67,7 @@ public class Bomb : IThrowableItem
         GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
         {
-            throwable.GetComponentInChildren<Rigidbody>().velocity = Camera.main.transform.forward * 60f / 2f;
+            throwable.GetComponentInChildren<Rigidbody>().velocity = GameManager._instance.MainCamera.transform.forward * 40f / 2f;
             throwable.transform.position = GameManager._instance.IsLeftThrowing ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
         }
         else
@@ -98,7 +98,7 @@ public class Smoke : IThrowableItem
         GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
         {
-            throwable.GetComponentInChildren<Rigidbody>().velocity = Camera.main.transform.forward * 60f / 3f;
+            throwable.GetComponentInChildren<Rigidbody>().velocity = GameManager._instance.MainCamera.transform.forward * 40f / 2f;
             throwable.transform.position = GameManager._instance.IsLeftThrowing ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
         }
         else
@@ -131,7 +131,7 @@ public class Shuriken : IThrowableItem
         GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
         {
-            throwable.GetComponentInChildren<Rigidbody>().velocity = Camera.main.transform.forward * 45f;
+            throwable.GetComponentInChildren<Rigidbody>().velocity = GameManager._instance.MainCamera.transform.forward * 45f;
             throwable.transform.position = GameManager._instance.IsLeftThrowing ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
         }
         else
@@ -164,7 +164,7 @@ public class Glass : IThrowableItem
         GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
         {
-            throwable.GetComponentInChildren<Rigidbody>().velocity = Camera.main.transform.forward * 60f / 2f;
+            throwable.GetComponentInChildren<Rigidbody>().velocity = GameManager._instance.MainCamera.transform.forward * 60f / 2f;
             throwable.transform.position = GameManager._instance.IsLeftThrowing ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
         }
         else
@@ -196,7 +196,7 @@ public class Stone : IThrowableItem
         GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
         {
-            throwable.GetComponentInChildren<Rigidbody>().velocity = Camera.main.transform.forward * 60f / 2f;
+            throwable.GetComponentInChildren<Rigidbody>().velocity = GameManager._instance.MainCamera.transform.forward * 60f / 2f;
             throwable.transform.position = GameManager._instance.IsLeftThrowing ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
         }
         else

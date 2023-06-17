@@ -67,10 +67,10 @@ public class PlaySoundOnCollision : MonoBehaviour
         if (_isDoor)
         {
             if (_doorSoundObj == null)
-                _doorSoundObj = SoundManager._instance.PlaySound(SoundManager._instance.DoorSound, transform.position, 0.1f, true, 1f);
+                _doorSoundObj = SoundManager._instance.PlaySound(SoundManager._instance.DoorSound, transform.position, 0.055f, true, 1f);
 
             pitch = Random.Range(0.8f, 1f);
-            volume = 0.18f;
+            volume = 0.14f;
             _soundClip = SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.DoorHitSounds);
         }
 

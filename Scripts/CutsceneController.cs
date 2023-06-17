@@ -28,7 +28,7 @@ public class CutsceneController : MonoBehaviour
                 return;
             }
         }
-        Debug.LogError("Cutscene Name not found...");
+        Debug.LogWarning("Cutscene Name not found...");
         GameManager._instance.ExitCutscene();
     }
     private void OnDisable()

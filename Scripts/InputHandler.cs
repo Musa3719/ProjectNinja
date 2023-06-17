@@ -12,6 +12,9 @@ public class InputHandler : MonoBehaviour
 
         switch (inputName)
         {
+            case "PastLevelDebug":
+                if (Keyboard.current == null) return false;
+                return isCheckingButtonDown ? Keyboard.current.lKey.wasPressedThisFrame : Keyboard.current.lKey.isPressed;
             case "Fire1":
                 if (Mouse.current == null) return false;
                 return isCheckingButtonDown ? Mouse.current.leftButton.wasPressedThisFrame : Mouse.current.leftButton.isPressed;
