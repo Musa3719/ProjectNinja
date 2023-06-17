@@ -10,6 +10,8 @@ GameObject:
   m_Component:
   - component: {fileID: 5295506828318245526}
   - component: {fileID: 4948015980203553469}
+  - component: {fileID: 2040269973}
+  - component: {fileID: 2040269974}
   m_Layer: 0
   m_Name: ExplosiveL1
   m_TagString: Untagged
@@ -50,6 +52,31 @@ Rigidbody:
   m_Interpolate: 1
   m_Constraints: 96
   m_CollisionDetection: 1
+--- !u!135 &2040269973
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1584210555609443282}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.625
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &2040269974
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1584210555609443282}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76aaa1686617e5f4582d9346028e27b7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1784432962143523240
 GameObject:
   m_ObjectHideFlags: 0
@@ -62,7 +89,6 @@ GameObject:
   - component: {fileID: 4669255312898998807}
   - component: {fileID: 6980618355964839106}
   - component: {fileID: 5693918205578304637}
-  - component: {fileID: 6198451197184811411}
   - component: {fileID: 998484147}
   m_Layer: 0
   m_Name: ExplosiveL1Projectile
@@ -149,19 +175,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _isTriggered: 0
---- !u!135 &6198451197184811411
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1784432962143523240}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.25
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!95 &998484147
 Animator:
   serializedVersion: 4

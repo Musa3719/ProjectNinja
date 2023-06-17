@@ -975,9 +975,9 @@ CapsuleCollider:
   m_IsTrigger: 1
   m_Enabled: 1
   m_Radius: 0.18243335
-  m_Height: 1.5128747
+  m_Height: 1.6214751
   m_Direction: 2
-  m_Center: {x: -0.047566023, y: -0.04999314, z: -0.67415357}
+  m_Center: {x: -0.047566634, y: -0.049993202, z: -0.72845334}
 --- !u!114 &1256018860717129776
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -990,6 +990,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c2eee75d0fdcb4d478f90f44b5f50295, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  IsHardHitWeapon: 0
 --- !u!1 &1781971631271450660
 GameObject:
   m_ObjectHideFlags: 0
@@ -1510,7 +1511,7 @@ Transform:
   m_LocalRotation: {x: 0.00000005960463, y: -0.0000000023792375, z: 0.0000000068589525,
     w: 1}
   m_LocalPosition: {x: -0.026099946, y: 0.06939978, z: 0.1066004}
-  m_LocalScale: {x: 0.013999999, y: 0.014000003, z: 0.014}
+  m_LocalScale: {x: 0.02, y: 0.014, z: 0.015}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 4272336588862207520}
@@ -3119,7 +3120,7 @@ Transform:
   m_LocalRotation: {x: 0.00000005960463, y: -0.0000000023792375, z: 0.0000000068589525,
     w: 1}
   m_LocalPosition: {x: 0.026100004, y: 0.06939967, z: 0.10660088}
-  m_LocalScale: {x: 0.013999999, y: 0.014000003, z: 0.014}
+  m_LocalScale: {x: 0.02, y: 0.014, z: 0.015}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 4272336588862207520}
@@ -3414,7 +3415,6 @@ MonoBehaviour:
   _IsAttackInterrupted: 0
   _combatStaminaLimit:
   - 45
-  - 75
   _weaponHolderTransform: {fileID: 5438060758663631169}
   _decalFollowTransform: {fileID: 2848372737585586462}
   _attackAnimCount: 10
@@ -4219,8 +4219,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7312101115054254730}
   m_LocalRotation: {x: -0.026894856, y: 0.75017357, z: 0.65327466, w: -0.09873485}
-  m_LocalPosition: {x: 0.15438774, y: -0.9152214, z: 0.157946}
-  m_LocalScale: {x: 100.00013, y: 100.00009, z: 100.00022}
+  m_LocalPosition: {x: 0.135, y: -0.812, z: 0.144}
+  m_LocalScale: {x: 85, y: 85, z: 85}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5009439653501138813}
