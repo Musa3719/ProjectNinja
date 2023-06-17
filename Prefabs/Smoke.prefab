@@ -517,7 +517,7 @@ GameObject:
   - component: {fileID: 6132029323980578885}
   - component: {fileID: 9085884656245645799}
   - component: {fileID: 132701495}
-  m_Layer: 0
+  m_Layer: 2
   m_Name: Sphere
   m_TagString: Smoke
   m_Icon: {fileID: 0}
