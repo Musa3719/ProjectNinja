@@ -26,8 +26,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
 
     public CapsuleCollider _collider { get; private set; }
 
-    private float _lastAttackTime;
-    private int _lastAttackNumber;
+    private AttackType _lastAttackType;
 
     [SerializeField]
     private Transform _sparkPosition;
@@ -123,7 +122,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
         {
             if (_collisionVelocity > _crashStunCheckValue || collision.collider.GetComponent<IKillable>()._CollisionVelocity > _crashStunCheckValue)
             {
-                Stun(0.35f, true, collision.collider.transform);
+                Stun(0.15f, false, collision.collider.transform);
             }
         }
 
@@ -199,7 +198,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
         _IsDodgingOrForwardLeap = true;
 
         PlayerStateController._instance.ChangeAnimation("Dodge");
-        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.ArmorWalkSounds), transform.position, 0.18f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.ArmorWalkSounds), transform.position, 0.14f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.3f));
         CameraController.ShakeCamera(3f, 1.6f, 0.1f, 0.7f);
 
@@ -224,7 +223,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
             }
 
             PlayerStateController._instance.ChangeAnimation(GetBlockedName());
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
             CameraController.ShakeCamera(4f, 1.15f, 0.15f, 0.65f);
             PlayerMovement._instance.BlockedMove(PlayerStateController._instance._rb, -dir);
             _AttackBlockedCounter = 0.4f;
@@ -250,7 +249,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
                 Action OpenIsAllowedToAttack = () => {
                     _isAllowedToAttack = true;
                 };
-                GameManager._instance.CallForAction(OpenIsAllowedToAttack, _attackWaitTime * 1.5f);
+                GameManager._instance.CallForAction(OpenIsAllowedToAttack, _attackWaitTime * 1.25f);
             }
 
             _lastAttackDeflectedCounter = 0;
@@ -259,7 +258,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
         {
             CameraController.ShakeCamera(3f, 1.1f, 0.2f, 0.5f);
             PlayerStateController._instance.ChangeAnimation(GetDeflectedName());
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
             if (_isBlockedOrDeflectedCoroutine != null)
                 StopCoroutine(_isBlockedOrDeflectedCoroutine);
@@ -295,7 +294,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
                 Action OpenIsAllowedToAttack = () => {
                     _isAllowedToAttack = true;
                 };
-                GameManager._instance.CallForAction(OpenIsAllowedToAttack, _attackWaitTime / 2f);
+                GameManager._instance.CallForAction(OpenIsAllowedToAttack, _attackWaitTime / 4f);
             }
 
             _lastAttackDeflectedCounter++;
@@ -319,7 +318,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
         _isAllowedToAttack = false;
         PlayerCombat._instance._IsAttacking = true;
 
-        CameraController._instance.GetComponentInChildren<Animator>().CrossFade("CameraAttack" + attackName.Substring(attackName.Length - 1), 0.25f);
+        CameraController._instance.GetComponentInChildren<Animator>().CrossFade("Camera" + attackName, 0.15f);
 
         GameManager._instance.PlayerAttackHandle();
         GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; _isAllowedToAttack = true; }, _attackWaitTime);
@@ -340,11 +339,12 @@ public class PlayerCombat : MonoBehaviour, IKillable
             _attackColliderWarning.gameObject.SetActive(false);
         _attackColliderWarning.gameObject.SetActive(true);
 
-        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackColliderWarning.gameObject.SetActive(false); }, _attackTime * 0.7f);
+        
+        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackColliderWarning.gameObject.SetActive(false); }, _attackTime * 0.475f);
 
-        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(true); CameraController.ShakeCamera(2f, 1.75f, 0.15f, 0.35f); }, _attackTime * 0.5f);
+        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(true); CameraController.ShakeCamera(2.5f, 2f, 0.2f, 0.4f); GameManager._instance.BlurVolume.enabled = true; }, _attackTime * 0.35f);
 
-        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(false); PlayerCombat._instance._IsAttacking = false; }, _attackTime * 0.7f);
+        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(false); PlayerCombat._instance._IsAttacking = false; GameManager._instance.BlurVolume.enabled = false; }, _attackTime * 0.475f);
     }
     private void SelectAttackType()
     {
@@ -355,18 +355,53 @@ public class PlayerCombat : MonoBehaviour, IKillable
                 _attackType = AttackType.Left;
             else
                 _attackType = AttackType.Right;
-            return;
+        }
+        else if (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(4).IsName("DeflectedToRight"))
+        {
+            _attackType = AttackType.Right;
+        }
+        else if (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(4).IsName("DeflectedToLeft"))
+        {
+            _attackType = AttackType.Left;
+        }
+        else
+        {
+            do
+            {
+                int random = UnityEngine.Random.Range(0, 3);
+                if (random == 0)
+                    _attackType = AttackType.Both;
+                else if (random == 1)
+                    _attackType = AttackType.Left;
+                else if (random == 2)
+                    _attackType = AttackType.Right;
+            } while (_attackType == _lastAttackType);
         }
 
-        _attackType = AttackType.Both;
+        if (_attackType != AttackType.Both)
+        {
+            if(!PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(4).IsName("EmptyCombat"))
+                PlayerStateController._instance.ChangeAnimation("EmptyCombat", 0.25f);
 
-        /*int random = UnityEngine.Random.Range(0, 25);
-        if (random != 23 && random != 24)
-            _attackType = AttackType.Both;
-        else if (random == 23)
-            _attackType = AttackType.Left;
-        else if (random == 24)
-            _attackType = AttackType.Right;*/
+            if (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(1).IsName("Idle") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(1).IsName("Walk") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(1).IsName("Run"))
+            {
+                if (_attackType == AttackType.Left)
+                {
+                    PlayerStateController._instance.ChangeAnimation("RightEmptyForAttack");
+                    PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.25f));
+                }
+                else
+                {
+                    PlayerStateController._instance.ChangeAnimation("LeftEmptyForAttack");
+                    PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.25f));
+                }
+                
+            }
+
+        }
+
+        _lastAttackType = _attackType;
+        
     }
     public void ChangeStamina(float amount)
     {
@@ -436,13 +471,13 @@ public class PlayerCombat : MonoBehaviour, IKillable
 
         GameManager._instance.CallForAction(() => { _IsStunned = false; }, time);
         PlayerStateController._instance.ChangeAnimation("Stun");
-        SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(1f));
+        SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.2f));
     }
     public void HitBreakable(GameObject breakable)
     {
         PlayerStateController._instance.ChangeAnimation("HitBreakable");
-        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.8f));
+        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.4f));
     }
 
     private string GetForwardLeapAnimation()
@@ -455,7 +490,10 @@ public class PlayerCombat : MonoBehaviour, IKillable
     }
     public string GetDeflectedName()
     {
-        return "Deflected" + UnityEngine.Random.Range(1, 4).ToString();
+        if (UnityEngine.Random.Range(0, 2) == 0)
+            return "DeflectedToRight";
+        else
+            return "DeflectedToLeft";
     }
     public string GetAttackDeflectedName()
     {
@@ -473,25 +511,17 @@ public class PlayerCombat : MonoBehaviour, IKillable
         SelectAttackType();
         if (_attackType == AttackType.Both)
         {
-            if (_lastAttackTime + 1.5f > Time.time)
-            {
-                _lastAttackNumber++;
-                if (_lastAttackNumber > 5) _lastAttackNumber = 1;
-                _lastAttackTime = Time.time;
-                return "Attack" + _lastAttackNumber;
-            }
-            _lastAttackNumber = 1;
-            _lastAttackTime = Time.time;
-            return "Attack" + _lastAttackNumber;
+            int random = UnityEngine.Random.Range(1, 3);
+            return "Attack" + random.ToString();
         }
         else
         {
-            _lastAttackTime = Time.time;
-            _lastAttackNumber = 0;
+            int random = UnityEngine.Random.Range(1, 3);
+
             if(_attackType == AttackType.Left)
-                return "LeftAttack" + UnityEngine.Random.Range(1, 3).ToString();
+                return "LeftAttack" + random.ToString();
             else
-                return "RightAttack" + UnityEngine.Random.Range(1, 3).ToString();
+                return "RightAttack" + random.ToString();
         }
     }
     public string GetThrowName()
@@ -527,19 +557,20 @@ public class PlayerCombat : MonoBehaviour, IKillable
         if (_isImmune)
         {
             PlayerStateController._instance.ChangeAnimation("Born");
-            PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.6f));
+            PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.3f));
             SoundManager._instance.PlaySound(SoundManager._instance.Die, transform.position, 0.1f, false, UnityEngine.Random.Range(0.5f, 0.6f));
-            GameObject deathVfx = Instantiate(GameManager._instance.DeathVFX, Camera.main.transform);
+            GameObject deathVfx = Instantiate(GameManager._instance.DeathVFX, GameManager._instance.MainCamera.transform);
             deathVfx.transform.localPosition = new Vector3(0f, 0f, 0.1f);
-            deathVfx.GetComponentInChildren<SpriteRenderer>().color = new Color(1f, 1f, 1f, 0.5f);
+            deathVfx.GetComponentInChildren<SpriteRenderer>().color = new Color(1f, 1f, 1f, 0.35f);
             Destroy(deathVfx, 1f);
             return;
         }
 
         CameraController.ShakeCamera(3.25f, 1.4f, 0.15f, 2.25f);
+        GameManager._instance.BlurVolume.enabled = true;
 
         PlayerStateController._instance._Animator.SetTrigger("Death");
-        var vfx = Instantiate(GameManager._instance.DeathVFX, Camera.main.transform);
+        var vfx = Instantiate(GameManager._instance.DeathVFX, GameManager._instance.MainCamera.transform);
         vfx.transform.localPosition = new Vector3(0f, 0f, 0.1f);
         SoundManager._instance.PlaySound(SoundManager._instance.Die, transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         CameraController._instance.DeathMove();

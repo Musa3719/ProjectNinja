@@ -217,7 +217,7 @@ namespace PlayerStates
             PlayerCombat._instance._IsBlocking = false;
             GameManager._instance.MidScreenDot.color = GameManager._instance.MidScreenDotOnWallColor;
 
-            PlayerStateController._instance.BladeSpinSoundObject = SoundManager._instance.PlaySound(SoundManager._instance.BladeSpin, PlayerStateController._instance.transform.position, 0.25f, true, 1f);
+            PlayerStateController._instance.BladeSpinSoundObject = SoundManager._instance.PlaySound(SoundManager._instance.BladeSpin, PlayerStateController._instance.transform.position, 0.225f, true, 1.3f);
 
             CreateSparkAndCheckDirection();
         }
@@ -250,9 +250,12 @@ namespace PlayerStates
             }
             else
             {
-                Vector3 leftPos = GameManager._instance.PlayerLeftHandTransform.position + PlayerStateController._instance.transform.up * -0.3f + PlayerStateController._instance.transform.right * -0.3f;
-                Vector3 rightPos = GameManager._instance.PlayerRightHandTransform.position + PlayerStateController._instance.transform.up * -0.3f + PlayerStateController._instance.transform.right * 0.3f;
-                PlayerStateController._instance.OnWallSpark.transform.position = _isWallOnLeftSide ? leftPos : rightPos;
+                if (PlayerMovement._instance._touchingWallColliders.Count > 0)
+                {
+                    Vector3 leftPos = GameManager._instance.PlayerLeftHandTransform.position + PlayerStateController._instance.transform.up * -0.4f + PlayerMovement._instance.transform.right * -0.32f + PlayerMovement._instance.GetForwardDirectionForWall(PlayerMovement._instance.transform, 1f) * -0.2f;
+                    Vector3 rightPos = GameManager._instance.PlayerRightHandTransform.position + PlayerStateController._instance.transform.up * -0.4f + PlayerMovement._instance.transform.right * 0.15f + PlayerMovement._instance.GetForwardDirectionForWall(PlayerMovement._instance.transform, 1f) * -0.1f;
+                    PlayerStateController._instance.OnWallSpark.transform.position = _isWallOnLeftSide ? leftPos : rightPos;
+                }
             }
             
             if (!PlayerStateController.CheckForOnWall())
@@ -368,7 +371,7 @@ namespace PlayerStates
                     {
                         PlayerStateController._instance.ChangeAnimation("LeftOnWall");
                         PlayerStateController._instance.ChangeAnimation("EmptyRight");
-                        PlayerStateController._instance.ChangeAnimation("Idle");
+                        PlayerStateController._instance.ChangeAnimation("Idle", 0.4f);
                     }
                 }
                 else if (angle < 90f)
@@ -400,7 +403,7 @@ namespace PlayerStates
                     {
                         PlayerStateController._instance.ChangeAnimation("RightOnWall");
                         PlayerStateController._instance.ChangeAnimation("EmptyLeft");
-                        PlayerStateController._instance.ChangeAnimation("Idle");
+                        PlayerStateController._instance.ChangeAnimation("Idle", 0.4f);
                     }
                 }
                 else if (angle > 90f)
@@ -427,14 +430,13 @@ namespace PlayerStates
             PlayerMovement._instance._isAllowedToWallRun = true;
 
             //Vector3 pos = isWallOnLeftSide ? GameManager._instance.PlayerLeftHandTransform.position + PlayerStateController._instance.transform.right / 2f : GameManager._instance.PlayerRightHandTransform.position - PlayerStateController._instance.transform.right / 2f;
-            Vector3 pos = _isWallOnLeftSide ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
-            pos += _isWallOnLeftSide ? PlayerStateController._instance.transform.right * 0.75f : PlayerStateController._instance.transform.right * -0.75f;
+            Vector3 pos = PlayerMovement._instance.transform.position + PlayerMovement._instance.GetForwardDirectionForWall(PlayerMovement._instance.transform, 1f) * -0.25f;
             PlayerStateController._instance.OnWallSpark = GameObject.Instantiate(GameManager._instance.SparksVFX[0], pos, Quaternion.identity);
             PlayerStateController._instance.OnWallSpark.GetComponentInChildren<Animator>().speed *= 4.5f;
             PlayerStateController._instance.OnWallSpark.transform.localScale *= 0.4f;
             GameObject.Destroy(PlayerStateController._instance.OnWallSpark, 0.14f);
 
-            GameObject.Destroy(SoundManager._instance.PlaySound(SoundManager._instance.WeaponHitSounds[0], PlayerStateController._instance.transform.position, Random.Range(0.2f, 0.3f), false, Random.Range(0.78f, 1.02f)), 2f);
+            GameObject.Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds), PlayerStateController._instance.transform.position, Random.Range(0.17f, 0.2f), false, Random.Range(1.05f, 1.25f)), 2f);
 
             /*GameObject decal = GameObject.Instantiate(GameManager._instance.HoleDecal, pos, Quaternion.identity);
             decal.transform.forward = wallCollider.transform.right;

@@ -199,17 +199,17 @@ public class PlayerMovement : MonoBehaviour
     }
     private void Born()
     {
-        SoundManager._instance.PlaySound(SoundManager._instance.Born, transform.position, 0.35f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        SoundManager._instance.PlaySound(SoundManager._instance.Born, transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         PlayerStateController._instance.ChangeAnimation("Born");
 
         //PlayerStateController._instance.BladeSpinSoundObject = SoundManager._instance.PlaySound(SoundManager._instance.BladeSpin, transform.position, 0.12f, true, 1f);
     }
     private void Pushed(Vector3 direction)
     {
-        _Stamina -= 27.5f;
+        _Stamina -= 7.5f;
         PlayerStateController._instance.ChangeAnimation("Stun");
-        SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(1f));
+        SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.25f));
         PushMove(direction);
     }
     private void ChangeAnimFromEvent(string name, float time)
@@ -405,7 +405,7 @@ public class PlayerMovement : MonoBehaviour
                 }
                 if (PlayerStateController._instance._rb.velocity.magnitude > _MoveSpeed + 1f)
                 {
-                    _walkSoundCounter -= Time.deltaTime * speed / 6f;
+                    _walkSoundCounter -= Time.deltaTime * speed / 3.825f;
                 }
                 else
                 {
@@ -789,7 +789,7 @@ public class PlayerMovement : MonoBehaviour
         {
             if (_lastHookNotReadyTime + 0.5f < Time.time)
             {
-                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
                 _lastHookNotReadyTime = Time.time;
             }
             
@@ -805,7 +805,7 @@ public class PlayerMovement : MonoBehaviour
             _isHookDisabled = false;
 
             PlayerStateController._instance.ChangeAnimation("UpHookThrow");
-            SoundManager._instance.PlaySound(SoundManager._instance.ThrowHook, transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.ThrowHook, transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
             CameraController.ShakeCamera(3.5f, 1.2f, 0.15f, 0.7f);
 
             PlayerMovement._instance._hookConnectedTransform = hit.collider.transform;
@@ -823,7 +823,7 @@ public class PlayerMovement : MonoBehaviour
         {
             if (_lastHookNotReadyTime + 0.5f < Time.time)
             {
-                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
                 _lastHookNotReadyTime = Time.time;
             }
         }
@@ -836,7 +836,7 @@ public class PlayerMovement : MonoBehaviour
         {
             if (_lastHookNotReadyTime + 0.5f < Time.time)
             {
-                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
                 _lastHookNotReadyTime = Time.time;
             }
             return;
@@ -851,8 +851,8 @@ public class PlayerMovement : MonoBehaviour
 
             PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.7f));
             PlayerStateController._instance.ChangeAnimation(GetThrowHookName());
-            SoundManager._instance.PlaySound(SoundManager._instance.ThrowHook, transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-            CameraController.ShakeCamera(3.5f, 1.2f, 0.15f, 0.7f);
+            SoundManager._instance.PlaySound(SoundManager._instance.ThrowHook, transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            CameraController.ShakeCamera(4f, 1.75f, 0.15f, 0.8f);
 
             PlayerMovement._instance._hookConnectedTransform = hit.collider.transform;
             PlayerMovement._instance._hookConnectedPositionOffset = hit.point - hit.collider.transform.position;
@@ -869,7 +869,7 @@ public class PlayerMovement : MonoBehaviour
         {
             if (_lastHookNotReadyTime + 0.5f < Time.time)
             {
-                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
                 _lastHookNotReadyTime = Time.time;
             }
         }
@@ -891,7 +891,7 @@ public class PlayerMovement : MonoBehaviour
     private IEnumerator PullHookPositionCoroutine()
     {
         float startTime = Time.time;
-        float localAnimTime = _hookAnimTime * 1.5f;
+        float localAnimTime = _hookAnimTime;
         while (Time.time < startTime + localAnimTime)
         {
             PlayerStateController._instance._lineRenderer.SetPosition(1, Vector3.Lerp(_hookConnectedTransform.position + _hookConnectedPositionOffset, PlayerStateController._instance._lineRenderer.GetPosition(0), (Time.time - startTime) / localAnimTime));
@@ -904,7 +904,7 @@ public class PlayerMovement : MonoBehaviour
     }
     public void HookPullMovement(Rigidbody rb, bool isUpHook, RaycastHit hit)
     {
-        SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, hit.point, 0.5f, false, UnityEngine.Random.Range(0.6f, 0.7f));
+        SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, hit.point, 0.3f, false, UnityEngine.Random.Range(0.6f, 0.7f));
         GameObject decal = Instantiate(GameManager._instance.HoleDecal, hit.point, Quaternion.identity);
         decal.GetComponent<DecalProjector>().size *= UnityEngine.Random.Range(1.4f, 2.1f);
         decal.transform.forward = hit.normal;
@@ -933,19 +933,26 @@ public class PlayerMovement : MonoBehaviour
     {
         float startTime = Time.time;
         float lerpSpeed = 4.5f;
-        if (dir.y > 0)
+        /*if (dir.y > 0)
         {
             lerpSpeed *= 1f;
             dir.y *= 1.1f;
         }
-        dir.y += 0.1f;
+        dir.y += 0.1f;*/
 
-        float speed = PlayerMovement._instance._HookMovementSpeed - PlayerMovement._instance._HookMovementSpeed * 0.25f * Mathf.Clamp(rb.velocity.magnitude, _MoveSpeed, _RunSpeed) / _RunSpeed;
+        float speed = PlayerMovement._instance._HookMovementSpeed - PlayerMovement._instance._HookMovementSpeed * 0.4f * Mathf.Clamp(rb.velocity.magnitude, _MoveSpeed, _RunSpeed) / _RunSpeed;
 
-        while (Time.time < startTime + _hookTime)
+        while (Time.time < startTime + _hookTime * 0.75f)
         {
             if (PlayerCombat._instance._IsDodgingOrForwardLeap) yield break;
-            rb.velocity = Vector3.Lerp(rb.velocity, dir * speed, Time.deltaTime * lerpSpeed);
+            rb.velocity = Vector3.Lerp(rb.velocity, dir * 1.2f * speed, Time.deltaTime * lerpSpeed);
+            yield return null;
+        }
+        startTime = Time.time;
+        while (Time.time < startTime + _hookTime * 0.75f)
+        {
+            if (PlayerCombat._instance._IsDodgingOrForwardLeap) yield break;
+            rb.velocity = Vector3.Lerp(rb.velocity, dir * 0.8f * speed, Time.deltaTime * lerpSpeed);
             yield return null;
         }
     }
@@ -1043,10 +1050,13 @@ public class PlayerMovement : MonoBehaviour
 
         Vector3 temp = rb.velocity;
         temp.y = 0f;
-        temp=temp.magnitude * GetForwardDirectionForWall(transform, 1f);
         Vector3 check1 = new Vector3(temp.x, rb.velocity.y, temp.z);
-        Vector3 check2 = -new Vector3(temp.x, rb.velocity.y, temp.z);
-        rb.velocity = Vector3.Angle(check1, temp) < Vector3.Angle(check2, temp) ? check1 : check2;
+        Vector3 check2 = new Vector3(-temp.x, rb.velocity.y, -temp.z);
+        Vector3 temp1 = check1;
+        temp1.y = 0f;
+        Vector3 temp2 = check2;
+        temp2.y = 0f;
+        rb.velocity = Vector3.Angle(temp1, temp) < Vector3.Angle(temp2, temp) ? check1 : check2;
     }
     public void Walk(Rigidbody rb)
     {
@@ -1145,7 +1155,7 @@ public class PlayerMovement : MonoBehaviour
             rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed / (targetVelocity - rb.velocity).magnitude);
 
         if (rb.velocity.magnitude > 0.5f)
-            EnemyAI.MakeArtificialSoundForPlayer(rb.position, 20f);
+            EnemyAI.MakeArtificialSoundForPlayer(rb.position, 12f);
     }
     public Vector3 GetForwardDirectionForWall(Transform transform, float yInput)
     {
@@ -1166,12 +1176,12 @@ public class PlayerMovement : MonoBehaviour
         Vector3 direction = PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.forward;
         Vector3 rayDirection = (PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.position - transform.position).normalized;
         rayDirection.y = 0f;
-        Physics.Raycast(transform.position, rayDirection, out RaycastHit hit, 15f, GameManager._instance.WallLayer);
-        if (hit.collider != null)
+        //Physics.Raycast(transform.position, rayDirection, out RaycastHit hit, 15f, GameManager._instance.WallLayer);
+        /*if (hit.collider != null)
         {
-            direction = Quaternion.AngleAxis(-90f, Vector3.up) * hit.normal;
-        }
-
+            
+        }*/
+        direction = Quaternion.AngleAxis(-90f, Vector3.up) * PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.right;
         return (direction * yInput * isForward);
     }
     private void WallMovement(Rigidbody rb, float speed, float lerpSpeed)
@@ -1203,7 +1213,7 @@ public class PlayerMovement : MonoBehaviour
         else
             rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed / (targetVelocity - rb.velocity).magnitude);
 
-        EnemyAI.MakeArtificialSoundForPlayer(rb.position, 25f);
+        EnemyAI.MakeArtificialSoundForPlayer(rb.position, 15f);
     }
     public void AirMovement(Rigidbody rb)
     {
@@ -1241,7 +1251,7 @@ public class PlayerMovement : MonoBehaviour
         else
             rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed * 2f);
 
-        EnemyAI.MakeArtificialSoundForPlayer(rb.position, 12f);
+        EnemyAI.MakeArtificialSoundForPlayer(rb.position, 6f);
     }
     public void StaminaMovement(Rigidbody rb)
     {

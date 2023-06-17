@@ -65,6 +65,8 @@ public class PlayerStateController : MonoBehaviour
 
     public GameObject OnWallSpark;
 
+    private List<GameObject> SmokeTriggers;
+
     public bool _isSpinEnding { get; set; }
 
     public void EnterState(IPlayerState newState)
@@ -105,7 +107,7 @@ public class PlayerStateController : MonoBehaviour
         _Animator.SetBool("IsBlocking", PlayerCombat._instance._IsBlocking);
         _Animator.SetBool("IsBlockedOrDeflected", PlayerCombat._instance._IsBlockedOrDeflected);
         _Animator.SetBool("IsStaminaReload", _isStaminaManual);
-        _Animator.SetFloat("RunAnimSpeedMultiplier", _rb.velocity.magnitude / PlayerMovement._instance._MoveSpeed * 0.875f);
+        _Animator.SetFloat("RunAnimSpeedMultiplier", _rb.velocity.magnitude / PlayerMovement._instance._MoveSpeed * 0.75f);
 
         if (_playerAnimState is PlayerAnimations.InAir && !_Animator.IsInTransition(1) && !PlayerCombat._instance._IsBlocking)
         {
@@ -143,13 +145,13 @@ public class PlayerStateController : MonoBehaviour
         {
             if (_playerAnimState is PlayerAnimations.Idle && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("Idle") && !_Animator.IsInTransition(1))
             {
-                ChangeAnimation("Idle");
+                ChangeAnimation("Idle", 0.4f);
             }
-            else if (_playerAnimState is PlayerAnimations.Walk && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("Walk") && !_Animator.IsInTransition(1))
+            else if (_playerAnimState is PlayerAnimations.Walk && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("Walk") && (!_Animator.IsInTransition(1) || _Animator.GetNextAnimatorStateInfo(1).IsName("Idle")))
             {
                 ChangeAnimation("Walk");
             }
-            else if (_playerAnimState is PlayerAnimations.Run && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("Run") && !_Animator.IsInTransition(1))
+            else if (_playerAnimState is PlayerAnimations.Run && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("Run") && (!_Animator.IsInTransition(1) || _Animator.GetNextAnimatorStateInfo(1).IsName("Idle")))
             {
                 ChangeAnimation("Run");
             }
@@ -161,11 +163,12 @@ public class PlayerStateController : MonoBehaviour
         isCreateTeleportAvailable = true;
         isUseTeleportAvailable = false;
         isInvertedMirrorAvailable = true;
-        _jumpBufferTime = 0.4f;
-        _hookBufferTime = 0.4f;
-        _attackBufferTime = 0.7f;
+        SmokeTriggers = new List<GameObject>();
+        _jumpBufferTime = 0.3f;
+        _hookBufferTime = 0.2f;
+        _attackBufferTime = 0.45f;
         _forwardLeapBufferTime = 0.4f;
-        _throwBufferTime = 0.4f;
+        _throwBufferTime = 0.35f;
         _coyoteTime = 0.2f;
         //Debug.Log(UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale.name);
         _rb = GetComponent<Rigidbody>();
@@ -173,7 +176,7 @@ public class PlayerStateController : MonoBehaviour
         _lineRenderer = GetComponentInChildren<LineRenderer>();
 
         EnterState(new PlayerStates.Movement());
-        EnterAnimState(new PlayerAnimations.WaitForOneAnim(1.2f));
+        EnterAnimState(new PlayerAnimations.Idle());
 
     }
     void Update()
@@ -183,6 +186,7 @@ public class PlayerStateController : MonoBehaviour
         _playerAnimState.DoState(_rb);
         ArrangeAnimStateParameter();
         CheckForCanDoWallMovement();
+        ArrangeIsInSmoke();
 
         UIArrangements();
         ArrangeAttackBlockedCounter();
@@ -195,6 +199,43 @@ public class PlayerStateController : MonoBehaviour
             PlayerMovement._instance._canDoWallMovement = !PlayerMovement._instance._canDoWallMovement;
             GameManager._instance.CanDoWallMovementUI.SetActive(!GameManager._instance.CanDoWallMovementUI.activeInHierarchy);
         }
+    }
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other != null && other.gameObject != null)
+        {
+            if (other.CompareTag("Smoke") && !SmokeTriggers.Contains(other.gameObject))
+            {
+                SmokeTriggers.Add(other.gameObject);
+            }
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other != null && other.gameObject != null)
+        {
+            if (other.CompareTag("Smoke") && SmokeTriggers.Contains(other.gameObject))
+            {
+                SmokeTriggers.Remove(other.gameObject);
+            }
+        }
+    }
+    private void ArrangeIsInSmoke()
+    {
+        for (int i = 0; i < SmokeTriggers.Count; i++)
+        {
+            if (SmokeTriggers[i] == null)
+            {
+                SmokeTriggers.Remove(SmokeTriggers[i]);
+                i--;
+            }
+        }
+
+        if (SmokeTriggers.Count == 0)
+            GameManager._instance._isPlayerInSmoke = false;
+        else
+            GameManager._instance._isPlayerInSmoke = true;
     }
     private void ArrangeAttackBlockedCounter()
     {
@@ -350,7 +391,7 @@ public class PlayerStateController : MonoBehaviour
         {
             if (PlayerMovement._instance._lastHookNotReadyTime + 0.5f < Time.time)
             {
-                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
                 PlayerMovement._instance._lastHookNotReadyTime = Time.time;
             }
             return false;
@@ -361,7 +402,7 @@ public class PlayerStateController : MonoBehaviour
         {
             if (PlayerMovement._instance._lastHookNotReadyTime + 0.5f < Time.time)
             {
-                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
                 PlayerMovement._instance._lastHookNotReadyTime = Time.time;
             }
             return false;
@@ -371,7 +412,7 @@ public class PlayerStateController : MonoBehaviour
         {
             if (PlayerMovement._instance._lastHookNotReadyTime + 0.5f < Time.time)
             {
-                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
                 PlayerMovement._instance._lastHookNotReadyTime = Time.time;
             }
         }
@@ -387,7 +428,7 @@ public class PlayerStateController : MonoBehaviour
         {
             if (PlayerMovement._instance._lastHookNotReadyTime + 0.5f < Time.time)
             {
-                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
                 PlayerMovement._instance._lastHookNotReadyTime = Time.time;
             }
             return false;
@@ -398,7 +439,7 @@ public class PlayerStateController : MonoBehaviour
         {
             if (PlayerMovement._instance._lastHookNotReadyTime + 0.5f < Time.time)
             {
-                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
                 PlayerMovement._instance._lastHookNotReadyTime = Time.time;
             }
         }

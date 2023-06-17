@@ -21,8 +21,8 @@ public class HeadBobber : MonoBehaviour
             return;
         }
 
-        bobbingAmount = 0.05f + (Mathf.Clamp(PlayerStateController._instance._rb.velocity.magnitude, 0.1f, 14f) - 7f) / 200f;
-        bobbingSpeed = 0.13f + (Mathf.Clamp(PlayerStateController._instance._rb.velocity.magnitude, 0.1f, 14f) + 5f) / 140f;
+        bobbingAmount = 0.05f + (Mathf.Clamp(PlayerStateController._instance._rb.velocity.magnitude, 0.1f, 14f) - 7f) / 180f;
+        bobbingSpeed = 0.13f + (Mathf.Clamp(PlayerStateController._instance._rb.velocity.magnitude, 0.1f, 14f) + 5f) / 120f;
 
         var moveState = PlayerStateController._instance._playerState as PlayerStates.Movement;
         if (moveState != null && moveState._isCrouching)

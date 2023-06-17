@@ -145,9 +145,9 @@ public class CameraController : MonoBehaviour
         _playerTransform.eulerAngles = new Vector3(_playerTransform.eulerAngles.x, _playerTransform.eulerAngles.y + offsets[1], _playerTransform.eulerAngles.z);
 
         transform.localEulerAngles = _playerTransform.localEulerAngles + new Vector3(transform.localEulerAngles.x + offsets[0], 0f, 0f);
-        if (transform.eulerAngles.x > 60f && transform.eulerAngles.x < 290)
+        if (transform.eulerAngles.x > 60f && transform.eulerAngles.x < 295f)
         {
-            float newX = Mathf.Abs(transform.localEulerAngles.x - 60f) < Mathf.Abs(transform.localEulerAngles.x - 290) ? 60f : 290f;
+            float newX = Mathf.Abs(transform.localEulerAngles.x - 60f) < Mathf.Abs(transform.localEulerAngles.x - 295f) ? 60f : 295f;
             transform.localEulerAngles = new Vector3(newX, transform.localEulerAngles.y, transform.localEulerAngles.z);
         }
 
