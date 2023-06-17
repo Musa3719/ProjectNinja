@@ -74,6 +74,7 @@ namespace BossStates
         public BossStateController _bossStateController { get; set; }
 
         public Transform _playerTransform;
+        private float _randomDirection;
 
         public void Enter(Rigidbody rb, IBossState oldState)
         {
@@ -81,7 +82,12 @@ namespace BossStates
             _bossStateController.EnableHeadAim();
             _playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
 
-            rb.GetComponent<NavMeshAgent>().stoppingDistance = _bossStateController._bossMovement._ChaseStoppingDistance;
+            if (Random.Range(0, 2) == 0)
+                _randomDirection = 1f;
+            else
+                _randomDirection = -1f;
+
+            //rb.GetComponent<NavMeshAgent>().stoppingDistance = _bossStateController._bossMovement._ChaseStoppingDistance;
         }
         public void Exit(Rigidbody rb, IBossState newState)
         {
@@ -124,9 +130,9 @@ namespace BossStates
                 _bossStateController._bossCombat.AttackWithPattern();
             }
 
-            if(!_bossStateController._bossCombat._IsDodging && !_bossStateController._bossCombat._IsInAttackPattern && !_bossStateController._bossCombat._IsBlocking)
+            if (!_bossStateController._bossCombat._IsDodging && !_bossStateController._bossCombat._IsInAttackPattern && !_bossStateController._bossCombat._IsBlocking)
                 if ((_playerTransform.position - _bossStateController.transform.position).magnitude < _bossStateController._bossCombat.AttackRange * 0.5f)
-                    _bossStateController._bossMovement.MoveToPosition(_bossStateController.transform.position - _bossStateController.transform.forward, _playerTransform.position);
+                    _bossStateController._bossMovement.MoveToPosition(GetPositionWhenNear(), _playerTransform.position, 35f, null, 0.55f);
                 else
                     _bossStateController._bossMovement.MoveToPosition(_playerTransform.position, GameManager._instance.PlayerRb.transform.position);
 
@@ -141,6 +147,19 @@ namespace BossStates
         public void DoStateLateUpdate(Rigidbody rb)
         {
 
+        }
+        private Vector3 GetPositionWhenNear()
+        {
+            bool isInAngle = Vector3.Angle(_playerTransform.forward, _bossStateController.transform.position - _playerTransform.position) < 15f;
+            if (isInAngle)
+            {
+                return _bossStateController.transform.position + _bossStateController.transform.forward * 0.2f + _bossStateController.transform.right * 1f * _randomDirection;
+            }
+            else
+            {
+                Vector3 pos = _playerTransform.position + _playerTransform.forward * 3.25f;
+                return pos;
+            }
         }
     }
 

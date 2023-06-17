@@ -58,8 +58,8 @@ namespace EnemyStates
 
             if (!_enemyStateController._enemyCombat._IsDodging && !_enemyStateController._enemyCombat._isInAttackPattern && !_enemyStateController._enemyCombat._IsBlocking)
             {
-                targetPos = _enemyStateController._enemyAI.GetIdleMovementPosition(_enemyStateController._agent);
-                _enemyStateController._enemyMovement.MoveToPosition(targetPos, targetPos);
+                //targetPos = _enemyStateController._enemyAI.GetIdleMovementPosition(_enemyStateController._agent);
+                //_enemyStateController._enemyMovement.MoveToPosition(targetPos, targetPos);
             }
             
         }
@@ -147,15 +147,21 @@ namespace EnemyStates
         public EnemyStateController _enemyStateController { get; set; }
 
         public Transform _playerTransform;
+        private float _randomDirection;
 
         public void Enter(Rigidbody rb, IEnemyState oldState)
         {
             _enemyStateController = rb.GetComponent<EnemyStateController>();
             _playerTransform = GameManager._instance.PlayerRb.transform;
 
+            if (Random.Range(0, 2) == 0)
+                _randomDirection = 1f;
+            else
+                _randomDirection = -1f;
+
             _enemyStateController.EnableHeadAim();
 
-            rb.GetComponent<NavMeshAgent>().stoppingDistance = _enemyStateController._enemyMovement._ChaseStoppingDistance;
+            //rb.GetComponent<NavMeshAgent>().stoppingDistance = _enemyStateController._enemyMovement._ChaseStoppingDistance;
         }
         public void Exit(Rigidbody rb, IEnemyState newState)
         {
@@ -227,7 +233,7 @@ namespace EnemyStates
                 if (_enemyStateController._enemyCombat._IsRanged && (_playerTransform.position - _enemyStateController.transform.position).magnitude < _enemyStateController._enemyCombat.AttackRange * 0.75f)
                     _enemyStateController._enemyMovement.MoveToPosition(_enemyStateController.transform.position, lookAtPos);
                 else if (!_enemyStateController._enemyCombat._IsRanged && (_playerTransform.position - _enemyStateController.transform.position).magnitude < _enemyStateController._enemyCombat.AttackRange * 0.5f)
-                    _enemyStateController._enemyMovement.MoveToPosition(_enemyStateController.transform.position - _enemyStateController.transform.forward, lookAtPos);
+                    _enemyStateController._enemyMovement.MoveToPosition(GetPositionWhenNear(), lookAtPos, 35f, null, 0.55f);
                 else
                     _enemyStateController._enemyMovement.MoveToPosition(_playerTransform.position, lookAtPos);
         }
@@ -240,6 +246,19 @@ namespace EnemyStates
         public void DoStateLateUpdate(Rigidbody rb)
         {
 
+        }
+        private Vector3 GetPositionWhenNear()
+        {
+            bool isInAngle = Vector3.Angle(_playerTransform.forward, _enemyStateController.transform.position - _playerTransform.position) < 15f;
+            if (isInAngle)
+            {
+                return _enemyStateController.transform.position + _enemyStateController.transform.forward * 0.2f + _enemyStateController.transform.right * 1f * _randomDirection;
+            }
+            else
+            {
+                Vector3 pos = _playerTransform.position + _playerTransform.forward * 3.25f;
+                return pos;
+            }
         }
     }
     public class StepBack : IEnemyState

@@ -25,6 +25,8 @@ public class EnemyAI : MonoBehaviour
     private float _StepBackValue;
     private float _ThrowValue;
 
+    private float _lastStanceAnimCounter;
+
     private void Awake()
     {
         if (enemyAIs == null)
@@ -56,6 +58,11 @@ public class EnemyAI : MonoBehaviour
     private void Update()
     {
         if (GameManager._instance.isGameStopped || _controller._isDead) return;
+
+        if (_controller._animator.GetCurrentAnimatorStateInfo(1).IsName("Stance"))
+            _lastStanceAnimCounter = 0f;
+        else if (_lastStanceAnimCounter < 10f)
+            _lastStanceAnimCounter += Time.deltaTime;
 
         if (_agent.isOnOffMeshLink)
         {
@@ -104,7 +111,11 @@ public class EnemyAI : MonoBehaviour
         int lastSelectedIndex = -2;
         for (int i = 0; i < attackAnimCount; i++)
         {
-            if (lastSelectedIndex + 1 == i)
+            if (Random.Range(0, 8) < 3)
+            {
+                lastSelectedIndex = AddAnimToPattern(selectedAnimNames, i);
+            }
+            /*if (lastSelectedIndex + 1 == i)
             {
                 int random = Random.Range(0, 3);
                 if (random == 0 || random == 1)
@@ -115,10 +126,10 @@ public class EnemyAI : MonoBehaviour
             else if (Random.Range(0, 3) == 0)
             {
                 lastSelectedIndex = AddAnimToPattern(selectedAnimNames, i);
-            }
+            }*/
         }
 
-        if (selectedAnimNames.Count == 1)
+        if (selectedAnimNames.Count == 1 && UnityEngine.Random.Range(0, 2) == 0)
         {
             if (lastSelectedIndex + 1 < attackAnimCount)
                 selectedAnimNames.Add("Attack" + (lastSelectedIndex + 2));
@@ -127,6 +138,8 @@ public class EnemyAI : MonoBehaviour
         {
             selectedAnimNames.Add("Attack" + (Random.Range(0, attackAnimCount) + 1).ToString());
         }
+
+        GameManager.Shuffle(selectedAnimNames);
 
         return selectedAnimNames;
     }
@@ -241,7 +254,9 @@ public class EnemyAI : MonoBehaviour
         {
             if (IsAttackFast())
                 chanceMultiplier *= 0.66f;
-            if (_DodgeOrBlockEfficiencyValue * chanceMultiplier * 1000 >= Random.Range(0, 1000))
+            if (_lastStanceAnimCounter < 0.7f)
+                chanceMultiplier *= 2;
+            if (_DodgeOrBlockEfficiencyValue * 0.6f * chanceMultiplier * 1000 >= Random.Range(0, 1000))
                 return true;
             return false;
         }
@@ -298,7 +313,7 @@ public class EnemyAI : MonoBehaviour
             Physics.Raycast(transform.position + direction, direction, out RaycastHit hit, _controller._enemyCombat.AttackRange, GameManager._instance.LayerMaskForVisible);
             if (IsRayHitPlayer(hit) && _controller._enemyCombat._IsAllowedToAttack)
             {
-                if (_AgressiveValue * 50f * Time.deltaTime * 60f > Random.Range(0, 1000) && !CheckForAttackFriendlyFire())
+                if (_AgressiveValue * 40f * Time.deltaTime * 60f > Random.Range(0, 1000) && !CheckForAttackFriendlyFire())
                 {
                     return true;
                 }
@@ -312,7 +327,7 @@ public class EnemyAI : MonoBehaviour
 
             if ((_controller._playerTransform.position - _controller._rb.transform.position).magnitude < attackRange && _controller._enemyCombat._IsAllowedToAttack)
             {
-                if (_AgressiveValue * 50f * Time.deltaTime * 60f > Random.Range(0, 1000))
+                if (_AgressiveValue * 20f * Time.deltaTime * 60f > Random.Range(0, 1000))
                 {
                     return true;
                 }
@@ -351,29 +366,41 @@ public class EnemyAI : MonoBehaviour
 
     public static void MakeArtificialSoundForPlayer(Vector3 position, float radius)
     {
+        radius *= 1.25f;
         foreach (var nearEnemy in GameManager._instance.enemiesNearPlayer)
         {
             if ((position - nearEnemy.transform.position).magnitude < radius)
             {
                 RaycastHit hit;
-                Physics.Raycast(nearEnemy.transform.position, (position - nearEnemy.transform.position).normalized, out hit, GameManager._instance.LayerMaskForVisible);
-
-                if ((hit.point - position).magnitude < 0.5f)
+                Vector3 dir = (position - nearEnemy.transform.position).normalized;
+                Physics.Raycast(nearEnemy.transform.position, dir, out hit, GameManager._instance.LayerMaskForVisible);
+                
+                if (hit.collider != null && (hit.collider.CompareTag("Player") || (hit.collider.transform.parent != null && hit.collider.transform.parent.CompareTag("Player"))))
+                {
                     enemyAIs[nearEnemy].HearArtificialSound(position);
+                }
             }
         }
     }
     
     public void MakeArtificialSoundForProjectileHit(Vector3 position, float radius)
     {
+        radius *= 1.25f;
         if((position-transform.position).magnitude <= radius)
         {
             RaycastHit hit;
             Physics.Raycast(position, (transform.position - position).normalized, out hit, GameManager._instance.LayerMaskForVisible);
 
-            if ((hit.point - transform.position).magnitude < 0.5f)
+            if (hit.collider != null && GetParentObject(hit.collider.gameObject) == gameObject)
                 HearArtificialSound(position);
         }
+    }
+    private GameObject GetParentObject(GameObject obj)
+    {
+        Transform temp = obj.transform;
+        while (temp.transform.parent != null)
+            temp = temp.transform.parent;
+        return temp.gameObject;
     }
 }
 

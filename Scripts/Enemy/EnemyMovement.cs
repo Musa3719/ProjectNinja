@@ -168,11 +168,11 @@ public class EnemyMovement : MonoBehaviour
     private IEnumerator MoveAfterAttackCoroutine(Vector3 targetVel)
     {
         float startTime = Time.time;
-        float firstMoveTime = 0.2f;
+        float firstMoveTime = 0.1f;
         float secondMoveTime = 0.5f;
         while (Time.time < startTime + firstMoveTime)
         {
-            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 5f);
+            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 12f);
             _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 6f);
             ArrangeMoveAfterAttackGrounded();
             yield return null;
@@ -297,7 +297,7 @@ public class EnemyMovement : MonoBehaviour
     {
         return _enemyStateController.TouchingGrounds.Count > 0;
     }
-    public void MoveToPosition(Vector3 position, Vector3 lookAtPos, float rotationLerpSpeed = 10f, float? speed = null)
+    public void MoveToPosition(Vector3 position, Vector3 lookAtPos, float rotationLerpSpeed = 10f, float? speed = null, float speedMultiplier = 1f)
     {
         if (!_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh || _navMeshAgent.isOnOffMeshLink) return;
 
@@ -315,6 +315,7 @@ public class EnemyMovement : MonoBehaviour
         {
             _navMeshAgent.speed = _moveSpeed;
         }
+        _navMeshAgent.speed *= speedMultiplier;
 
         //float lerpSpeed = 2.5f;
         //_rb.velocity = Vector3.Lerp(_rb.velocity, position * _moveSpeed, Time.deltaTime * lerpSpeed);

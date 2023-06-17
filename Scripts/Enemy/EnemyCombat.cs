@@ -111,8 +111,8 @@ public class EnemyCombat : MonoBehaviour, IKillable
 
         _IsAllowedToAttack = true;
         _IsAllowedToThrow = true;
-        _attackWaitTime = 1f;
-        _throwWaitTime = 1f;
+        _attackWaitTime = 1.5f;
+        _throwWaitTime = 1.5f;
         _dodgeTime = 0.8f;
         _blockMoveTime = 0.8f;
         _crashStunCheckValue = 10f;
@@ -421,7 +421,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
             Destroy(sparksVFX, 4f);
 
             _enemyStateController.ChangeAnimation(GetBlockAnimName(), 0.2f, true);
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
             _enemyStateController._enemyMovement.BlockMovement(_enemyStateController._BlockedEnemyPosition);
 
@@ -436,7 +436,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
             if (attacker != null && !isRangedAttack)
                 attacker.AttackDeflected(this as IKillable);
             _enemyStateController.ChangeAnimation(GetDeflectAnimName(), 0.2f, true);
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.35f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
             Destroy(sparksVFX, 4f);
 
             _IsAllowedToAttack = false;
@@ -716,7 +716,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
         _IsAllowedToAttack = false;
         if (_openIsAllowedToAttackCoroutine != null)
             StopCoroutine(_openIsAllowedToAttackCoroutine);
-        _openIsAllowedToAttackCoroutine = StartCoroutine(OpenIsAllowedToAttackCoroutine(_attackWaitTime));
+        _openIsAllowedToAttackCoroutine = StartCoroutine(OpenIsAllowedToAttackCoroutine(UnityEngine.Random.Range(3.75f, 5f)));
 
         SoundManager._instance.PlaySound(SoundManager._instance.BowFired, transform.position, 0.2f, false, UnityEngine.Random.Range(1.1f, 1.3f));
 
@@ -779,7 +779,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
         _IsAllowedToAttack = false;
         if (_openIsAllowedToAttackCoroutine != null)
             StopCoroutine(_openIsAllowedToAttackCoroutine);
-        _openIsAllowedToAttackCoroutine = StartCoroutine(OpenIsAllowedToAttackCoroutine(_attackWaitTime));
+        _openIsAllowedToAttackCoroutine = StartCoroutine(OpenIsAllowedToAttackCoroutine(6f));
 
         SoundManager._instance.PlaySound(SoundManager._instance.GunFired, transform.position, 0.25f, false, UnityEngine.Random.Range(1f, 1.1f));
         Instantiate(GameManager._instance.GunFireVFX, _rangedWeapon.transform.Find("BulletSpawnPos").position, Quaternion.identity);
@@ -901,12 +901,14 @@ public class EnemyCombat : MonoBehaviour, IKillable
 
         //_enemyStateController._animator.SetTrigger("Death");
         SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.PlayerAttacks), transform.position, 0.3f, false, UnityEngine.Random.Range(1.1f, 1.25f));
-        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.EnemyDeathSounds), transform.position, 0.12f, false, UnityEngine.Random.Range(0.95f, 1.05f)), 1f);
+        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds), transform.position, 0.4f, false, UnityEngine.Random.Range(0.95f, 1.1f));
+        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.EnemyDeathSounds), transform.position, 0.04f, false, UnityEngine.Random.Range(0.95f, 1.05f)), 1f);
         //die vfx, blood and sound etc
-        Vector3 VFXposition = transform.position + transform.forward * 0.85f;
+        Vector3 bloodDir = (GameManager._instance.MainCamera.transform.position - transform.position).normalized;
+        bloodDir.y = 0f;
+        Vector3 VFXposition = transform.position + bloodDir * 0.33f + Vector3.up * 0.07f;
         GameObject bloodVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.BloodVFX), VFXposition, Quaternion.identity);
-        bloodVFX.GetComponentInChildren<Rigidbody>().velocity = Vector3.up * 2f + transform.right * UnityEngine.Random.Range(-1f, 1f) + dir * UnityEngine.Random.Range(4f, 6f);
+        bloodVFX.GetComponentInChildren<Rigidbody>().velocity = Vector3.up * 2f + transform.right * UnityEngine.Random.Range(-1f, 1f) + dir * UnityEngine.Random.Range(2.5f, 4f);
         Destroy(bloodVFX, 5f);
 
         GameObject bloodPrefab = GameManager._instance.BloodDecalPrefabs[UnityEngine.Random.Range(0, GameManager._instance.BloodDecalPrefabs.Count)];
@@ -915,6 +917,9 @@ public class EnemyCombat : MonoBehaviour, IKillable
         decal.GetComponent<DecalProjector>().size = new Vector3(size, size, decal.GetComponent<DecalProjector>().size.z);
         decal.GetComponent<DecalFollow>().FollowingTransform = _decalFollowTransform;
         decal.GetComponent<DecalFollow>().LocalPosition = new Vector3(UnityEngine.Random.Range(-0.2f, 0.2f), UnityEngine.Random.Range(0.2f, 0.7f), 0f);
+
+        GameObject sparksVFX = Instantiate(GameManager._instance.ShiningSparksVFX[0], transform.position - transform.forward * 0.8f, Quaternion.identity);
+        Destroy(sparksVFX, 4f);
 
         if (_attackCollider != null)
             _attackCollider.gameObject.SetActive(false);

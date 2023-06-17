@@ -179,7 +179,7 @@ namespace BossAnimations
                 if (_bossStateController._bossMovement.IsGrounded())
                 {
                     _bossStateController.ChangeAnimation("HitGround");
-                    GameManager._instance.CallForAction(() => _bossStateController.EnterAnimState(new BossAnimations.Walk()), 0.5f);
+                    GameManager._instance.CallForAction(() => _bossStateController.EnterAnimState(new BossAnimations.Walk()), 0.2f);
                 }
                 else
                 {
@@ -261,7 +261,7 @@ namespace BossAnimations
             if (_bossStateController._bossMovement.IsGrounded())
             {
                 _bossStateController.ChangeAnimation("HitGround");
-                GameManager._instance.CallForAction(() => _bossStateController.EnterAnimState(new BossAnimations.Walk()), 0.5f);
+                GameManager._instance.CallForAction(() => _bossStateController.EnterAnimState(new BossAnimations.Walk()), 0.2f);
             }
         }
 

@@ -195,10 +195,10 @@ public class BossCombat : MonoBehaviour, IKillable
     {
         Destroy(_weaponObject.GetComponent<Rigidbody>());
         Destroy(_weaponObject.GetComponent<WeaponInAir>());
-        while ((_weaponObject.transform.position - _weaponHolderTransform.position).magnitude > 6f)
+        while ((_weaponObject.transform.position - _weaponHolderTransform.position).magnitude > 2f)
         {
-            _weaponObject.transform.position = Vector3.Lerp(_weaponObject.transform.position, _weaponHolderTransform.position, Time.deltaTime * 8f);
-            _weaponObject.transform.eulerAngles += new Vector3(1f, 0f, 0.5f) * Time.deltaTime * 15f;
+            _weaponObject.transform.position = Vector3.Lerp(_weaponObject.transform.position, _weaponHolderTransform.position, Time.deltaTime * 4f);
+            _weaponObject.transform.eulerAngles += new Vector3(1f, 0f, 0.5f) * Time.deltaTime * 6f;
             yield return null;
         }
 
@@ -206,10 +206,10 @@ public class BossCombat : MonoBehaviour, IKillable
         _weaponObject.transform.SetParent(_weaponHolderTransform);
 
         float startTime = Time.time;
-        while (startTime + 0.35f > Time.time)
+        while (startTime + 0.2f > Time.time)
         {
-            _weaponObject.transform.localPosition = Vector3.Lerp(_weaponObject.transform.localPosition, _weaponLocalPosition, Time.deltaTime * 12f);
-            _weaponObject.transform.localEulerAngles = Vector3.Lerp(_weaponObject.transform.localEulerAngles, _weaponLocalEulerAngles, Time.deltaTime * 12f);
+            _weaponObject.transform.localPosition = Vector3.Lerp(_weaponObject.transform.localPosition, _weaponLocalPosition, Time.deltaTime * 15f);
+            _weaponObject.transform.localEulerAngles = Vector3.Lerp(_weaponObject.transform.localEulerAngles, _weaponLocalEulerAngles, Time.deltaTime * 15f);
             yield return null;
         }
 
@@ -339,7 +339,7 @@ public class BossCombat : MonoBehaviour, IKillable
             Destroy(sparksVFX, 4f);
 
             _bossStateController.ChangeAnimation(GetBlockAnimName(), 0.2f, true);
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
             _CombatStamina -= _DodgeOrBlockStaminaUse;
             if (!(_bossStateController._bossState is BossStates.Retreat) && !(_bossStateController._bossState is BossStates.SpecialAction))
@@ -368,7 +368,7 @@ public class BossCombat : MonoBehaviour, IKillable
             if (attacker != null && !isRangedAttack)
                 attacker.AttackDeflected(this as IKillable);
             _bossStateController.ChangeAnimation(GetDeflectAnimName(), 0.2f, true);
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.35f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
             Destroy(sparksVFX, 4f);
         }
     }
@@ -533,6 +533,10 @@ public class BossCombat : MonoBehaviour, IKillable
     {
         if (_IsAttacking || _IsDodging) return;
         _bossStateController.ChangeAnimation(attackName);
+
+        int random = UnityEngine.Random.Range(0, 100);
+        if (random > 80)
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.BossGrunts), transform.position, UnityEngine.Random.Range(0.2f, 0.4f), false, UnityEngine.Random.Range(0.93f, 1.07f));
 
         _IsAttacking = true;
         _bossStateController._bossMovement.AttackOrBlockRotation(true);
@@ -749,7 +753,7 @@ public class BossCombat : MonoBehaviour, IKillable
         if (IsDead) return;
 
         SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.PlayerAttacks), transform.position, 0.6f, false, UnityEngine.Random.Range(1.1f, 1.25f));
+        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds), transform.position, 0.4f, false, UnityEngine.Random.Range(0.95f, 1.1f));
         //GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.EnemyDeathSounds), transform.position, 0.15f, false, UnityEngine.Random.Range(0.95f, 1.05f)), 1f);
 
         GameManager._instance.BossPhaseCounterBetweenScenes.transform.position = new Vector3(1f, 0f, 0f);
@@ -766,9 +770,11 @@ public class BossCombat : MonoBehaviour, IKillable
         _bossStateController._bossAI.StopAllCoroutines();
 
         //_enemyStateController._animator.SetTrigger("Death");
-        Vector3 VFXposition = transform.position + transform.forward * 0.85f;
+        Vector3 bloodDir = (GameManager._instance.MainCamera.transform.position - transform.position).normalized;
+        bloodDir.y = 0f;
+        Vector3 VFXposition = transform.position + bloodDir * 0.33f + Vector3.up * 0.07f;
         GameObject bloodVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.BloodVFX), VFXposition, Quaternion.identity);
-        bloodVFX.GetComponentInChildren<Rigidbody>().velocity = Vector3.up * 2f + transform.right * UnityEngine.Random.Range(-1f, 1f) + dir * UnityEngine.Random.Range(4f, 6f);
+        bloodVFX.GetComponentInChildren<Rigidbody>().velocity = Vector3.up * 2f + transform.right * UnityEngine.Random.Range(-1f, 1f) + dir * UnityEngine.Random.Range(2.5f, 4f);
         Destroy(bloodVFX, 5f);
 
         GameObject bloodPrefab = GameManager._instance.BloodDecalPrefabs[UnityEngine.Random.Range(0, GameManager._instance.BloodDecalPrefabs.Count)];
@@ -777,6 +783,9 @@ public class BossCombat : MonoBehaviour, IKillable
         decal.GetComponent<DecalProjector>().size = new Vector3(size, size, decal.GetComponent<DecalProjector>().size.z);
         decal.GetComponent<DecalFollow>().FollowingTransform = _decalFollowTransform;
         decal.GetComponent<DecalFollow>().LocalPosition = new Vector3(UnityEngine.Random.Range(-0.2f, 0.2f), UnityEngine.Random.Range(0.2f, 0.7f), 0f);
+
+        GameObject sparksVFX = Instantiate(GameManager._instance.ShiningSparksVFX[0], transform.position - transform.forward * 0.8f, Quaternion.identity);
+        Destroy(sparksVFX, 4f);
 
         _bossStateController._isDead = true;
         _attackCollider.gameObject.SetActive(false);

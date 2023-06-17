@@ -26,7 +26,7 @@ public class WeaponInAir : MonoBehaviour
     }
     private IEnumerator WeaponHitCoroutine()
     {
-        SoundManager._instance.PlaySound(SoundManager._instance.WeaponStickGround, transform.position, 0.6f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        SoundManager._instance.PlaySound(SoundManager._instance.WeaponStickGround, transform.position, 0.375f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, transform.position + Vector3.up * 0.75f, Quaternion.identity);
         hitSmoke.GetComponentInChildren<Animator>().speed = 0.7f;
         Color color = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
@@ -42,7 +42,7 @@ public class WeaponInAir : MonoBehaviour
     {
         if (_isHitBefore) return;
 
-        _rb.velocity = Vector3.Lerp(_rb.velocity, (GameManager._instance.PlayerRb.transform.position - transform.position).normalized * 37f, Time.deltaTime * 4f);
+        _rb.velocity = Vector3.Lerp(_rb.velocity, (GameManager._instance.PlayerRb.transform.position - transform.position).normalized * 37f, Time.deltaTime * 1.35f);
         float zAngleTemp = transform.localEulerAngles.z + Time.deltaTime * 640f;
         transform.forward = Vector3.Lerp(transform.forward, -(GameManager._instance.PlayerRb.transform.position - transform.position).normalized, Time.deltaTime * 5f);
         transform.localEulerAngles = new Vector3(transform.localEulerAngles.x, transform.localEulerAngles.y, zAngleTemp);

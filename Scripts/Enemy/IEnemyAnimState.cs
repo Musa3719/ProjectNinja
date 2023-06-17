@@ -179,7 +179,7 @@ namespace EnemyAnimations
                 if (_enemyStateController._enemyMovement.IsGrounded())
                 {
                     _enemyStateController.ChangeAnimation("HitGround");
-                    GameManager._instance.CallForAction(() => _enemyStateController.EnterAnimState(new EnemyAnimations.Walk()), 0.5f);
+                    GameManager._instance.CallForAction(() => _enemyStateController.EnterAnimState(new EnemyAnimations.Walk()), 0.2f);
                     
                 }
                 else
@@ -262,7 +262,7 @@ namespace EnemyAnimations
             if (_enemyStateController._enemyMovement.IsGrounded())
             {
                 _enemyStateController.ChangeAnimation("HitGround");
-                GameManager._instance.CallForAction(() => _enemyStateController.EnterAnimState(new EnemyAnimations.Walk()), 0.5f);
+                GameManager._instance.CallForAction(() => _enemyStateController.EnterAnimState(new EnemyAnimations.Walk()), 0.2f);
             }
         }
 

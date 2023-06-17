@@ -100,7 +100,7 @@ public class BossAI : MonoBehaviour
     {
         Coroutine velocityLerperCoroutine = null;
         
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(0.35f);
         Vector3[] array = GetSpecialActionWallToWallDirection(rb);
         Vector3 toWallDirection = array[0];
         Vector3 wallNormal = array[1];
@@ -156,10 +156,10 @@ public class BossAI : MonoBehaviour
         _controller.ChangeAnimation("OnWall", 0.3f);
 
         timeCounter = 0f;
-        while (timeCounter < 0.3f)
+        while (timeCounter < 0.2f)
         {
             timeCounter += Time.deltaTime;
-            rb.transform.forward = Vector3.Lerp(rb.transform.forward, wallNormal, Time.deltaTime * 5f);
+            rb.transform.forward = Vector3.Lerp(rb.transform.forward, wallNormal, Time.deltaTime * 8f);
             yield return null;
         }
         rb.transform.forward = wallNormal;
@@ -195,7 +195,7 @@ public class BossAI : MonoBehaviour
         velocityLerperCoroutine = StartCoroutine(VelocityLerper(rb, Vector3.zero, 0.3f));
         _controller.ChangeAnimation("HitGround");
 
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(0.15f);
 
         int random = Random.Range(0, 3);
         if (random == 0 || random == 1)
@@ -257,7 +257,7 @@ public class BossAI : MonoBehaviour
     {
         float minDistance = 100f;
         Vector3 minDistanceDirection = rb.transform.forward;
-        Vector3 wallNormal = Vector3.forward;
+        Vector3 wallNormal = rb.transform.forward;
         Vector3 wallHitPosition = Vector3.forward;
 
         Vector3 forwardDirection = rb.transform.forward * Random.Range(1.7f, 3f);
@@ -268,6 +268,10 @@ public class BossAI : MonoBehaviour
         if (minDistance == 100f)
         {
             Debug.LogError("Every WallToWall ray didn't hit a wall...");
+        }
+        if (_controller._bossMovement.IsTouchingAnyWalls())
+        {
+            wallNormal = _controller.TouchingWalls[_controller.TouchingWalls.Count - 1].transform.right;
         }
 
         return new Vector3[] { minDistanceDirection.normalized, wallNormal, wallHitPosition };
@@ -297,7 +301,11 @@ public class BossAI : MonoBehaviour
         int lastSelectedIndex = -2;
         for (int i = 0; i < attackAnimCount; i++)
         {
-            if (lastSelectedIndex + 1 == i)
+            if (Random.Range(0, 8) < 3)
+            {
+                lastSelectedIndex = AddAnimToPattern(selectedAnimNames, i);
+            }
+            /*if (lastSelectedIndex + 1 == i)
             {
                 int random = Random.Range(0, 3);
                 if (random == 0 || random == 1)
@@ -305,13 +313,13 @@ public class BossAI : MonoBehaviour
                     lastSelectedIndex = AddAnimToPattern(selectedAnimNames, i);
                 }
             }
-            else if (Random.Range(0, 5) == 0)
+            else if (Random.Range(0, 3) == 0)
             {
                 lastSelectedIndex = AddAnimToPattern(selectedAnimNames, i);
-            }
+            }*/
         }
 
-        if (selectedAnimNames.Count == 1)
+        if (selectedAnimNames.Count == 1 && UnityEngine.Random.Range(0, 2) == 0)
         {
             if (lastSelectedIndex + 1 < attackAnimCount)
                 selectedAnimNames.Add("Attack" + (lastSelectedIndex + 2));
@@ -321,6 +329,7 @@ public class BossAI : MonoBehaviour
             selectedAnimNames.Add("Attack" + (Random.Range(0, attackAnimCount) + 1).ToString());
         }
 
+        GameManager.Shuffle(selectedAnimNames);
 
         return selectedAnimNames;
     }
@@ -499,7 +508,7 @@ public class BossAI : MonoBehaviour
 
         if ((_controller._playerTransform.position - _controller._rb.transform.position).magnitude < attackRange && _controller._bossCombat._IsAllowedToAttack)
         {
-            if (_AgressiveValue * chanceMultiplier * 50f * Time.deltaTime * 60f > Random.Range(0, 1000))
+            if (_AgressiveValue * chanceMultiplier * 25f * Time.deltaTime * 60f > Random.Range(0, 1000))
             {
                 return true;
             }

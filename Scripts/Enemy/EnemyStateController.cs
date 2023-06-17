@@ -79,8 +79,8 @@ public class EnemyStateController : MonoBehaviour
         _mesh = GetComponentInChildren<SkinnedMeshRenderer>();
         _searchingTime = 5f;
         _seeAngleHalf = 110f;
-        _checkDistance = 20f;
-        _checkDistanceWhileInSmoke = 3.5f;
+        _checkDistance = 25f;
+        _checkDistanceWhileInSmoke = 2.75f;
         float yScaleMultiplier = Random.Range(0.95f, 1.05f);
         transform.localScale = new Vector3(transform.localScale.x, transform.localScale.y * yScaleMultiplier, transform.localScale.z);
         _agent.baseOffset = 1f + (1f - yScaleMultiplier);
@@ -455,7 +455,13 @@ public class EnemyStateController : MonoBehaviour
             if (_isInSmoke)
                 localCheckDistance = _checkDistanceWhileInSmoke;
             else
+            {
                 localCheckDistance = _checkDistance;
+                if (GameManager._instance._isPlayerInSmoke)
+                {
+                    return false;
+                }
+            }
 
             RaycastHit hit;
             Physics.Raycast(_rb.transform.position, (playerTransform.position - _rb.transform.position).normalized, out hit, localCheckDistance, GameManager._instance.LayerMaskForVisible);
@@ -472,7 +478,7 @@ public class EnemyStateController : MonoBehaviour
 
                 //Debug.Log(isInAngle);
 
-                if(isInAngle || (playerTransform.position - _rb.transform.position).magnitude < 4.5f)
+                if(isInAngle || (playerTransform.position - _rb.transform.position).magnitude < 4f)
                     isSeeingPlayer = true;
             }
         }

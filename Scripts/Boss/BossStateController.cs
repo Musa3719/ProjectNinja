@@ -183,8 +183,6 @@ public class BossStateController : MonoBehaviour
         CheckForPush();
         _bossCombat.ArrangeBlockCounterTimer();
         GameManager._instance.ArrangeBossUI(_bossCombat._CombatStamina, _bossCombat._CombatStaminaLimit);
-        if (InputHandler.GetButton("Jump")) TeleportAndDissolve(false);
-
     }
     void LateUpdate()
     {
@@ -319,15 +317,15 @@ public class BossStateController : MonoBehaviour
     {
         if (_bossState is BossStates.Retreat || _bossState is BossStates.SpecialAction)
         {
-            _bossCombat._CombatStamina += Time.deltaTime * 2f * _bossCombat._CombatStaminaLimit / 100f;
+            _bossCombat._CombatStamina += Time.deltaTime * 0.25f * _bossCombat._CombatStaminaLimit / 100f;
         }
         else if (_bossCombat._IsInAttackPattern || _bossCombat._IsDodging || _bossCombat._IsBlocking)
         {
-            _bossCombat._CombatStamina += Time.deltaTime * 2f * _bossCombat._CombatStaminaLimit / 100f;
+            _bossCombat._CombatStamina += Time.deltaTime * 0.5f * _bossCombat._CombatStaminaLimit / 100f;
         }
         else
         {
-            _bossCombat._CombatStamina += Time.deltaTime * 6.5f * _bossCombat._CombatStaminaLimit / 100f;
+            _bossCombat._CombatStamina += Time.deltaTime * 1.5f * _bossCombat._CombatStaminaLimit / 100f;
         }
     }
     public void EnableHeadAim()
@@ -378,10 +376,7 @@ public class BossStateController : MonoBehaviour
             {
                 TouchingRoofs.Add(collision.collider.gameObject);
             }
-            if (!TouchingWalls.Contains(collision.collider.gameObject) && collision.collider.CompareTag("Wall"))
-            {
-                TouchingWalls.Add(collision.collider.gameObject);
-            }
+            
         }
     }
     private void OnCollisionExit(Collision collision)
@@ -396,10 +391,7 @@ public class BossStateController : MonoBehaviour
             {
                 TouchingRoofs.Remove(collision.collider.gameObject);
             }
-            if (TouchingWalls.Contains(collision.collider.gameObject) && collision.collider.CompareTag("Wall"))
-            {
-                TouchingWalls.Remove(collision.collider.gameObject);
-            }
+            
         }
     }
     private void OnTriggerEnter(Collider other)
@@ -409,6 +401,10 @@ public class BossStateController : MonoBehaviour
             if (other.CompareTag("Smoke") && !SmokeTriggers.Contains(other.gameObject))
             {
                 SmokeTriggers.Add(other.gameObject);
+            }
+            if (!TouchingWalls.Contains(other.gameObject) && other.CompareTag("WallTrigger"))
+            {
+                TouchingWalls.Add(other.gameObject);
             }
         }
     }
@@ -420,6 +416,10 @@ public class BossStateController : MonoBehaviour
             if (other.CompareTag("Smoke") && SmokeTriggers.Contains(other.gameObject))
             {
                 SmokeTriggers.Remove(other.gameObject);
+            }
+            if (TouchingWalls.Contains(other.gameObject) && other.CompareTag("WallTrigger"))
+            {
+                TouchingWalls.Remove(other.gameObject);
             }
         }
     }

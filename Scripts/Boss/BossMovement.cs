@@ -193,14 +193,14 @@ public class BossMovement : MonoBehaviour
     private IEnumerator MoveAfterAttackCoroutine(Vector3 targetVel)
     {
         float startTime = Time.time;
-        float firstMoveTime = 0.2f;
+        float firstMoveTime = 0.1f;
         float secondMoveTime = 0.5f;
 
         while (Time.time < startTime + firstMoveTime)
         {
             if (_bossStateController._bossCombat._IsAttackInterrupted) yield break;
 
-            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 5f);
+            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 12f);
             _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 6f);
             ArrangeMoveAfterAttackGrounded();
             yield return null;
@@ -341,13 +341,13 @@ public class BossMovement : MonoBehaviour
     }
     public void Retreat()
     {
-        if (Random.Range(0, 4) == 0 && IsBackWallNotNear())
+        /*if (Random.Range(0, 4) == 0 && IsBackWallNotNear())
         {
             if (_retreatCoroutine != null)
                 StopCoroutine(_retreatCoroutine);
             _retreatCoroutine = StartCoroutine(RetreatGroundCoroutine());
-        }
-        else if (Random.Range(0, 4) == 0 && (GameManager._instance.PlayerRb.transform.position - transform.position).magnitude > 13f)
+        }else if*/
+        if (Random.Range(0, 4) == 0 && (GameManager._instance.PlayerRb.transform.position - transform.position).magnitude > 13f)
         {
             if (_retreatCoroutine != null)
                 StopCoroutine(_retreatCoroutine);
@@ -379,7 +379,7 @@ public class BossMovement : MonoBehaviour
         _rb.velocity = Vector3.zero;
 
         float timer = 0f;
-        while (timer < 0.75f)
+        while (timer < 0.4f)
         {
             timer += Time.deltaTime;
             transform.forward = Vector3.Lerp(transform.forward, (GameManager._instance.PlayerRb.transform.position - transform.position).normalized, Time.deltaTime * 8f);
@@ -445,8 +445,8 @@ public class BossMovement : MonoBehaviour
 
         _bossStateController.ChangeAnimation("Retreat");
 
-        Vector3 retreatDir = (Vector3.up * 0.55f - transform.forward * Random.Range(0.8f, 1.2f));
-        _rb.velocity = retreatDir * 19f;
+        Vector3 retreatDir = (Vector3.up * 0.65f - transform.forward * Random.Range(0.8f, 1.2f));
+        _rb.velocity = retreatDir * 22f;
         float yStartVelocity = _rb.velocity.y;
 
         float startTime = Time.time;
@@ -530,7 +530,7 @@ public class BossMovement : MonoBehaviour
         //phase change position
         //cutscene etc
     }
-    public void MoveToPosition(Vector3 position, Vector3 lookAtPos, float rotationLerpSpeed = 10f, float? speed=null)
+    public void MoveToPosition(Vector3 position, Vector3 lookAtPos, float rotationLerpSpeed = 10f, float? speed=null, float speedMultiplier = 1f)
     {
         if (!_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh || _navMeshAgent.isOnOffMeshLink) return;
 
@@ -548,6 +548,7 @@ public class BossMovement : MonoBehaviour
         {
             _navMeshAgent.speed = _moveSpeed;
         }
+        _navMeshAgent.speed *= speedMultiplier;
 
         //float lerpSpeed = 2.5f;
         //_rb.velocity = Vector3.Lerp(_rb.velocity, position * _moveSpeed, Time.deltaTime * lerpSpeed);

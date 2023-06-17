@@ -19,13 +19,15 @@ public class Boss1Special : BossSpecial
 {
     public Boss1Special(BossStateController controller)
     {
-        _phaseCount = 2;
+        _phaseCount = 1;
         _phase = (int)GameManager._instance.BossPhaseCounterBetweenScenes.transform.position.x;
         _controller = controller;
         _name = "Ginhaeyr The Yielder";
     }
     public override float DoRandomWallAction()
     {
+        return DoWallActionPhase2();
+        /*
         switch (_phase)
         {
             case 1:
@@ -34,7 +36,7 @@ public class Boss1Special : BossSpecial
                 return DoWallActionPhase2();
             default:
                 return 0f;
-        }
+        }*/
     }
     public float DoWallActionPhase1()
     {
@@ -71,7 +73,8 @@ public class Boss1Special : BossSpecial
     }
     public override float DoRandomGroundAction()
     {
-        switch (_phase)
+        return DoGroundActionPhase2();
+        /*switch (_phase)
         {
             case 1:
                 return DoGroundActionPhase1();
@@ -79,7 +82,7 @@ public class Boss1Special : BossSpecial
                 return DoGroundActionPhase2();
             default:
                 return 0f;
-        }
+        }*/
     }
     public float DoGroundActionPhase1()
     {
@@ -154,20 +157,20 @@ public class Boss1Special : BossSpecial
     private IEnumerator JumpToPlayerCoroutine()
     {
         _controller._rb.useGravity = true;
-        _controller._rb.velocity += Vector3.up * 27.5f;
+        _controller._rb.velocity += Vector3.up * 14f;
         float time = 0f;
-        while ((GameManager._instance.PlayerRb.transform.position - _controller.transform.position).magnitude > (_controller._rb.velocity.magnitude > 32f ? 8f : 4f)) 
+        while ((GameManager._instance.PlayerRb.transform.position - _controller.transform.position).magnitude > (_controller._rb.velocity.magnitude > 32f ? 6.5f : 4f)) 
         {
             time += Time.deltaTime;
-            if (time > 3.75f || _controller._bossCombat.IsDead || (time > 0.75f && _controller._rb.velocity.magnitude < 0.5f))
+            if (time > 3f || _controller._bossCombat.IsDead || (time > 0.75f && _controller._rb.velocity.magnitude < 0.5f))
             {
                 _controller.EnterState(new BossStates.Chase());
                 yield break;
             }
             Vector3 dir = (GameManager._instance.PlayerRb.transform.position - _controller.transform.position).normalized;
             Vector3 forwardToPlayerDirection = new Vector3(dir.x, 0f, dir.z);
-            _controller.transform.forward = Vector3.Lerp(_controller.transform.forward, forwardToPlayerDirection, Time.deltaTime * 15f);
-            _controller._rb.velocity = Vector3.Lerp(_controller._rb.velocity, 64f * dir, Time.deltaTime * 3.5f);
+            _controller.transform.forward = Vector3.Lerp(_controller.transform.forward, forwardToPlayerDirection, Time.deltaTime * 8f);
+            _controller._rb.velocity = Vector3.Lerp(_controller._rb.velocity, 48f * dir, Time.deltaTime * 3.5f);
             yield return null;
         }
         JumpToPlayerAttack();
@@ -233,7 +236,9 @@ public class Boss1Special : BossSpecial
         GameObject obj = GameObject.Instantiate(PrefabHolder._instance.KnifePrefab, _controller.transform.position, Quaternion.identity);
         obj.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = _controller._bossCombat.Collider;
         obj.GetComponentInChildren<Projectile>().WhenTriggered = obj.GetComponentInChildren<Projectile>().WhenTriggeredForKnife;
-        obj.GetComponentInChildren<Rigidbody>().velocity = (GameManager._instance.PlayerRb.transform.position - _controller.transform.position).normalized * 40f;
+        obj.GetComponentInChildren<Rigidbody>().velocity = (GameManager._instance.PlayerRb.transform.position + GameManager._instance.PlayerRb.velocity * 0.05f - _controller.transform.position).normalized * 40f;
+        obj.transform.forward = (GameManager._instance.PlayerRb.transform.position + GameManager._instance.PlayerRb.velocity * 0.05f - _controller.transform.position).normalized;
+        obj.transform.localScale *= 2f;
     }
 
     public float ThrowSmoke()
@@ -250,7 +255,7 @@ public class Boss1Special : BossSpecial
     public float ThrowWeapon()
     {
         _controller.ChangeAnimation("ThrowWeapon");
-        GameManager._instance.CallForAction(() => _controller._bossCombat.ThrowWeapon(), 0.75f);
+        GameManager._instance.CallForAction(() => _controller._bossCombat.ThrowWeapon(), 0.5f);
         GameManager._instance.CallForAction(() => _controller._bossCombat.GetWeaponBack(), 2.5f);
         return GetAnimLenght("ThrowWeapon");
     }
