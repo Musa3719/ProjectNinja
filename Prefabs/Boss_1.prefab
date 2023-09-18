@@ -110,7 +110,7 @@ CharacterJoint:
   m_AutoConfigureConnectedAnchor: 1
   m_ConnectedAnchor: {x: 0.0017107922, y: 0.6755074, z: -0.030809175}
   serializedVersion: 2
-  m_SwingAxis: {x: 0, y: 0, z: 1}
+  m_SwingAxis: {x: 0, y: 0, z: 0}
   m_TwistLimitSpring:
     spring: 0
     damper: 0
@@ -316,6 +316,7 @@ GameObject:
   - component: {fileID: 8734690963101587903}
   - component: {fileID: 1714492521427528198}
   - component: {fileID: 750252287027724137}
+  - component: {fileID: 4145951950738748747}
   m_Layer: 0
   m_Name: Model
   m_TagString: Untagged
@@ -377,6 +378,18 @@ MonoBehaviour:
   - m_Rig: {fileID: 8115644483662348490}
     m_Active: 1
   m_Effectors: []
+--- !u!114 &4145951950738748747
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 635640326934306962}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86dcefcd4468b7046b3434882e146cb9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &661656093315274626
 GameObject:
   m_ObjectHideFlags: 0
@@ -865,7 +878,7 @@ CapsuleCollider:
   m_Material: {fileID: 0}
   m_IsTrigger: 0
   m_Enabled: 1
-  m_Radius: 0.09568366
+  m_Radius: 0.12
   m_Height: 0.38273463
   m_Direction: 1
   m_Center: {x: 0, y: 0.19136731, z: 0}
@@ -975,9 +988,9 @@ CapsuleCollider:
   m_IsTrigger: 1
   m_Enabled: 1
   m_Radius: 0.18243335
-  m_Height: 1.6214751
+  m_Height: 1.5040014
   m_Direction: 2
-  m_Center: {x: -0.047566634, y: -0.049993202, z: -0.72845334}
+  m_Center: {x: -0.047567166, y: -0.04999318, z: -0.6697167}
 --- !u!114 &1256018860717129776
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1309,7 +1322,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 20d4f2977c88d1a4c942371483c0fded, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _mesh: {fileID: 4354573065976178516}
   _targetTransform: {fileID: 2848372737585586462}
 --- !u!114 &7927765866123865202
 MonoBehaviour:
@@ -2011,7 +2023,7 @@ SkinnedMeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 3
   m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 257
+  m_RenderingLayerMask: 1281
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: f619003916c1a544fa05743c9a4f5dd8, type: 2}
@@ -2598,7 +2610,7 @@ CapsuleCollider:
   m_Material: {fileID: 0}
   m_IsTrigger: 0
   m_Enabled: 1
-  m_Radius: 0.094592445
+  m_Radius: 0.12
   m_Height: 0.37836978
   m_Direction: 1
   m_Center: {x: 0, y: 0.18918489, z: 0}
@@ -3323,7 +3335,7 @@ CapsuleCollider:
   m_Material: {fileID: 0}
   m_IsTrigger: 0
   m_Enabled: 1
-  m_Radius: 0.5
+  m_Radius: 0.3
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
@@ -3381,7 +3393,7 @@ MonoBehaviour:
   _normalMaterial: {fileID: 2100000, guid: f619003916c1a544fa05743c9a4f5dd8, type: 2}
   _dissolveMaterial: {fileID: 2100000, guid: e9c3c3e4d32c12341a08f1e1ed90b3b8, type: 2}
   _BlockedEnemyPosition: {x: 0, y: 0, z: 0}
-  EyeObject: {fileID: 0}
+  EyeObject: {fileID: 5919591709573453005}
 --- !u!114 &2116888280984131267
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3395,7 +3407,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _footTransform: {fileID: 4856051990227122812}
-  _testTransformForMove: {fileID: 4272336588862207520}
 --- !u!114 &7224320611809436264
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3423,7 +3434,7 @@ MonoBehaviour:
   _blockAnimCount: 3
   _sparkPosition: {fileID: 8680412191861465721}
   _bossTypeSpeedMultiplier: 0.8
-  _attackRange: 7
+  _attackRange: 14
   _interruptAttackCounter: 1
   _LastBlockOrDodgeTime: 0
 --- !u!114 &1874075042446481887

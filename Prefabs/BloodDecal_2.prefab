@@ -48,12 +48,12 @@ MonoBehaviour:
   m_Material: {fileID: 2100000, guid: dc170493100be0a4694a2fb66585cd11, type: 2}
   m_DrawDistance: 1000
   m_FadeScale: 0.9
-  m_StartAngleFade: 180
-  m_EndAngleFade: 180
+  m_StartAngleFade: 0
+  m_EndAngleFade: 39.785786
   m_UVScale: {x: 1, y: 1}
   m_UVBias: {x: 0, y: 0}
   m_AffectsTransparency: 0
-  m_DecalLayerMask: 1
+  m_DecalLayerMask: 4
   m_ScaleMode: 0
   m_Offset: {x: 0, y: 0, z: 0}
   m_Size: {x: 0.5, y: 0.5, z: 1}

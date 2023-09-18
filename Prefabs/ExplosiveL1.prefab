@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 2040269974}
   m_Layer: 0
   m_Name: ExplosiveL1
-  m_TagString: Untagged
+  m_TagString: ExplosiveL1
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -63,7 +63,7 @@ SphereCollider:
   m_IsTrigger: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.625
+  m_Radius: 0.7
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &2040269974
 MonoBehaviour:
