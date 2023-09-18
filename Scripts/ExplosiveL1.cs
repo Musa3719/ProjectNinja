@@ -69,7 +69,7 @@ public class ExplosiveL1 : MonoBehaviour
         timer += Time.deltaTime;
         if (timer > 6.5f)
         {
-            _explodeCoroutine = StartCoroutine(Explode());
+            StartExploding();
             return;
         }
         Vector3 dir = (_playerTransform.position - transform.position).normalized;
@@ -79,10 +79,14 @@ public class ExplosiveL1 : MonoBehaviour
 
         if ((_playerTransform.position - transform.position).magnitude < 2.25f)
         {
-            _explodeCoroutine = StartCoroutine(Explode());
+            StartExploding();
         }
     }
-    private IEnumerator Explode()
+    private void StartExploding()
+    {
+        _explodeCoroutine = StartCoroutine(ExplodeCoroutine());
+    }
+    private IEnumerator ExplodeCoroutine()
     {
         if (_isAboutToExplode) yield break;
 
@@ -99,6 +103,11 @@ public class ExplosiveL1 : MonoBehaviour
             _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, Time.deltaTime * 10f);
             yield return null;
         }
+
+        Explode();
+    }
+    public void Explode()
+    {
         SoundManager._instance.PlaySound(SoundManager._instance.BombExplode, transform.position, 0.3f, false, UnityEngine.Random.Range(1.25f, 1.5f));
         GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.ExplosionVFX), transform.position, Quaternion.identity);
 
@@ -114,11 +123,16 @@ public class ExplosiveL1 : MonoBehaviour
                 collider.GetComponentInChildren<Rigidbody>().AddForce((collider.transform.position - transform.position).normalized * 150f, ForceMode.Impulse);
 
             Physics.Raycast(transform.position, direction, out hit, bombRange, GameManager._instance.LayerMaskForVisible);
-            if (hit.collider == null || (!hit.collider.CompareTag("Player") && !hit.collider.CompareTag("BreakableObject") && !hit.collider.CompareTag("Boss") && !hit.collider.CompareTag("Enemy") && !hit.collider.CompareTag("HitBox"))) continue;
+            if (hit.collider == null || (!hit.collider.CompareTag("Player") && !hit.collider.CompareTag("BreakableObject") && !hit.collider.CompareTag("Boss") && !hit.collider.CompareTag("Enemy") && !hit.collider.CompareTag("ExplosiveL1") && !hit.collider.CompareTag("HitBox"))) continue;
 
             if (hit.collider.CompareTag("BreakableObject"))
             {
                 hit.collider.GetComponent<BreakableObject>().BrakeObject((transform.position - hit.collider.transform.position).normalized);
+            }
+            else if (hit.collider.CompareTag("ExplosiveL1") && hit.collider.gameObject != transform.parent.gameObject)
+            {
+                //hit.collider.GetComponentInChildren<ExplosiveL1>().StopAllCoroutines();
+                //hit.collider.GetComponentInChildren<ExplosiveL1>().Explode();
             }
 
             IKillable colliderKillable = GameManager._instance.GetHitBoxIKillable(hit.collider);

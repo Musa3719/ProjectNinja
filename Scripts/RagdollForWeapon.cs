@@ -18,12 +18,24 @@ public class RagdollForWeapon : MonoBehaviour
             if (weapon.transform.Find("AttackColliderWarning") != null)
                 weapon.transform.Find("AttackColliderWarning").GetComponent<Collider>().enabled = false;
 
-            PlaySoundOnCollision weaponMeshPlaySound = weapon.GetComponentInChildren<PlaySoundOnCollision>();
-            weaponMeshPlaySound._soundClip = SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds);
-            weaponMeshPlaySound._isEnabled = true;
 
+            PlaySoundOnCollision weaponMeshPlaySound = weapon.GetComponentInChildren<PlaySoundOnCollision>();
+
+            if (weapon.GetComponentInChildren<Cloth>() != null)
+            {
+                Destroy(weapon.GetComponentInChildren<Cloth>());
+                GameManager._instance.CallForAction(() => weapon.AddComponent<Cloth>(), 0.1f);
+
+                weaponMeshPlaySound._soundClip = SoundManager._instance.FabricPlaneSounds[0];
+            }
+            else
+            {
+                weaponMeshPlaySound._soundClip = SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds);
+            }
+
+            weaponMeshPlaySound._isEnabled = true;
             GameObject weaponMesh = weaponMeshPlaySound.gameObject;
-            if (weaponMesh.name == "Katana(Clone)")
+            /*if (weaponMesh.name == "Katana(Clone)")
             {
                 weaponMesh.GetComponent<BoxCollider>().enabled = true;
             }
@@ -61,15 +73,29 @@ public class RagdollForWeapon : MonoBehaviour
                 col.size *= 0.9f;
                 col2.size *= 0.9f;
 
-            }
-
-
+            }*/
             Rigidbody rb = weapon.AddComponent(typeof(Rigidbody)) as Rigidbody;
             rb.mass = 18f;
             rb.interpolation = RigidbodyInterpolation.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+
+            if (weaponMesh.GetComponentInChildren<MeshRenderer>() != null)
+                weaponMesh.GetComponentInChildren<MeshRenderer>().gameObject.AddComponent(typeof(MeshCollider)).GetComponent<MeshCollider>().convex = true;
+            else
+            {
+                weaponMesh.AddComponent(typeof(BoxCollider));
+                if(weaponMesh.name=="R_Blade" || weaponMesh.name == "L_Blade")
+                {
+                    weaponMesh.GetComponent<BoxCollider>().size *= 0.15f;
+                    weaponMesh.GetComponent<Rigidbody>().mass *= 0.15f;
+                    Destroy(weaponMesh.GetComponent<RotateBladeHumanoid>());
+                }
+            }
+
+
+            
             //rb.AddForce(tempDir * forceMultiplier * 1.5f + Vector3.up * forceUpMultiplier * 1.2f);
-            rb.AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 50f + tempDir * forceMultiplier + Vector3.up * forceUpMultiplier) * 4f);
+            rb.AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 5f + tempDir * forceMultiplier) * 8f);
         }
     }
 }

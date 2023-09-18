@@ -58,7 +58,7 @@ public class AttackWarning : MonoBehaviour
             {
                 Rigidbody rb = transform.parent.gameObject.GetComponent<Rigidbody>();
                 if (rb == null) return;
-                bool isFast = rb.velocity.magnitude > 13f ? true : false;
+                bool isFast = rb.velocity.magnitude > 11f ? true : false;
                 otherKillable.AttackWarning(GetComponent<Collider>(), isFast, rb.transform.position);
             }
             else if (IgnoreCollisionCollider != null)

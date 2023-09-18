@@ -32,7 +32,12 @@ public class SceneController : MonoBehaviour
     public static AsyncOperation NextSceneAsyncOperation;
     private void Awake()
     {
-        if (SceneManager.GetActiveScene().buildIndex == 7) Cursor.visible = true;
+        if (SceneManager.GetActiveScene().buildIndex == 7 || SceneManager.GetActiveScene().buildIndex == 0)
+        {
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+        }
+        
         _instance = this;
         Time.timeScale = 1f;
         if (SceneManager.GetActiveScene().buildIndex == 0)

@@ -51,19 +51,16 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
         if (other.CompareTag("BreakableObject"))
         {
             other.GetComponent<BreakableObject>().BrakeObject((other.transform.position - GetParent(transform).position).normalized);
-            SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, transform.position, 0.3f, false, UnityEngine.Random.Range(0.6f, 0.7f));
+            SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, transform.position, 0.2f, false, UnityEngine.Random.Range(0.6f, 0.7f));
             return;
         }
         else if ((other.CompareTag("Wall") || IsProp(other)) && !_isDecalCreatedForThisAttack)
         {
             _isDecalCreatedForThisAttack = true;
-            SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, IgnoreCollisionCollider.transform.position + IgnoreCollisionCollider.transform.forward * 0.5f, 0.18f, false, UnityEngine.Random.Range(0.6f, 0.7f));
+            SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, IgnoreCollisionCollider.transform.position + IgnoreCollisionCollider.transform.forward * 0.5f, 0.1f, false, UnityEngine.Random.Range(0.6f, 0.7f));
             GameObject decal = Instantiate(GameManager._instance.HoleDecal, transform.position, Quaternion.identity);
 
-            if (other.CompareTag("Wall"))
-                decal.transform.forward = other.transform.right;
-            else
-                decal.transform.forward = -IgnoreCollisionCollider.transform.forward;
+            decal.transform.forward = -other.transform.right;
             decal.transform.localEulerAngles = new Vector3(decal.transform.localEulerAngles.x, decal.transform.localEulerAngles.y, UnityEngine.Random.Range(0f, 360f));
             
             if (IgnoreCollisionCollider.CompareTag("Player"))
@@ -93,7 +90,7 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
         {
             other.GetComponentInChildren<Rigidbody>().AddForce((other.transform.position - IgnoreCollisionCollider.transform.position).normalized * 25f, ForceMode.Impulse);
 
-            Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.25f, false, UnityEngine.Random.Range(0.55f, 0.65f)), 2f);
+            Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.1f, false, UnityEngine.Random.Range(0.55f, 0.65f)), 2f);
             GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, IgnoreCollisionCollider.transform.position + IgnoreCollisionCollider.transform.forward * 0.7f, Quaternion.identity);
             hitSmoke.transform.position = new Vector3(hitSmoke.transform.position.x, GameManager._instance.PlayerLeftHandTransform.position.y, hitSmoke.transform.position.z) + IgnoreCollisionCollider.transform.right * 0.6f + IgnoreCollisionCollider.transform.up * 0.3f;
             hitSmoke.GetComponentInChildren<Animator>().speed = 1f;

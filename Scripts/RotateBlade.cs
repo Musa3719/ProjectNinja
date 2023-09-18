@@ -21,7 +21,7 @@ public class RotateBlade : MonoBehaviour
         Vector2 tempVel = new Vector2(GameManager._instance.PlayerRb.velocity.x, GameManager._instance.PlayerRb.velocity.z);
         float angle = Vector2.Angle(tempVel, tempDir);
         if (angle > 120f) _speed = -_speed;
-        else if (angle > 75f) { float sAngle = Vector2.SignedAngle(tempVel, tempDir); _speed = sAngle <= 0f ? _speed : -_speed; }
+        else if (angle > 75f) { float sAngle = Vector2.SignedAngle(tempVel, tempDir); _speed = sAngle > 0f ? _speed : -_speed; }
 
         float lerpSpeed = 3f;
         if (GameManager._instance.PlayerRb.velocity.magnitude < 3f) lerpSpeed /= 1.25f;

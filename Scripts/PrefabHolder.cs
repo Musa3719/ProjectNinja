@@ -61,8 +61,10 @@ public class PrefabHolder : MonoBehaviour
     public GameObject GunPrefab;
     [SerializeField]
     public GameObject KatanaPrefab;
+    [SerializeField]
+    public GameObject ZweihanderPrefab;
 
-    
+
 
     public Knife KnifeHolder;
     public Bomb BombHolder;

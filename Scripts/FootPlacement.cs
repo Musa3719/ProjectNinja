@@ -83,6 +83,12 @@ public class FootPlacement : MonoBehaviour
                 R_Foot_Constraint.data.targetRotationWeight = Mathf.Lerp(R_Foot_Constraint.data.targetRotationWeight, 1f, Time.deltaTime * 8f);
             }
         }
+
+        //position and hint disabled for now
+        L_Foot_Constraint.data.hintWeight = 0f;
+        R_Foot_Constraint.data.hintWeight = 0f;
+        L_Foot_Constraint.data.targetPositionWeight = 0f;
+        R_Foot_Constraint.data.targetPositionWeight = 0f;
     }
 
     private void LateUpdate()

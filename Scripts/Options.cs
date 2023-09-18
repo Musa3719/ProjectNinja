@@ -11,11 +11,14 @@ public class Options : MonoBehaviour
     public float MouseSensitivity { get; private set; }
     public float MaxSensitivity { get; private set; }
 
+    public float FOV { get; private set; }
+
 
 
     public Slider SoundSlider;
     public Slider MusicSlider;
     public Slider SensitivitySlider;
+    public Slider FovSlider;
 
     private void Awake()
     {
@@ -24,8 +27,10 @@ public class Options : MonoBehaviour
         MaxSensitivity = 3f;
         SoundVolume = PlayerPrefs.GetFloat("Sound", 0.33f);
         MusicVolume = PlayerPrefs.GetFloat("Music", 0.33f);
+        FOV = PlayerPrefs.GetFloat("FOV", 70f);
         SoundSlider.value = SoundVolume;
         MusicSlider.value = MusicVolume;
+        FovSlider.value = FOV;
     }
 
     private void Start()
@@ -53,6 +58,11 @@ public class Options : MonoBehaviour
         {
             MouseSensitivity = newValue * MaxSensitivity;
         }
+    }
+    public void FOVVolumeChanged(float newValue)
+    {
+        PlayerPrefs.SetFloat("FOV", newValue);
+        FOV = newValue;
     }
     public void SetQuality(int number)
     {

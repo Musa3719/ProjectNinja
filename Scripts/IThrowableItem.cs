@@ -38,7 +38,7 @@ public class Knife : IThrowableItem
             throwable.transform.position = GameManager._instance.IsLeftThrowing ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
         }
         else
-            throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 30f;
+            throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 22f;
         throwable.transform.forward = throwable.GetComponentInChildren<Rigidbody>().velocity.normalized;
         throwable.GetComponentInChildren<Rigidbody>().angularVelocity = throwable.transform.right * 15f;
         throwable.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = IgnoredCollider;
@@ -135,7 +135,7 @@ public class Shuriken : IThrowableItem
             throwable.transform.position = GameManager._instance.IsLeftThrowing ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
         }
         else
-            throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 30f;
+            throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 22f;
         throwable.transform.forward = throwable.GetComponentInChildren<Rigidbody>().velocity.normalized;
         throwable.GetComponentInChildren<Rigidbody>().angularVelocity = throwable.transform.up * 7f;
         throwable.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = IgnoredCollider;

@@ -12,11 +12,12 @@ public class DecalFollow : MonoBehaviour
     private void Awake()
     {
         decalProjector = GetComponent<DecalProjector>();
+        GameManager._instance.CallForAction(() => decalProjector.decalLayerMask = DecalLayerEnum.DecalLayerDefault, 2f);
     }
 
     private void LateUpdate()
     {
         transform.position = FollowingTransform.position + LocalPosition.x * FollowingTransform.right + LocalPosition.y * FollowingTransform.up + +LocalPosition.z * FollowingTransform.forward;
-        decalProjector.fadeFactor = Mathf.Lerp(decalProjector.fadeFactor, 1f, Time.deltaTime * 0.25f);
+        decalProjector.fadeFactor = Mathf.Lerp(decalProjector.fadeFactor, 1f, Time.unscaledDeltaTime * 4f);
     }
 }

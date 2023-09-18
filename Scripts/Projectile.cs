@@ -51,7 +51,7 @@ public class Projectile : MonoBehaviour, IKillObject
     {
         if (soundObj != null)
         {
-            if (soundObj.transform.position == transform.position)
+            if (rb.velocity.magnitude < 0.04f)
                 Destroy(soundObj);
             else
                 soundObj.transform.position = transform.position;
@@ -74,7 +74,7 @@ public class Projectile : MonoBehaviour, IKillObject
     public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude)
     {
         SoundManager._instance.PlaySound(SoundManager._instance.Stab, transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-        killable.Die(dir, killersVelocityMagnitude);
+        killable.Die(dir / 2f, killersVelocityMagnitude / 2f);
     }
 
     private void OnTriggerEnter(Collider other)
@@ -134,13 +134,13 @@ public class Projectile : MonoBehaviour, IKillObject
                 if (!isTargetBlocking && !isTargetDodging)
                 {
                     if (!otherKillable.Object.CompareTag("Boss"))
-                        Kill(otherKillable, -other.transform.forward, rb.velocity.magnitude / 4f);
+                        Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f);
                 }
                 else if (isTargetDodging)
                 {
                     if (otherKillable.Object.CompareTag("Enemy"))
                     {
-                        Kill(otherKillable, -other.transform.forward, rb.velocity.magnitude / 4f);
+                        Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f);
                     }
                 }
                 else if (isTargetBlocking)
@@ -152,7 +152,7 @@ public class Projectile : MonoBehaviour, IKillObject
                     else
                     {
                         if (!otherKillable.Object.CompareTag("Boss"))
-                            Kill(otherKillable, other.transform.forward, rb.velocity.magnitude / 4f);
+                            Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f);
                     }
                 }
             }
@@ -174,7 +174,7 @@ public class Projectile : MonoBehaviour, IKillObject
         }
         else if (other.CompareTag("Door"))
         {
-            Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.25f, false, UnityEngine.Random.Range(0.55f, 0.65f)), 2f);
+            Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.175f, false, UnityEngine.Random.Range(0.55f, 0.65f)), 2f);
             GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, transform.position, Quaternion.identity);
             hitSmoke.transform.localScale *= 3f;
             hitSmoke.GetComponentInChildren<Animator>().speed = 1f;
@@ -224,7 +224,7 @@ public class Projectile : MonoBehaviour, IKillObject
 
             if (hit.collider != null && hit.collider.GetComponentInChildren<ExplosiveL1>() != null)
             {
-                hit.collider.GetComponentInChildren<ExplosiveL1>().DestroyWithoutExploding(transform);
+                hit.collider.GetComponentInChildren<ExplosiveL1>().Explode();
             }
 
             if (hit.collider == null || (!hit.collider.CompareTag("Player") && !hit.collider.CompareTag("Boss") && !hit.collider.CompareTag("Enemy") && !hit.collider.CompareTag("HitBox"))) continue;
@@ -301,13 +301,13 @@ public class Projectile : MonoBehaviour, IKillObject
                 if (!isTargetBlocking && !isTargetDodging)
                 {
                     if (!otherKillable.Object.CompareTag("Boss"))
-                        Kill(otherKillable, -other.transform.forward, rb.velocity.magnitude / 4f);
+                        Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f);
                 }
                 else if (isTargetDodging)
                 {
                     if (otherKillable.Object.CompareTag("Enemy"))
                     {
-                        Kill(otherKillable, -other.transform.forward, rb.velocity.magnitude / 4f);
+                        Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f);
                     }
                 }
                 else if (isTargetBlocking)
@@ -319,7 +319,7 @@ public class Projectile : MonoBehaviour, IKillObject
                     else
                     {
                         if (!otherKillable.Object.CompareTag("Boss"))
-                            Kill(otherKillable, other.transform.forward, rb.velocity.magnitude / 4f);
+                            Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f);
                     }
                 }
             }
@@ -341,7 +341,7 @@ public class Projectile : MonoBehaviour, IKillObject
         }
         else if (other.CompareTag("Door"))
         {
-            Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.25f, false, UnityEngine.Random.Range(0.55f, 0.65f)), 2f);
+            Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.175f, false, UnityEngine.Random.Range(0.55f, 0.65f)), 2f);
             GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, transform.position, Quaternion.identity);
             hitSmoke.transform.localScale *= 3f;
             Color temp = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;

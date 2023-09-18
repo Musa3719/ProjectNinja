@@ -16,11 +16,13 @@ public class SmokeCollider : MonoBehaviour
     private void Awake()
     {
         _startTime = Time.time;
-        transform.parent.transform.position = new Vector3(transform.parent.transform.position.x, Random.Range(-0.3f, 0.5f), transform.parent.transform.position.z);
+        //transform.parent.transform.position = new Vector3(transform.parent.transform.position.x, Random.Range(-0.3f, 0.5f), transform.parent.transform.position.z);
     }
 
     void Update()
     {
+        transform.parent.transform.position += -Vector3.up * Time.deltaTime * 0.225f; 
+
         if (transform.localScale.x < _MaxScale)
         {
             //transform.localScale += Vector3.one * _GrowthByTime / transform.localScale.x * Time.deltaTime;
