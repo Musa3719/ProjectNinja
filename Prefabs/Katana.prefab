@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4536057238035989114}
   - component: {fileID: 674567508345654750}
-  - component: {fileID: 5837006876580068242}
   m_Layer: 0
   m_Name: Katana
   m_TagString: Untagged
@@ -52,19 +51,7 @@ MonoBehaviour:
   _dissolveMaterial: {fileID: 2100000, guid: aba0867898bc10e44a98a4d6642d5103, type: 2}
   _soundClip: {fileID: 0}
   _isEnabled: 0
---- !u!65 &5837006876580068242
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3870985351573657792}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_Enabled: 0
-  serializedVersion: 2
-  m_Size: {x: 0.00079713267, y: 0.013841712, z: 0.0013850064}
-  m_Center: {x: -0.000024474486, y: 0.0047589075, z: 0.00013887294}
+  _isDoor: 0
 --- !u!1 &4141598047241546815
 GameObject:
   m_ObjectHideFlags: 0
@@ -184,6 +171,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c2eee75d0fdcb4d478f90f44b5f50295, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  IsHardHitWeapon: 0
 --- !u!1 &4182127232098142597
 GameObject:
   m_ObjectHideFlags: 0

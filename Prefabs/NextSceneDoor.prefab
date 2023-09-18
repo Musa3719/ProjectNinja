@@ -423,7 +423,7 @@ GameObject:
   - component: {fileID: 2477945151150494058}
   m_Layer: 0
   m_Name: NextSceneHandler
-  m_TagString: Untagged
+  m_TagString: DoorHandler
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
@@ -483,7 +483,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _Text: 
   _Number: 1
-  _Image: {fileID: 21300000, guid: b057f5ee50417b84194962954fab6c6c, type: 3}
 --- !u!1 &2623717603289674313
 GameObject:
   m_ObjectHideFlags: 0

@@ -1923,7 +1923,7 @@ CapsuleCollider:
   m_Material: {fileID: 0}
   m_IsTrigger: 0
   m_Enabled: 1
-  m_Radius: 0.093217276
+  m_Radius: 0.065
   m_Height: 0.4660864
   m_Direction: 1
   m_Center: {x: 0, y: 0.2330432, z: 0}
@@ -2422,7 +2422,7 @@ CapsuleCollider:
   m_Material: {fileID: 0}
   m_IsTrigger: 0
   m_Enabled: 1
-  m_Radius: 0.09121067
+  m_Radius: 0.065
   m_Height: 0.45605335
   m_Direction: 1
   m_Center: {x: 0, y: 0.22802667, z: 0}
@@ -2499,6 +2499,7 @@ GameObject:
   - component: {fileID: 7683302915154730432}
   - component: {fileID: 2469493219023255681}
   - component: {fileID: 4740351841728406086}
+  - component: {fileID: 671904760195804041}
   m_Layer: 0
   m_Name: Model
   m_TagString: Untagged
@@ -2560,6 +2561,18 @@ MonoBehaviour:
   - m_Rig: {fileID: 3530657062303846827}
     m_Active: 1
   m_Effectors: []
+--- !u!114 &671904760195804041
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3877904438100924393}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86dcefcd4468b7046b3434882e146cb9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &3958604275346590286
 GameObject:
   m_ObjectHideFlags: 0
@@ -3594,7 +3607,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 20d4f2977c88d1a4c942371483c0fded, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _mesh: {fileID: 7091001287583246467}
   _targetTransform: {fileID: 754383942927851750}
 --- !u!114 &5872349411264969539
 MonoBehaviour:
@@ -3917,7 +3929,7 @@ CapsuleCollider:
   m_Material: {fileID: 0}
   m_IsTrigger: 0
   m_Enabled: 1
-  m_Radius: 0.5
+  m_Radius: 0.225
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
@@ -3949,11 +3961,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb4dbee19edeaa148ac3a36bd4223c3a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _enemyNumber: 6
   headAimConstraint: {fileID: 7655397461786906117}
   _normalMaterial: {fileID: 2100000, guid: 48374406d33bcf84f89bccf8db15e35a, type: 2}
   _dissolveMaterial: {fileID: 2100000, guid: d39e67f3bb1cc7f4c81bd22d2554cbb5, type: 2}
   _BlockedEnemyPosition: {x: 0, y: 0, z: 0}
   _isHearTriggered: 0
+  _lastTimeCheckForPlayerInSeenCalled: 0
 --- !u!114 &5694100322309169553
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3967,7 +3981,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _footTransform: {fileID: 5576427303480148185}
-  _testTransformForMove: {fileID: 0}
 --- !u!114 &6004631899336362389
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3981,7 +3994,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _sparkPosition: {fileID: 530237643244036221}
-  _enemyTypeSpeedMultiplier: 1
+  _enemyTypeSpeedMultiplier: 0.9
   _weaponType: 8
   _throwableType: 0
   _weaponHolderTransform: {fileID: 3696427785894368440}
@@ -5351,7 +5364,7 @@ SkinnedMeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 3
   m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 257
+  m_RenderingLayerMask: 1281
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 48374406d33bcf84f89bccf8db15e35a, type: 2}

@@ -59,6 +59,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c2eee75d0fdcb4d478f90f44b5f50295, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  IsHardHitWeapon: 1
 --- !u!1 &4361057721301535493
 GameObject:
   m_ObjectHideFlags: 0
@@ -118,6 +119,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15cc8248a43d85441aa6c9056e80363b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  isMeleeWeapon: 1
 --- !u!1 &4361057722258753957
 GameObject:
   m_ObjectHideFlags: 0
@@ -146,7 +148,7 @@ Transform:
   m_GameObject: {fileID: 4361057722258753957}
   m_LocalRotation: {x: 0.000000021855694, y: 0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.15, y: 0.9, z: 1.15}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4361057720188677747}
@@ -220,3 +222,4 @@ MonoBehaviour:
   _dissolveMaterial: {fileID: 2100000, guid: 2a37f619d95ed514d848b3b5fa319f3e, type: 2}
   _soundClip: {fileID: 0}
   _isEnabled: 0
+  _isDoor: 0
