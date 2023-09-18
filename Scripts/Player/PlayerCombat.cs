@@ -18,10 +18,10 @@ public class PlayerCombat : MonoBehaviour, IKillable
     public GameObject Object => gameObject;
     public bool IsDead => GameManager._instance.isPlayerDead;
     public bool IsBlockingGetter => _IsBlocking;
-    public bool IsDodgingGetter => _IsDodgingOrForwardLeap;
+    public bool IsDodgingGetter => _IsDodging;
     public GameObject AttackCollider => _attackCollider.gameObject;
     public int InterruptAttackCounterGetter => _interruptAttackCounter;
-    public float _CollisionVelocity => _collisionVelocity;
+    public float _CollisionVelocity => CollisionVelocity;
     public bool _DeflectedBuffer { get => false; set {  } }
 
     public CapsuleCollider _collider { get; private set; }
@@ -50,11 +50,12 @@ public class PlayerCombat : MonoBehaviour, IKillable
     public IThrowableItem _CurrentThrowableItem { get; set; }
 
     private Coroutine _isBlockedOrDeflectedCoroutine;
+    private Coroutine _customPassOpenCoroutine;
 
     public bool _IsStunned { get; private set; }
 
     private bool _isBlocking;
-    public bool _IsDodgingOrForwardLeap { get; set; }
+    public bool _IsDodging { get; set; }
 
     public bool _IsBlocking { get { return _isBlocking; } set { if (_isBlocking == false && value == true) { _blockStartTime = Time.time; } _isBlocking = value; } }
     public bool _IsBlockedOrDeflected { get; set; }
@@ -82,12 +83,13 @@ public class PlayerCombat : MonoBehaviour, IKillable
 
     private int _lastAttackDeflectedCounter;
     private float _lastAttackDeflectedTime;
+    private float _lastDeflectedTime;
 
     public float _AttackTime => _attackTime;
     public float _forwardLeapTime { get; private set; }
 
     private float _crashStunCheckValue;
-    private float _collisionVelocity;
+    public float CollisionVelocity;
 
     private void Awake()
     {
@@ -101,32 +103,26 @@ public class PlayerCombat : MonoBehaviour, IKillable
         _isAllowedToForwardLeap = true;
         _isAllowedToThrow = true;
         _blockWaitTime = 0.1f;
-        _attackWaitTime = 0.725f;
-        _attackTime = 0.7f;
+        _attackWaitTime = 0.6f;
+        _attackTime = 0.6f;
         _forwardLeapWaitTime = 3f;
         _throwWaitTime = 0.8f;
         _dodgeWaitTime = 0.75f;
-        _dodgeTime = 0.1f;
+        _dodgeTime = 0.05f;
         _forwardLeapTime = 0.2f;
-        _blockTimingValue = 0.3f;
-        _crashStunCheckValue = 10f;
+        _blockTimingValue = 0.225f;
+        _crashStunCheckValue = 11.25f;
+
+        AttackCollider.transform.localPosition = new Vector3(0f, 0.2f, 0.65f);
+        AttackCollider.GetComponent<CapsuleCollider>().radius = 0.65f;
     }
     
     private void FixedUpdate()
     {
-        _collisionVelocity = PlayerStateController._instance._rb.velocity.magnitude;
+        GameManager._instance.PlayerLastSpeed = CollisionVelocity;
+        CollisionVelocity = PlayerStateController._instance._rb.velocity.magnitude;
     }
-    private void OnCollisionEnter(Collision collision)
-    {
-        if (collision.collider != null && collision.collider.GetComponent<IKillable>() != null)
-        {
-            if (_collisionVelocity > _crashStunCheckValue || collision.collider.GetComponent<IKillable>()._CollisionVelocity > _crashStunCheckValue)
-            {
-                Stun(0.15f, false, collision.collider.transform);
-            }
-        }
-
-    }
+    
     public void StopBlockingAndDodge()
     {
         //
@@ -195,11 +191,10 @@ public class PlayerCombat : MonoBehaviour, IKillable
         if (!_isAllowedToDodge) return;
 
         _isAllowedToDodge = false;
-        _IsDodgingOrForwardLeap = true;
+        _IsDodging = true;
 
-        PlayerStateController._instance.ChangeAnimation("Dodge");
         SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.ArmorWalkSounds), transform.position, 0.14f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.3f));
+        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.25f));
         CameraController.ShakeCamera(3f, 1.6f, 0.1f, 0.7f);
 
         Action OpenIsAllowedToDodge = () => {
@@ -208,7 +203,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
         GameManager._instance.CallForAction(OpenIsAllowedToDodge, _dodgeWaitTime);
 
         Action CloseIsDodging = () => {
-            _IsDodgingOrForwardLeap = false;
+            _IsDodging = false;
         };
         GameManager._instance.CallForAction(CloseIsDodging, _dodgeTime);
     }
@@ -223,7 +218,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
             }
 
             PlayerStateController._instance.ChangeAnimation(GetBlockedName());
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.175f, false, UnityEngine.Random.Range(0.93f, 1.07f));
             CameraController.ShakeCamera(4f, 1.15f, 0.15f, 0.65f);
             PlayerMovement._instance.BlockedMove(PlayerStateController._instance._rb, -dir);
             _AttackBlockedCounter = 0.4f;
@@ -235,9 +230,10 @@ public class PlayerCombat : MonoBehaviour, IKillable
 
             GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.SparksVFX), _sparkPosition.position, Quaternion.identity);
             Destroy(sparksVFX, 4f);
+            GameObject combatSmokeVFX = Instantiate(GameManager._instance.CombatSmokeVFX, transform.position + transform.forward * 0.1f, Quaternion.LookRotation(attacker.Object.transform.position - transform.position));
+            Destroy(combatSmokeVFX, 4f);
 
-            Debug.Log("Blocked with bad timing...");
-            _isAllowedToBlock = false;
+            //_isAllowedToBlock = false;
             Action OpenIsAllowedToBlock = () => {
                 _isAllowedToBlock = true;
             };
@@ -249,7 +245,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
                 Action OpenIsAllowedToAttack = () => {
                     _isAllowedToAttack = true;
                 };
-                GameManager._instance.CallForAction(OpenIsAllowedToAttack, _attackWaitTime * 1.25f);
+                GameManager._instance.CallForAction(OpenIsAllowedToAttack, _attackWaitTime / 1.15f);
             }
 
             _lastAttackDeflectedCounter = 0;
@@ -258,14 +254,18 @@ public class PlayerCombat : MonoBehaviour, IKillable
         {
             CameraController.ShakeCamera(3f, 1.1f, 0.2f, 0.5f);
             PlayerStateController._instance.ChangeAnimation(GetDeflectedName());
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.175f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
             if (_isBlockedOrDeflectedCoroutine != null)
                 StopCoroutine(_isBlockedOrDeflectedCoroutine);
             _isBlockedOrDeflectedCoroutine = StartCoroutine(IsBlockedOrDeflectedCoroutine());
 
+            _lastDeflectedTime = Time.time;
+
             GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.ShiningSparksVFX), _sparkPosition.position, Quaternion.identity);
             Destroy(sparksVFX, 4f);
+            GameObject combatSmokeVFX = Instantiate(GameManager._instance.CombatSmokeVFX, transform.position + transform.forward * 0.1f, Quaternion.LookRotation(attacker.Object.transform.position - transform.position));
+            Destroy(combatSmokeVFX, 4f);
 
             if (attacker != null && attacker.Object.CompareTag("Boss"))
             {
@@ -282,20 +282,20 @@ public class PlayerCombat : MonoBehaviour, IKillable
                     attacker.AttackDeflected(this as IKillable);
             }
 
-            _isAllowedToBlock = false;
+            //_isAllowedToBlock = false;
             Action OpenIsAllowedToBlock = () => {
                 _isAllowedToBlock = true;
             };
             GameManager._instance.CallForAction(OpenIsAllowedToBlock, _blockWaitTime);
 
-            if (_isAllowedToAttack)
+            /*if (_isAllowedToAttack)
             {
                 _isAllowedToAttack = false;
                 Action OpenIsAllowedToAttack = () => {
                     _isAllowedToAttack = true;
                 };
                 GameManager._instance.CallForAction(OpenIsAllowedToAttack, _attackWaitTime / 4f);
-            }
+            }*/
 
             _lastAttackDeflectedCounter++;
             _lastAttackDeflectedTime = Time.time;
@@ -321,11 +321,23 @@ public class PlayerCombat : MonoBehaviour, IKillable
         CameraController._instance.GetComponentInChildren<Animator>().CrossFade("Camera" + attackName, 0.15f);
 
         GameManager._instance.PlayerAttackHandle();
-        GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; _isAllowedToAttack = true; }, _attackWaitTime);
+        GameObject aimAssistedEnemy = GameManager._instance.CheckForAimAssist();
+        if (aimAssistedEnemy != null)
+        {
+            PlayerMovement._instance.AimAssistToEnemy(aimAssistedEnemy);
+            //Vector3 temp = CameraController._instance.transform.eulerAngles;
+            //CameraController._instance.transform.LookAt(aimAssistedEnemy.transform.position);
+            //CameraController._instance.transform.eulerAngles = new Vector3(temp.x, CameraController._instance.transform.eulerAngles.y, temp.z);
+        }
+
+        float localAttackWaitTime = _attackWaitTime;
+        if (_lastDeflectedTime + 1.75f > Time.time || _isImmune)
+            localAttackWaitTime /= 1.3f;
+        GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; _isAllowedToAttack = true; }, localAttackWaitTime);
 
         PlayerStateController._instance.ChangeAnimation(attackName);
-        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.125f, false, UnityEngine.Random.Range(1f, 1.1f)), 0.3f);
-        SoundManager._instance.PlaySound(SoundManager._instance.BladeSlide, transform.position, 0.2f, false, UnityEngine.Random.Range(0.65f, 0.75f));
+        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.075f, false, UnityEngine.Random.Range(1f, 1.1f)), 0.2f);
+        SoundManager._instance.PlaySound(SoundManager._instance.BladeSlide, transform.position, 0.12f, false, UnityEngine.Random.Range(0.65f, 0.75f));
 
 
         /*GameManager._instance.CallForAction(() =>
@@ -339,12 +351,26 @@ public class PlayerCombat : MonoBehaviour, IKillable
             _attackColliderWarning.gameObject.SetActive(false);
         _attackColliderWarning.gameObject.SetActive(true);
 
-        
-        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackColliderWarning.gameObject.SetActive(false); }, _attackTime * 0.475f);
+        /*if (!PlayerMovement._instance.IsTouchingAnyWall() && !PlayerMovement._instance.IsTouchingAnyProp())
+        {
+            GameManager._instance.CustomPassForHands.enabled = false;
+            if (_customPassOpenCoroutine != null)
+                StopCoroutine(_customPassOpenCoroutine);
+            _customPassOpenCoroutine = StartCoroutine(CustomPassOpenCoroutine(_attackTime));
+        }*/
+       
+        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackColliderWarning.gameObject.SetActive(false); }, _attackTime * 0.37f);
 
-        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(true); CameraController.ShakeCamera(2.5f, 2f, 0.2f, 0.4f); GameManager._instance.BlurVolume.enabled = true; }, _attackTime * 0.35f);
+        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(true); CameraController.ShakeCamera(2.5f, 2f, 0.2f, 0.4f); GameManager._instance.BlurVolume.enabled = true; }, _attackTime * 0.32f);
 
-        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(false); PlayerCombat._instance._IsAttacking = false; GameManager._instance.BlurVolume.enabled = false; }, _attackTime * 0.475f);
+        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(false); GameManager._instance.BlurVolume.enabled = false; }, _attackTime * 0.37f);
+
+        GameManager._instance.CallForAction(() => { if (IsDead) return; PlayerCombat._instance._IsAttacking = false; }, _attackTime * 0.9f);
+    }
+    private IEnumerator CustomPassOpenCoroutine(float time)
+    {
+        yield return new WaitForSeconds(time);
+        GameManager._instance.CustomPassForHands.enabled = true;
     }
     private void SelectAttackType()
     {
@@ -413,13 +439,13 @@ public class PlayerCombat : MonoBehaviour, IKillable
 
         PlayerMovement._instance._Stamina -= PlayerMovement._instance._forwardLeapStaminaUse;
         _isAllowedToForwardLeap = false;
-        _IsDodgingOrForwardLeap = true;
+        _IsDodging = true;
 
         CameraController.ShakeCamera(1.5f, 1.25f, 0.1f, 0.3f);
 
         GameManager._instance.CallForAction(() => { _isAllowedToForwardLeap = true; }, _forwardLeapWaitTime);
 
-        GameManager._instance.CallForAction(() => { _IsDodgingOrForwardLeap = false; }, _forwardLeapTime);
+        GameManager._instance.CallForAction(() => { _IsDodging = false; }, _forwardLeapTime);
 
         PlayerStateController._instance.ChangeAnimation(GetForwardLeapAnimation());
 
@@ -447,8 +473,8 @@ public class PlayerCombat : MonoBehaviour, IKillable
         GameManager._instance.CallForAction(OpenIsAllowedToThrow, _throwWaitTime);
 
         PlayerStateController._instance.ChangeAnimation(GetThrowName());
-        SoundManager._instance.PlaySound(SoundManager._instance.Throw, transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-        GameManager._instance.CallForAction(() => UseThrowableItem(item), 0.2f);
+
+        GameManager._instance.CallForAction(() => {SoundManager._instance.PlaySound(SoundManager._instance.Throw, transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f)); UseThrowableItem(item); }, 0.15f);
     }
     public void BombDeflected()
     {
@@ -581,5 +607,13 @@ public class PlayerCombat : MonoBehaviour, IKillable
     public void AttackWarning(Collider collider, bool isFast, Vector3 attackPosition)
     {
         //maybe some ui stuff later
+    }
+    public void OpenAttackCollider()
+    {
+
+    }
+    public void CloseAttackCollider()
+    {
+
     }
 }

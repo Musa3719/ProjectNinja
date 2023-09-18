@@ -127,8 +127,8 @@ public class Boss1Special : BossSpecial
         obj.GetComponentInChildren<Projectile>().ChangeSoundObj(SoundManager._instance.PlaySound(SoundManager._instance.Spell1, obj.transform.position, 0.15f, true, 1f));
         obj.GetComponentInChildren<Rigidbody>().velocity = (-_controller.transform.forward + Vector3.up * 1f).normalized * 3f;
         float time = Random.Range(0.75f, 1.2f);
-        GameManager._instance.CallForAction(() => { if (obj == null) return; obj.transform.Find("SpellProjectile").GetComponent<Collider>().enabled = false; obj.GetComponentInChildren<Rigidbody>().velocity = (GameManager._instance.PlayerRb.transform.position - obj.transform.position).normalized * 80f; }, time);
-        GameManager._instance.CallForAction(() => { if (obj == null) return; obj.transform.Find("SpellProjectile").GetComponent<Collider>().enabled = true; obj.transform.Find("SpellProjectile").GetComponent<Collider>().isTrigger = true; obj.transform.Find("SpellWarning").GetComponent<Collider>().enabled = true; }, time + 0.15f);
+        GameManager._instance.CallForAction(() => { if (obj == null || _controller._isDead) return; obj.transform.Find("SpellProjectile").GetComponent<Collider>().enabled = false; obj.GetComponentInChildren<Rigidbody>().velocity = (GameManager._instance.PlayerRb.transform.position - obj.transform.position).normalized * 80f; }, time);
+        GameManager._instance.CallForAction(() => { if (obj == null || _controller._isDead) return; obj.transform.Find("SpellProjectile").GetComponent<Collider>().enabled = true; obj.transform.Find("SpellProjectile").GetComponent<Collider>().isTrigger = true; obj.transform.Find("SpellWarning").GetComponent<Collider>().enabled = true; }, time + 0.15f);
 
         return GetAnimLenght("Spell");
     }
@@ -141,8 +141,8 @@ public class Boss1Special : BossSpecial
         obj.GetComponentInChildren<Projectile>().ChangeSoundObj(SoundManager._instance.PlaySound(SoundManager._instance.Spell2, obj.transform.position, 0.15f, true, 1f));
         obj.GetComponentInChildren<Rigidbody>().velocity = (-_controller.transform.forward + Vector3.up * 1f).normalized * 3f;
         float time = Random.Range(0.5f, 1f);
-        GameManager._instance.CallForAction(() => { if (obj == null) return; obj.transform.Find("SpellProjectile").GetComponent<Collider>().enabled = false;  obj.GetComponentInChildren<Rigidbody>().velocity = (GameManager._instance.PlayerRb.transform.position - obj.transform.position).normalized * 60f; }, time);
-        GameManager._instance.CallForAction(() => { if (obj == null) return; obj.transform.Find("SpellProjectile").GetComponent<Collider>().enabled = true; obj.transform.Find("SpellProjectile").GetComponent<Collider>().isTrigger = true; obj.transform.Find("SpellWarning").GetComponent<Collider>().enabled = true; }, time + 0.15f);
+        GameManager._instance.CallForAction(() => { if (obj == null || _controller._isDead) return; obj.transform.Find("SpellProjectile").GetComponent<Collider>().enabled = false;  obj.GetComponentInChildren<Rigidbody>().velocity = (GameManager._instance.PlayerRb.transform.position - obj.transform.position).normalized * 60f; }, time);
+        GameManager._instance.CallForAction(() => { if (obj == null || _controller._isDead) return; obj.transform.Find("SpellProjectile").GetComponent<Collider>().enabled = true; obj.transform.Find("SpellProjectile").GetComponent<Collider>().isTrigger = true; obj.transform.Find("SpellWarning").GetComponent<Collider>().enabled = true; }, time + 0.15f);
 
         return GetAnimLenght("Spell");
     }
@@ -157,20 +157,33 @@ public class Boss1Special : BossSpecial
     private IEnumerator JumpToPlayerCoroutine()
     {
         _controller._rb.useGravity = true;
-        _controller._rb.velocity += Vector3.up * 14f;
+        Vector3 dir = (GameManager._instance.PlayerRb.transform.position - _controller.transform.position).normalized;
+        _controller._rb.velocity = Vector3.up * 12.5f + 50f * dir;
+
+        Vector3 velWithoutY;
+
         float time = 0f;
+        float isGroundedCounter = 0f;
         while ((GameManager._instance.PlayerRb.transform.position - _controller.transform.position).magnitude > (_controller._rb.velocity.magnitude > 32f ? 6.5f : 4f)) 
         {
             time += Time.deltaTime;
-            if (time > 3f || _controller._bossCombat.IsDead || (time > 0.75f && _controller._rb.velocity.magnitude < 0.5f))
+
+            if (_controller._bossMovement.IsGrounded()) isGroundedCounter += Time.deltaTime;
+            else isGroundedCounter = 0f;
+
+            if (time > 3f || _controller._bossCombat.IsDead || (time > 0.75f && _controller._rb.velocity.magnitude < 0.5f) || isGroundedCounter > 0.8f)
             {
                 _controller.EnterState(new BossStates.Chase());
                 yield break;
             }
-            Vector3 dir = (GameManager._instance.PlayerRb.transform.position - _controller.transform.position).normalized;
+            velWithoutY = _controller._rb.velocity;
+            velWithoutY.y = 0f;
+            dir = (GameManager._instance.PlayerRb.transform.position - _controller.transform.position).normalized;
             Vector3 forwardToPlayerDirection = new Vector3(dir.x, 0f, dir.z);
-            _controller.transform.forward = Vector3.Lerp(_controller.transform.forward, forwardToPlayerDirection, Time.deltaTime * 8f);
-            _controller._rb.velocity = Vector3.Lerp(_controller._rb.velocity, 48f * dir, Time.deltaTime * 3.5f);
+            _controller.transform.forward = Vector3.Lerp(_controller.transform.forward, forwardToPlayerDirection, Time.deltaTime * 4f);
+            velWithoutY = Vector3.Lerp(velWithoutY, velWithoutY.magnitude * dir, Time.deltaTime * 1.5f);
+            velWithoutY *= (1f - Time.deltaTime / 2.5f);
+            _controller._rb.velocity = new Vector3(velWithoutY.x, _controller._rb.velocity.y, velWithoutY.z);
             yield return null;
         }
         JumpToPlayerAttack();
@@ -233,6 +246,8 @@ public class Boss1Special : BossSpecial
     }
     private void ThrowKnifeInstantiate()
     {
+        if (_controller._isDead) return;
+
         GameObject obj = GameObject.Instantiate(PrefabHolder._instance.KnifePrefab, _controller.transform.position, Quaternion.identity);
         obj.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = _controller._bossCombat.Collider;
         obj.GetComponentInChildren<Projectile>().WhenTriggered = obj.GetComponentInChildren<Projectile>().WhenTriggeredForKnife;
@@ -254,6 +269,8 @@ public class Boss1Special : BossSpecial
     }
     public float ThrowWeapon()
     {
+        if (_controller._bossCombat.WeaponObject == null) return 0f;
+
         _controller.ChangeAnimation("ThrowWeapon");
         GameManager._instance.CallForAction(() => _controller._bossCombat.ThrowWeapon(), 0.5f);
         GameManager._instance.CallForAction(() => _controller._bossCombat.GetWeaponBack(), 2.5f);
@@ -286,6 +303,8 @@ public class Boss1Special : BossSpecial
     }
     private void ThrowExplosiveInstantiate()
     {
+        if (_controller._isDead) return;
+
         GameObject obj = GameObject.Instantiate(PrefabHolder._instance.L1Explosive, _controller.transform.position, Quaternion.identity);
         obj.GetComponentInChildren<Rigidbody>().velocity = (GameManager._instance.PlayerRb.transform.position - _controller.transform.position).normalized * 24f;
         obj.GetComponentInChildren<Rigidbody>().angularVelocity = new Vector3(10f, 10f, 10f);

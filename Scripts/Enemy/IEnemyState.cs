@@ -22,7 +22,7 @@ namespace EnemyStates
         {
             _enemyStateController = rb.GetComponent<EnemyStateController>();
             _enemyStateController.HalfHeadAim();
-            _enemyStateController._animator.SetFloat("LocomotionSpeedMultiplier", 0.5f + (_enemyStateController._enemyMovement._runSpeed - 10.5f) / 10f);
+            _enemyStateController._animator.SetFloat("LocomotionSpeedMultiplier", 0.75f + (_enemyStateController._enemyMovement._runSpeed - 10.5f) / 10f);
         }
         public void Exit(Rigidbody rb, IEnemyState newState)
         {
@@ -45,7 +45,11 @@ namespace EnemyStates
                 return;
             }
 
-            if (_enemyStateController._lastTimeCheckForPlayerInSeenCalled + 0.25f < Time.time && _enemyStateController.CheckForPlayerInSeen())
+            if (GameManager._instance.IsFollowPlayerTriggered)
+            {
+                _enemyStateController.EnterState(new Chasing());
+            }
+            else if (_enemyStateController._lastTimeCheckForPlayerInSeenCalled + 0.25f < Time.time && _enemyStateController.CheckForPlayerInSeen())
             {
                 _enemyStateController._lastTimeCheckForPlayerInSeenCalled = Time.time;
                 _enemyStateController.EnterState(new Chasing());
@@ -111,7 +115,11 @@ namespace EnemyStates
                 return;
             }
 
-            if (_enemyStateController._lastTimeCheckForPlayerInSeenCalled + 0.25f < Time.time && _enemyStateController.CheckForPlayerInSeen())
+            if (GameManager._instance.IsFollowPlayerTriggered)
+            {
+                _enemyStateController.EnterState(new Chasing());
+            }
+            else if (_enemyStateController._lastTimeCheckForPlayerInSeenCalled + 0.25f < Time.time && _enemyStateController.CheckForPlayerInSeen())
             {
                 _enemyStateController._lastTimeCheckForPlayerInSeenCalled = Time.time;
                 _enemyStateController.EnterState(new Chasing());
@@ -184,13 +192,13 @@ namespace EnemyStates
                 return;
             }
 
-            if (_enemyStateController._lastTimeCheckForPlayerInSeenCalled + 0.25f < Time.time && !_enemyStateController.CheckForPlayerInSeen())
+            if (!GameManager._instance.IsFollowPlayerTriggered && _enemyStateController._lastTimeCheckForPlayerInSeenCalled + 0.25f < Time.time && !_enemyStateController.CheckForPlayerInSeen())
             {
                 _enemyStateController._lastTimeCheckForPlayerInSeenCalled = Time.time;
                 _enemyStateController.SearchingFromChasing();
                 _enemyStateController.EnterState(new Searching());
             }
-            else if (_enemyStateController._enemyAI.CheckForStepBack())
+            else if (_enemyStateController._enemyAI.CheckForStepBack() && (_playerTransform.position - _enemyStateController.transform.position).magnitude < _enemyStateController._enemyCombat.AttackRange * 1.25f)
             {
                 _enemyStateController.EnterState(new StepBack());
             }
@@ -211,7 +219,7 @@ namespace EnemyStates
             else if (_enemyStateController._enemyAI.CheckForThrow())
             {
                 _enemyStateController._enemyCombat._rangedWarning.SetActive(true);
-                GameManager._instance.CallForAction(() => _enemyStateController._enemyCombat.ThrowKillObject(), 0.5f); 
+                GameManager._instance.CallForAction(() => _enemyStateController._enemyCombat.ThrowKillObject(), 0.75f); 
             }
 
             Vector3 lookAtPos = _enemyStateController._enemyCombat._IsRanged ? _playerTransform.position + GameManager._instance.PlayerRb.velocity * 0.6f * 0.075f * (_playerTransform.position - _enemyStateController.transform.position).magnitude : _playerTransform.position;
@@ -233,7 +241,7 @@ namespace EnemyStates
                 if (_enemyStateController._enemyCombat._IsRanged && (_playerTransform.position - _enemyStateController.transform.position).magnitude < _enemyStateController._enemyCombat.AttackRange * 0.75f)
                     _enemyStateController._enemyMovement.MoveToPosition(_enemyStateController.transform.position, lookAtPos);
                 else if (!_enemyStateController._enemyCombat._IsRanged && (_playerTransform.position - _enemyStateController.transform.position).magnitude < _enemyStateController._enemyCombat.AttackRange * 0.5f)
-                    _enemyStateController._enemyMovement.MoveToPosition(GetPositionWhenNear(), lookAtPos, 35f, null, 0.55f);
+                    _enemyStateController._enemyMovement.MoveToPosition(GetPositionWhenNear(), lookAtPos);
                 else
                     _enemyStateController._enemyMovement.MoveToPosition(_playerTransform.position, lookAtPos);
         }
@@ -252,11 +260,13 @@ namespace EnemyStates
             bool isInAngle = Vector3.Angle(_playerTransform.forward, _enemyStateController.transform.position - _playerTransform.position) < 15f;
             if (isInAngle)
             {
-                return _enemyStateController.transform.position + _enemyStateController.transform.forward * 0.2f + _enemyStateController.transform.right * 1f * _randomDirection;
+                if ((_playerTransform.position - _enemyStateController.transform.position).magnitude < _enemyStateController._enemyCombat.AttackRange * 0.33f)
+                    return _enemyStateController.transform.position - _enemyStateController.transform.forward * 0.4f;
+                return _enemyStateController.transform.position;
             }
             else
             {
-                Vector3 pos = _playerTransform.position + _playerTransform.forward * 3.25f;
+                Vector3 pos = _playerTransform.position + _playerTransform.forward * 2.5f;
                 return pos;
             }
         }
@@ -320,7 +330,7 @@ namespace EnemyStates
             else if (_enemyStateController._enemyAI.CheckForThrow())
             {
                 _enemyStateController._enemyCombat._rangedWarning.SetActive(true);
-                GameManager._instance.CallForAction(() => _enemyStateController._enemyCombat.ThrowKillObject(), 0.5f);
+                GameManager._instance.CallForAction(() => _enemyStateController._enemyCombat.ThrowKillObject(), 0.75f);
             }
 
             if (!_enemyStateController._enemyCombat._IsDodging && !_enemyStateController._enemyCombat._isInAttackPattern && !_enemyStateController._enemyCombat._IsBlocking)

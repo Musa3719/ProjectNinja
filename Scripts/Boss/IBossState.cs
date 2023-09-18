@@ -17,12 +17,14 @@ namespace BossStates
     {
         public BossStateController _bossStateController { get; set; }
         private Vector3 _targetPos;
+        private float startTime;
 
         public void Enter(Rigidbody rb, IBossState oldState)
         {
+            startTime = Time.time;
             _bossStateController = rb.GetComponent<BossStateController>();
             _bossStateController.EnableHeadAim();
-            _bossStateController._animator.SetFloat("LocomotionSpeedMultiplier", 0.5f + (_bossStateController._bossMovement._runSpeed - 10.5f) / 10f);
+            _bossStateController._animator.SetFloat("LocomotionSpeedMultiplier", 0.75f + (_bossStateController._bossMovement._runSpeed - 10.5f) / 10f);
             _targetPos = _bossStateController._bossAI.GetIdleMovementPosition(_bossStateController._agent);
         }
         public void Exit(Rigidbody rb, IBossState newState)
@@ -33,7 +35,7 @@ namespace BossStates
         {
             _bossStateController._bossAI._idleTimer -= Time.deltaTime;
 
-            if (_bossStateController._bossAI.CheckForExitIdle() || (_targetPos - rb.transform.position).magnitude < 0.5f)
+            if (startTime + 3.75f < Time.time || _bossStateController._bossAI.CheckForExitIdle() || (_targetPos - rb.transform.position).magnitude < 0.5f)
             {
                 _bossStateController.EnterState(new Chase());
             }
@@ -54,7 +56,7 @@ namespace BossStates
             if (_bossStateController._bossCombat._IsStunned) return;
 
             if (!_bossStateController._bossCombat._IsDodging && !_bossStateController._bossCombat._IsInAttackPattern && !_bossStateController._bossCombat._IsBlocking)
-                _bossStateController._bossMovement.MoveToPosition(_targetPos, GameManager._instance.PlayerRb.transform.position, 6.5f, 2.5f);
+                _bossStateController._bossMovement.MoveToPosition(_targetPos, GameManager._instance.PlayerRb.transform.position, 16f, 4f);
         }
 
         public void DoStateFixedUpdate(Rigidbody rb)
@@ -110,7 +112,10 @@ namespace BossStates
             }
             else if (_bossStateController._bossAI.CheckForRetreat())
             {
-                _bossStateController.EnterState(new Retreat());
+                if (_bossStateController._bossAI._BossNumber == 1)
+                {
+                    _bossStateController.EnterState(new RetreatBoss1());
+                }
             }
             else if (_bossStateController._bossAI.CheckForDodgeOrBlock())
             {
@@ -153,7 +158,7 @@ namespace BossStates
             bool isInAngle = Vector3.Angle(_playerTransform.forward, _bossStateController.transform.position - _playerTransform.position) < 15f;
             if (isInAngle)
             {
-                return _bossStateController.transform.position + _bossStateController.transform.forward * 0.2f + _bossStateController.transform.right * 1f * _randomDirection;
+                return _bossStateController.transform.position + _bossStateController.transform.forward * -0.2f;
             }
             else
             {
@@ -163,7 +168,7 @@ namespace BossStates
         }
     }
 
-    public class Retreat : IBossState
+    public class RetreatBoss1 : IBossState
     {
         public BossStateController _bossStateController { get; set; }
 
@@ -227,7 +232,7 @@ namespace BossStates
         }
         public void Exit(Rigidbody rb, IBossState newState)
         {
-            if (!(newState is Retreat))
+            if (!(newState is RetreatBoss1))
             {
                 _bossStateController.EnterAnimState(new BossAnimations.Walk());
             }

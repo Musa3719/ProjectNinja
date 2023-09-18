@@ -42,7 +42,7 @@ public class CameraController : MonoBehaviour
         _playerForwardBefore = Vector3.forward;
         _playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
         _verticalCameraModifier = 0.85f;
-        _velocityForwardLerpSpeed = 28f;
+        _velocityForwardLerpSpeed = 30f;
         transform.position = _playerTransform.position + _cameraOffset;
 
         transform.localEulerAngles = _playerTransform.eulerAngles;
@@ -113,7 +113,10 @@ public class CameraController : MonoBehaviour
 
     public void ArrangeFOV(float Fov)
     {
-        _mainCamera.fieldOfView = Mathf.Lerp(_mainCamera.fieldOfView, Fov, Time.deltaTime * 2f);
+        if (PlayerCombat._instance._IsAttacking)
+            _mainCamera.fieldOfView = Mathf.Lerp(_mainCamera.fieldOfView, Fov - 5f, Time.deltaTime * 4.5f);
+        else
+            _mainCamera.fieldOfView = Mathf.Lerp(_mainCamera.fieldOfView, Fov, Time.deltaTime * 4.5f);
     }
     public void LookAround(bool isVelocityToForward)
     {
@@ -121,9 +124,16 @@ public class CameraController : MonoBehaviour
 
         Vector3 speed = PlayerStateController._instance._rb.velocity;
         speed.y = 0f;
-        
-        float xOffset = -InputHandler.GetAxis("Mouse Y") * Time.deltaTime * 60f / 12f * Options._instance.MouseSensitivity * _verticalCameraModifier * Mathf.Cos(speed.magnitude / PlayerMovement._instance._RunSpeed * Mathf.PI / 4f); // cos func for slowing camera 
-        float yOffset = InputHandler.GetAxis("Mouse X") * Time.deltaTime * 60f / 12f * Options._instance.MouseSensitivity * Mathf.Cos(speed.magnitude / PlayerMovement._instance._RunSpeed * Mathf.PI / 4f);
+
+
+        float xOffset = -InputHandler.GetAxis("Mouse Y") * Time.deltaTime * 60f / 24f * Options._instance.MouseSensitivity * _verticalCameraModifier; // cos func for slowing camera 
+        float yOffset = InputHandler.GetAxis("Mouse X") * Time.deltaTime * 60f / 24f * Options._instance.MouseSensitivity;
+
+        if (Time.timeScale != 0f && Time.timeScale != 1f)
+        {
+            xOffset /= Time.timeScale * 1.125f;
+            yOffset /= Time.timeScale * 1.125f;
+        }
 
         if (RunCounter > 0)
         {
@@ -136,15 +146,20 @@ public class CameraController : MonoBehaviour
             /*xOffset *= 0.75f;
             yOffset *= 0.75f;*/
         }
+        if (Time.timeScale != 0f && Time.timeScale != 1f)
+        {
+            float[] offsets = GetAvarageMouseOffsets(xOffset, yOffset, 10);
+        }
 
-        float[] offsets = GetAvarageMouseOffsets(xOffset, yOffset, 2);
+
+        //float[] offsets = GetAvarageMouseOffsets(xOffset, yOffset, 2);
 
 
         _playerForwardBefore = _playerTransform.forward;
 
-        _playerTransform.eulerAngles = new Vector3(_playerTransform.eulerAngles.x, _playerTransform.eulerAngles.y + offsets[1], _playerTransform.eulerAngles.z);
+        _playerTransform.eulerAngles = new Vector3(_playerTransform.eulerAngles.x, _playerTransform.eulerAngles.y + yOffset, _playerTransform.eulerAngles.z);
 
-        transform.localEulerAngles = _playerTransform.localEulerAngles + new Vector3(transform.localEulerAngles.x + offsets[0], 0f, 0f);
+        transform.localEulerAngles = _playerTransform.localEulerAngles + new Vector3(transform.localEulerAngles.x + xOffset, 0f, 0f);
         if (transform.eulerAngles.x > 60f && transform.eulerAngles.x < 295f)
         {
             float newX = Mathf.Abs(transform.localEulerAngles.x - 60f) < Mathf.Abs(transform.localEulerAngles.x - 295f) ? 60f : 295f;

@@ -30,6 +30,7 @@ public class BossStateController : MonoBehaviour
 
     public Rig _rig { get; private set; }
     public SkinnedMeshRenderer _mesh { get; private set; }
+    public SkinnedMeshRenderer[] _meshes { get; private set; }
     public bool _isDead { get; set; }
     public bool _isOnOffMeshLinkPath { get; set; }
     public bool _isInSmoke { get; set; }
@@ -38,7 +39,7 @@ public class BossStateController : MonoBehaviour
 
     public float _searchStartTime { get; set; }
 
-    public Vector3 _BlockedEnemyPosition;
+    [HideInInspector] public Vector3 _BlockedEnemyPosition;
 
     private float _searchingTime;
     private float _seeAngleHalf;
@@ -52,6 +53,7 @@ public class BossStateController : MonoBehaviour
 
     private Coroutine _enableHeadAimCoroutine;
     private Coroutine _disableHeadAimCoroutine;
+    private Coroutine _pushCoroutine;
 
     private Coroutine _dissolveCoroutine;
 
@@ -82,7 +84,7 @@ public class BossStateController : MonoBehaviour
         _seeAngleHalf = 80f;
         _checkDistance = 20f;
         _checkDistanceWhileInSmoke = 3.5f;
-        
+        _meshes = GetComponentsInChildren<SkinnedMeshRenderer>();
     }
     private void Start()
     {
@@ -121,7 +123,7 @@ public class BossStateController : MonoBehaviour
             yield return null;
         }
 
-        if (!hasMovedAlready && !(_bossState is BossStates.Retreat) && !(_bossState is BossStates.SpecialAction))
+        if (!hasMovedAlready && !(_bossState is BossStates.RetreatBoss1) && !(_bossState is BossStates.SpecialAction))
         {
             Vector3 direction = (GameManager._instance.PlayerRb.transform.position - _rb.transform.position).normalized;
             direction.y = 0f;
@@ -286,6 +288,8 @@ public class BossStateController : MonoBehaviour
     }
     private void ArrangeAnimStateParameter()
     {
+        bool isStanding = _agent.enabled ? _agent.velocity.magnitude < 0.1f : _rb.velocity.magnitude < 0.1f;
+        _animator.SetBool("IsStanding", isStanding);
         if (_bossAnimState is BossAnimations.InAir && !_animator.GetCurrentAnimatorStateInfo(6).IsName("InAir") && !_animator.IsInTransition(6))
         {
             ChangeAnimation("InAir", 0.5f);
@@ -304,8 +308,16 @@ public class BossStateController : MonoBehaviour
 
         if (_animator.GetCurrentAnimatorStateInfo(1).IsName("Empty"))
         {
-            _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
-            _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 1f, Time.deltaTime * 3f));
+            if (_agent.velocity.magnitude < 0.1f)
+            {
+                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
+                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 3f));
+            }
+            else
+            {
+                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
+                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 1f, Time.deltaTime * 3f));
+            }
         }
         else
         {
@@ -315,17 +327,17 @@ public class BossStateController : MonoBehaviour
     }
     private void ArrangeCombatStamina()
     {
-        if (_bossState is BossStates.Retreat || _bossState is BossStates.SpecialAction)
+        if (_bossState is BossStates.RetreatBoss1 || _bossState is BossStates.SpecialAction)
         {
-            _bossCombat._CombatStamina += Time.deltaTime * 0.25f * _bossCombat._CombatStaminaLimit / 100f;
+            _bossCombat._CombatStamina += Time.deltaTime * 1f * _bossCombat._CombatStaminaLimit / 100f;
         }
         else if (_bossCombat._IsInAttackPattern || _bossCombat._IsDodging || _bossCombat._IsBlocking)
         {
-            _bossCombat._CombatStamina += Time.deltaTime * 0.5f * _bossCombat._CombatStaminaLimit / 100f;
+            _bossCombat._CombatStamina += Time.deltaTime * 2f * _bossCombat._CombatStaminaLimit / 100f;
         }
         else
         {
-            _bossCombat._CombatStamina += Time.deltaTime * 1.5f * _bossCombat._CombatStaminaLimit / 100f;
+            _bossCombat._CombatStamina += Time.deltaTime * 4f * _bossCombat._CombatStaminaLimit / 100f;
         }
     }
     public void EnableHeadAim()
@@ -376,8 +388,39 @@ public class BossStateController : MonoBehaviour
             {
                 TouchingRoofs.Add(collision.collider.gameObject);
             }
-            
+            if (!TouchingWalls.Contains(collision.collider.gameObject) && collision.collider.CompareTag("WallTrigger"))
+            {
+                TouchingWalls.Add(collision.collider.gameObject);
+            }
+            if (collision.collider.CompareTag("Player") && GameManager._instance.PlayerLastSpeed > 13.5f && !GameManager._instance.isPlayerAttacking)
+            {
+                ChangeAnimation("Stun");
+                SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                if (_pushCoroutine != null)
+                    StopCoroutine(_pushCoroutine);
+                _pushCoroutine = StartCoroutine(PushCoroutine());
+            }
         }
+    }
+    private IEnumerator PushCoroutine()
+    {
+        _agent.enabled = false;
+        _rb.isKinematic = false;
+        Vector3 direction = (transform.position - GameManager._instance.PlayerRb.transform.position).normalized;
+        float startTime = Time.time;
+        while (startTime + 0.15f > Time.time)
+        {
+            _rb.velocity = Vector3.Lerp(_rb.velocity, (direction * 1f * GameManager._instance.PlayerLastSpeed), Time.deltaTime * 15f);
+            yield return null;
+        }
+        _rb.velocity = (direction * 1f * GameManager._instance.PlayerLastSpeed);
+        while (startTime + 0.65f > Time.time)
+        {
+            _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, Time.deltaTime * 2.5f);
+            yield return null;
+        }
+        _agent.enabled = true;
+        _rb.isKinematic = true;
     }
     private void OnCollisionExit(Collision collision)
     {
@@ -391,7 +434,11 @@ public class BossStateController : MonoBehaviour
             {
                 TouchingRoofs.Remove(collision.collider.gameObject);
             }
-            
+            if (TouchingWalls.Contains(collision.collider.gameObject) && collision.collider.CompareTag("WallTrigger"))
+            {
+                TouchingWalls.Remove(collision.collider.gameObject);
+            }
+
         }
     }
     private void OnTriggerEnter(Collider other)
@@ -504,7 +551,7 @@ public class BossStateController : MonoBehaviour
 
     public void BlockOpen(Vector3 blockedEnemyPosition)
     {
-        if(_bossState is BossStates.Retreat || _bossState is BossStates.SpecialAction)
+        if(_bossState is BossStates.RetreatBoss1 || _bossState is BossStates.SpecialAction)
         {
             Debug.LogError("Special but block opened..");
             return;
@@ -518,13 +565,6 @@ public class BossStateController : MonoBehaviour
 
         if (_bossCombat._IsInAttackPattern)
         {
-            /*if (UnityEngine.Random.Range(0,101) >= 30)
-            {
-                _bossMovement.Teleport();
-                return;
-            }
-            else
-                _bossCombat.StopAttackInstantly();*/
             _bossCombat.StopAttackInstantly();
         }
 

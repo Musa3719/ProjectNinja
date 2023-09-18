@@ -33,8 +33,8 @@ public class WeaponInAir : MonoBehaviour
         hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(color.r, color.g, color.b, 10f / 255f);
         hitSmoke.transform.localScale *= 10f;
         Destroy(hitSmoke, 5f);
-        yield return new WaitForSeconds(0.02f);
         transform.Find("AttackCollider").gameObject.SetActive(false);
+        yield return new WaitForSeconds(0.01f);
         _rb.isKinematic = true;
     }
 

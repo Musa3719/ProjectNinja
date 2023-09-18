@@ -19,12 +19,19 @@ public class BossCombat : MonoBehaviour, IKillable
     public float _CollisionVelocity => _collisionVelocity;
 
     private CapsuleCollider _collider;
-    private CapsuleCollider _attackCollider;
-    private CapsuleCollider _attackColliderWarning;
+    private Collider _attackCollider;
+    private Collider _attackColliderWarning;
     private MeleeWeapon _meleeWeapon;
+
+    public BoxCollider _rightBladeAttackCollider { get; private set; }
+    public BoxCollider _rightBladeAttackWarning { get; private set; }
+    public BoxCollider _leftBladeAttackCollider { get; private set; }
+    public BoxCollider _leftBladeAttackWarning { get; private set; }
+
 
     [SerializeField]
     private GameObject _weaponObject;
+    public GameObject WeaponObject => _weaponObject;
 
     private Collider[] _ragdollColliders;
 
@@ -34,16 +41,17 @@ public class BossCombat : MonoBehaviour, IKillable
     private Coroutine _closeIsDodgedLatelyCoroutine;
     private Coroutine _openIsAllowedToAttackCoroutine;
     private Coroutine _closeIsAttackInterruptedCoroutine;
+    private Coroutine _closeEyesCoroutine;
 
     public Dictionary<string, string> _attackNameToPrepareName;
     public Dictionary<string, float> _attackNameToHitOpenTime;
 
     public bool _IsStunned { get; private set; }
 
-    public bool _IsInAttackPattern;
-    public bool _IsAttacking;
-    public bool _IsPreparingAttack;
-    public bool _IsAttackInterrupted;
+    [HideInInspector] public bool _IsInAttackPattern;
+    [HideInInspector] public bool _IsAttacking;
+    [HideInInspector] public bool _IsPreparingAttack;
+    [HideInInspector] public bool _IsAttackInterrupted;
     public bool _IsDodging { get; set; }
 
     public bool _IsBlocking { get; set; }
@@ -116,26 +124,58 @@ public class BossCombat : MonoBehaviour, IKillable
     {
         _bossStateController = GetComponent<BossStateController>();
         _collider = GetComponent<CapsuleCollider>();
-        _attackCollider = _weaponObject.transform.Find("AttackCollider").GetComponent<CapsuleCollider>();
-        _attackColliderWarning = _weaponObject.transform.Find("AttackColliderWarning").GetComponent<CapsuleCollider>();
+        if (_weaponObject != null)
+        {
+            _attackCollider = _weaponObject.transform.Find("AttackCollider").GetComponent<CapsuleCollider>();
+            _attackColliderWarning = _weaponObject.transform.Find("AttackColliderWarning").GetComponent<CapsuleCollider>();
+        }
+        else
+        {
+            var components = GetComponentsInChildren<RotateBladeHumanoid>();
+            foreach (var item in components)
+            {
+                if (item.name == "R_Blade")
+                {
+                    _rightBladeAttackCollider = item.transform.Find("AttackCollider").GetComponent<BoxCollider>();
+                    _rightBladeAttackWarning = item.transform.Find("AttackColliderWarning").GetComponent<BoxCollider>();
+                }
+                else if (item.name == "L_Blade")
+                {
+                    _leftBladeAttackCollider = item.transform.Find("AttackCollider").GetComponent<BoxCollider>();
+                    _leftBladeAttackWarning = item.transform.Find("AttackColliderWarning").GetComponent<BoxCollider>();
+                }
+            }
+            _attackCollider = _rightBladeAttackCollider;
+            _attackColliderWarning = _rightBladeAttackWarning;
+        }
         _meleeWeapon = _attackCollider.GetComponent<MeleeWeapon>();
 
         _attackNameToPrepareName = new Dictionary<string, string>();
         _attackNameToHitOpenTime = new Dictionary<string, float>();
 
         _IsAllowedToAttack = true;
-        _attackWaitTime = 1f;
+        _attackWaitTime = 1.25f;
         _dodgeTime = 0.8f;
         _blockMoveTime = 0.8f;
-        _crashStunCheckValue = 10f;
+        _crashStunCheckValue = 13.5f;
         _CombatStamina = 100f;
         _DodgeOrBlockStaminaUse = 5f;
-        _weaponLocalPosition = _weaponObject.transform.localPosition;
-        _weaponLocalEulerAngles = _weaponObject.transform.localEulerAngles;
+
+        if (_weaponObject != null)
+        {
+            _weaponLocalPosition = _weaponObject.transform.localPosition;
+            _weaponLocalEulerAngles = _weaponObject.transform.localEulerAngles;
+        }
+       
     }
 
     private void Start()
     {
+        if (_bossStateController._bossAI._BossNumber == 3)
+        {
+            ArrangeBoss3BladesToHands();
+        }
+        if (_bossStateController._bossAI._BossNumber == 2) _attackWaitTime = 0.25f;
         _bossStateController._bossMovement._moveSpeed = 4f * _bossTypeSpeedMultiplier;
         _bossStateController._bossMovement._runSpeed = 12f * _bossTypeSpeedMultiplier;
         ArrangeRagdoll();
@@ -171,6 +211,8 @@ public class BossCombat : MonoBehaviour, IKillable
     }
     public void ThrowWeapon()
     {
+        if (_bossStateController._isDead) return;
+
         //wait animTime * 0.83f
         _weaponObject.transform.parent = null;
         Rigidbody rb = (Rigidbody)_weaponObject.AddComponent(typeof(Rigidbody));
@@ -186,6 +228,8 @@ public class BossCombat : MonoBehaviour, IKillable
     
     public void GetWeaponBack()
     {
+        if (_bossStateController._isDead) return;
+
         if (_weaponObject.transform.parent == null && _getWeaponBackCoroutine == null)
         {
             _getWeaponBackCoroutine = StartCoroutine(GetWeaponBackCoroutine());
@@ -193,12 +237,14 @@ public class BossCombat : MonoBehaviour, IKillable
     }
     private IEnumerator GetWeaponBackCoroutine()
     {
-        Destroy(_weaponObject.GetComponent<Rigidbody>());
         Destroy(_weaponObject.GetComponent<WeaponInAir>());
+        Destroy(_weaponObject.GetComponent<Rigidbody>());
         while ((_weaponObject.transform.position - _weaponHolderTransform.position).magnitude > 2f)
         {
-            _weaponObject.transform.position = Vector3.Lerp(_weaponObject.transform.position, _weaponHolderTransform.position, Time.deltaTime * 4f);
-            _weaponObject.transform.eulerAngles += new Vector3(1f, 0f, 0.5f) * Time.deltaTime * 6f;
+            if (_bossStateController._isDead) yield break;
+
+            _weaponObject.transform.position = Vector3.Lerp(_weaponObject.transform.position, _weaponHolderTransform.position, Time.deltaTime * 6f);
+            _weaponObject.transform.eulerAngles += Vector3.one * Time.deltaTime * 600f;
             yield return null;
         }
 
@@ -208,6 +254,8 @@ public class BossCombat : MonoBehaviour, IKillable
         float startTime = Time.time;
         while (startTime + 0.2f > Time.time)
         {
+            if (_bossStateController._isDead) yield break;
+
             _weaponObject.transform.localPosition = Vector3.Lerp(_weaponObject.transform.localPosition, _weaponLocalPosition, Time.deltaTime * 15f);
             _weaponObject.transform.localEulerAngles = Vector3.Lerp(_weaponObject.transform.localEulerAngles, _weaponLocalEulerAngles, Time.deltaTime * 15f);
             yield return null;
@@ -221,7 +269,7 @@ public class BossCombat : MonoBehaviour, IKillable
     {
         StopAttackInstantly();
 
-        if (!(_bossStateController._bossState is BossStates.Retreat) && !(_bossStateController._bossState is BossStates.SpecialAction))
+        if (!(_bossStateController._bossState is BossStates.RetreatBoss1) && !(_bossStateController._bossState is BossStates.SpecialAction))
         {
             _bossStateController._bossMovement.BlockMovement(deflectedKillable.Object.transform.position);
         }
@@ -245,7 +293,7 @@ public class BossCombat : MonoBehaviour, IKillable
         _IsAttackInterrupted = true;
         if (_closeIsAttackInterruptedCoroutine != null)
             StopCoroutine(_closeIsAttackInterruptedCoroutine);
-        _closeIsAttackInterruptedCoroutine = StartCoroutine(CloseIsAttackInterruptedCoroutine(0.5f));
+        _closeIsAttackInterruptedCoroutine = StartCoroutine(CloseIsAttackInterruptedCoroutine(0.75f));
 
         _bossStateController.ChangeAnimation("Empty", 0.5f);
         _bossStateController.ChangeAnimation("EmptyBody", 0.5f);
@@ -333,16 +381,20 @@ public class BossCombat : MonoBehaviour, IKillable
         else if (_blockCounter == 1) { chanceChange = 15; _blockCounter++; }
         _blockCounterTimer = 1f;
 
-        if (UnityEngine.Random.Range(0, 100) < 60 + chanceChange)
+
+        if (UnityEngine.Random.Range(0, 100) < 60 + chanceChange && !_IsInAttackPattern)
         {
             GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.SparksVFX), _sparkPosition.position, Quaternion.identity);
             Destroy(sparksVFX, 4f);
+            GameObject combatSmokeVFX = Instantiate(GameManager._instance.CombatSmokeVFX, transform.position, Quaternion.LookRotation(attacker.Object.transform.position - transform.position));
+            combatSmokeVFX.GetComponent<Rigidbody>().velocity = -transform.forward * 2f;
+            Destroy(combatSmokeVFX, 4f);
 
             _bossStateController.ChangeAnimation(GetBlockAnimName(), 0.2f, true);
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.175f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
             _CombatStamina -= _DodgeOrBlockStaminaUse;
-            if (!(_bossStateController._bossState is BossStates.Retreat) && !(_bossStateController._bossState is BossStates.SpecialAction))
+            if (!(_bossStateController._bossState is BossStates.RetreatBoss1) && !(_bossStateController._bossState is BossStates.SpecialAction))
             {
                 _bossStateController._bossMovement.BlockMovement(_bossStateController._BlockedEnemyPosition);
             }
@@ -365,11 +417,15 @@ public class BossCombat : MonoBehaviour, IKillable
             _openIsAllowedToAttackCoroutine = StartCoroutine(OpenIsAllowedToAttackCoroutine(_attackWaitTime * 0.35f));
 
             GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.ShiningSparksVFX), _sparkPosition.position, Quaternion.identity);
+            Destroy(sparksVFX, 4f);
+            GameObject combatSmokeVFX = Instantiate(GameManager._instance.CombatSmokeVFX, transform.position, Quaternion.LookRotation(attacker.Object.transform.position - transform.position));
+            combatSmokeVFX.GetComponent<Rigidbody>().velocity = -transform.forward * 2f;
+            Destroy(combatSmokeVFX, 4f);
+
             if (attacker != null && !isRangedAttack)
                 attacker.AttackDeflected(this as IKillable);
             _bossStateController.ChangeAnimation(GetDeflectAnimName(), 0.2f, true);
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-            Destroy(sparksVFX, 4f);
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.175f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         }
     }
     private IEnumerator CloseIsDeflectedLatelyCoroutine()
@@ -566,13 +622,13 @@ public class BossCombat : MonoBehaviour, IKillable
             if (isUsingCurrent)
             {
                 animTime = _bossStateController._animator.GetCurrentAnimatorClipInfo(animLayer)[0].clip.length / _bossStateController._animator.GetCurrentAnimatorStateInfo(animLayer).speed;
-                animTime = animTime * 0.7f;
+                animTime = animTime * 0.85f;
                 animTime -= time;
             }
             else
             {
                 animTime = _bossStateController._animator.GetNextAnimatorClipInfo(animLayer)[0].clip.length / _bossStateController._animator.GetNextAnimatorStateInfo(animLayer).speed;
-                animTime = animTime * 0.7f;
+                animTime = animTime * 0.85f;
                 animTime -= time;
             }
         }
@@ -587,7 +643,7 @@ public class BossCombat : MonoBehaviour, IKillable
 
         GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; _attackColliderWarning.gameObject.SetActive(false); }, animTime);
 
-        Action OpenAttackCollider = () => {
+        /*Action OpenAttackCollider = () => {
             if (_bossStateController._isDead || _IsAttackInterrupted) return;
             _attackCollider.gameObject.SetActive(true);
         };
@@ -599,7 +655,19 @@ public class BossCombat : MonoBehaviour, IKillable
             if (_IsAttackInterrupted) return;
             _attackCollider.gameObject.SetActive(false);
         };
-        GameManager._instance.CallForAction(CloseAttackCollider, animTime);
+        GameManager._instance.CallForAction(CloseAttackCollider, animTime);*/
+    }
+    public void OpenAttackCollider()
+    {
+        if (_bossStateController._isDead || _IsAttackInterrupted) return;
+
+        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        _attackCollider.gameObject.SetActive(true);
+    }
+    public void CloseAttackCollider()
+    {
+        if (_IsAttackInterrupted) return;
+        _attackCollider.gameObject.SetActive(false);
     }
     public void SingleAttack(string attackName, float animTime, int animLayer)
     {
@@ -623,7 +691,7 @@ public class BossCombat : MonoBehaviour, IKillable
     }
     public void BombDeflected()
     {
-        _CombatStamina -= 5f;
+        _CombatStamina -= 1f;
     }
     public void Stun(float time, bool isSpeedChanges, Transform otherTransform)
     {
@@ -643,10 +711,15 @@ public class BossCombat : MonoBehaviour, IKillable
     public void Push()
     {
         _bossStateController.ChangeAnimation("Push", 0.05f);
-        GameManager._instance._pushEvent?.Invoke((GameManager._instance.PlayerRb.transform.position - transform.position).normalized * 2f);
 
         if (_bossStateController._bossAI._BossNumber == 1)
+        {
+            GameManager._instance._pushEvent?.Invoke((GameManager._instance.PlayerRb.transform.position - transform.position).normalized * 2f);
             GameManager._instance.EffectPlayerByDark();
+        }
+        else
+            GameManager._instance._pushEvent?.Invoke((GameManager._instance.PlayerRb.transform.position - transform.position).normalized * 1f);
+
     }
     public void HitBreakable(GameObject breakable)
     {
@@ -684,11 +757,43 @@ public class BossCombat : MonoBehaviour, IKillable
     {
         item.Use(_bossStateController._rb, _collider, false);
     }
-    
+    private void CloseEyes()
+    {
+        if (_closeEyesCoroutine != null)
+            StopCoroutine(_closeEyesCoroutine);
+        _closeEyesCoroutine = StartCoroutine(CloseEyesCoroutine());
+    }
+    private IEnumerator CloseEyesCoroutine()
+    {
+        var meshes = _bossStateController.EyeObject.GetComponentsInChildren<MeshRenderer>();
+        Color emissiveColor = new Color(255f / 255f, 0f, 51f / 255f, 1f);
+        float newIntensity = 11f;
+        float startTime = Time.time;
+        while(startTime + 3.5f > Time.time)
+        {
+            newIntensity = Mathf.Clamp(newIntensity - Time.deltaTime * 20f, 0f, 15f);
+            foreach (var mesh in meshes)
+            {
+                mesh.material.SetFloat("_EmissiveIntensity", newIntensity);
+                mesh.material.SetColor("_EmissiveColor", emissiveColor * newIntensity);
+            }
+            yield return null;
+            yield return null;
+            yield return null;
+            yield return null;
+            yield return null;
+        }
+        _bossStateController.EyeObject.SetActive(false);
+    }
     private void PhaseChange()
     {
         if (_IsInAttackPattern)
             StopAttackInstantly();
+
+        if (_bossStateController._bossAI._BossNumber == 3)
+        {
+            ArrangeBoss3BladesToHands();
+        }
 
         SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.PlayerAttacks), transform.position, 0.45f, false, UnityEngine.Random.Range(1.1f, 1.25f));
@@ -733,9 +838,12 @@ public class BossCombat : MonoBehaviour, IKillable
     }
     public void Die(Vector3 dir, float killersVelocityMagnitude)
     {
-        if ((_bossStateController._bossState is BossStates.Retreat) || (_bossStateController._bossState is BossStates.SpecialAction))
+        if ((_bossStateController._bossState is BossStates.RetreatBoss1) || (_bossStateController._bossState is BossStates.SpecialAction))
         {
             _bossStateController.ChangeAnimation("BlockWhile");
+            GameObject sparks = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.SparksVFX), _sparkPosition.position, Quaternion.identity);
+            Destroy(sparks, 4f);
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.175f, false, UnityEngine.Random.Range(0.93f, 1.07f));
             return;
         }
         if (_CombatStamina > _DodgeOrBlockStaminaUse)
@@ -752,7 +860,7 @@ public class BossCombat : MonoBehaviour, IKillable
 
         if (IsDead) return;
 
-        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.4f, false, UnityEngine.Random.Range(1.05f, 1.15f));
         SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds), transform.position, 0.4f, false, UnityEngine.Random.Range(0.95f, 1.1f));
         //GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.EnemyDeathSounds), transform.position, 0.15f, false, UnityEngine.Random.Range(0.95f, 1.05f)), 1f);
 
@@ -764,6 +872,11 @@ public class BossCombat : MonoBehaviour, IKillable
 
         GameManager._instance.CloseBossUI();
 
+        if (_bossStateController._bossAI._BossNumber == 1)
+        {
+            CloseEyes();
+        }
+
         _bossStateController.StopAllCoroutines();
         _bossStateController._bossMovement.StopAllCoroutines();
         _bossStateController._bossCombat.StopAllCoroutines();
@@ -774,7 +887,7 @@ public class BossCombat : MonoBehaviour, IKillable
         bloodDir.y = 0f;
         Vector3 VFXposition = transform.position + bloodDir * 0.33f + Vector3.up * 0.07f;
         GameObject bloodVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.BloodVFX), VFXposition, Quaternion.identity);
-        bloodVFX.GetComponentInChildren<Rigidbody>().velocity = Vector3.up * 2f + transform.right * UnityEngine.Random.Range(-1f, 1f) + dir * UnityEngine.Random.Range(2.5f, 4f);
+        bloodVFX.GetComponentInChildren<Rigidbody>().velocity = Vector3.up * 1.25f + killersVelocityMagnitude * dir * 0.75f;
         Destroy(bloodVFX, 5f);
 
         GameObject bloodPrefab = GameManager._instance.BloodDecalPrefabs[UnityEngine.Random.Range(0, GameManager._instance.BloodDecalPrefabs.Count)];
@@ -806,6 +919,8 @@ public class BossCombat : MonoBehaviour, IKillable
 
         foreach (var collider in _ragdollColliders)
         {
+            if (collider.gameObject.layer == LayerMask.NameToLayer("Ignore Raycast")) continue;
+
             collider.gameObject.AddComponent(typeof(PlaySoundOnCollision));
             collider.GetComponent<PlaySoundOnCollision>()._soundClip = SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.ArmorHitSounds);
             collider.isTrigger = true;
@@ -820,8 +935,8 @@ public class BossCombat : MonoBehaviour, IKillable
     {
         if (!IsDead) return;
 
-        float forceMultiplier = 800f;
-        float forceUpMultiplier = 40f;
+        float forceMultiplier = 1000f;
+        float forceUpMultiplier = -20f;
 
         _bossStateController._animator.enabled = false;
         //_enemyStateController._animator.avatar = null;
@@ -832,17 +947,25 @@ public class BossCombat : MonoBehaviour, IKillable
         _bossStateController._rb.velocity = Vector3.zero;
         _bossStateController._rb.isKinematic = true;
 
-        _bossStateController._mesh.updateWhenOffscreen = true;
+        foreach (SkinnedMeshRenderer mesh in _bossStateController._meshes)
+        {
+            mesh.updateWhenOffscreen = true;
+        }
 
         if (_ragdollColliders == null)
             _ragdollColliders = transform.Find("Model").GetComponentsInChildren<Collider>();
 
         GetComponentInChildren<TransformBonePosition>().TransformPosition();
-        Vector3 tempDirForWeapon = dir + new Vector3(UnityEngine.Random.Range(-0.6f, 0.6f), UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.6f, 0.6f));
+        Vector3 tempDirForWeapon = dir + new Vector3(UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.1f, 0.1f), UnityEngine.Random.Range(-0.25f, 0.25f));
         GetComponentInChildren<RagdollForWeapon>().SeperateWeaponsFromRagdoll(tempDirForWeapon, forceMultiplier, forceUpMultiplier, killersVelocityMagnitude);
 
         foreach (var collider in _ragdollColliders)
         {
+            if (collider.GetComponent<PlaySoundOnCollision>() == null)
+            {
+                Debug.LogWarning(collider.name + " object does not have a playsoundoncollision component");
+                continue;
+            }
             collider.GetComponent<PlaySoundOnCollision>()._isEnabled = true;
             collider.isTrigger = false;
             collider.GetComponent<Rigidbody>().velocity = currentVelocity;
@@ -852,10 +975,28 @@ public class BossCombat : MonoBehaviour, IKillable
             tempDir += new Vector3(UnityEngine.Random.Range(-0.6f, 0.6f), UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.6f, 0.6f));
             //tempDir = tempDir.normalized; commented for power variety
             if (collider.gameObject.name == "CC_Base_Hip")
-                collider.GetComponent<Rigidbody>().AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 50f + tempDir * forceMultiplier + Vector3.up * forceUpMultiplier) * 7.5f);
+                collider.GetComponent<Rigidbody>().AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 4.5f + tempDir * forceMultiplier + Vector3.up * forceUpMultiplier) * 7.5f);
         }
 
         //Destroy(_bossStateController._rb);
         //Destroy(_bossStateController._agent);
+    }
+    private void ArrangeBoss3BladesToHands()
+    {
+        GameObject rBlade = GameObject.Find("R_Blade");
+        GameObject lBlade = GameObject.Find("L_Blade");
+
+        rBlade.transform.parent = GameObject.Find("CC_Base_R_Hand").transform;
+        lBlade.transform.parent = GameObject.Find("CC_Base_L_Hand").transform;
+
+        Vector3 rBladeNewPos = new Vector3(0.001355575f, 0.1047062f, -0.004732913f);
+        Vector3 rBladeNewRot = new Vector3(-108.37f, -21.97302f, 113.927f);
+        Vector3 lBladeNewPos = new Vector3(-0.005183703f, 0.09486907f, -0.01518293f);
+        Vector3 lBladeNewRot = new Vector3(-47.185f, 180.631f, -290.029f);
+
+        rBlade.transform.localPosition = rBladeNewPos;
+        rBlade.transform.localEulerAngles = rBladeNewRot;
+        lBlade.transform.localPosition = lBladeNewPos;
+        lBlade.transform.localEulerAngles = lBladeNewRot;
     }
 }

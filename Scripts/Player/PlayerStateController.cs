@@ -28,27 +28,27 @@ public class PlayerStateController : MonoBehaviour
     public bool _forwardLeapBuffer { get; set; }
     public bool _throwBuffer { get; set; }
     public bool _hookBuffer { get; set; }
-    public bool _upHookBuffer { get; set; }
     public bool _isGroundedBuffer { get; set; }
     public bool _isTouchingBuffer { get; set; }
 
 
     public Coroutine _jumpCoroutine;
+    public Coroutine _hookCoroutine;
     public Coroutine _attackCoroutine;
     public Coroutine _forwardLeapCoroutine;
     public Coroutine _throwCoroutine;
-    public Coroutine _hookCoroutine;
-    public Coroutine _upHookCoroutine;
     public Coroutine _isGroundedCoroutine;
     public Coroutine _isTouchingCoroutine;
 
 
     private float _jumpBufferTime;
+    private float _hookBufferTime;
     private float _attackBufferTime;
     private float _forwardLeapBufferTime;
     private float _throwBufferTime;
-    private float _hookBufferTime;
     private float _coyoteTime;
+
+    private float _lastTimeHookNotReadyPlayed;
 
     private GameObject _CurrentTeleportSpot;
     public GameObject _hookAnchor;
@@ -68,6 +68,8 @@ public class PlayerStateController : MonoBehaviour
     private List<GameObject> SmokeTriggers;
 
     public bool _isSpinEnding { get; set; }
+
+    private float _timeStopCounter;
 
     public void EnterState(IPlayerState newState)
     {
@@ -107,6 +109,7 @@ public class PlayerStateController : MonoBehaviour
         _Animator.SetBool("IsBlocking", PlayerCombat._instance._IsBlocking);
         _Animator.SetBool("IsBlockedOrDeflected", PlayerCombat._instance._IsBlockedOrDeflected);
         _Animator.SetBool("IsStaminaReload", _isStaminaManual);
+        _Animator.SetBool("IsAnimNameBlocking", _Animator.GetCurrentAnimatorStateInfo(1).IsName("Blocking"));
         _Animator.SetFloat("RunAnimSpeedMultiplier", _rb.velocity.magnitude / PlayerMovement._instance._MoveSpeed * 0.75f);
 
         if (_playerAnimState is PlayerAnimations.InAir && !_Animator.IsInTransition(1) && !PlayerCombat._instance._IsBlocking)
@@ -115,7 +118,7 @@ public class PlayerStateController : MonoBehaviour
             {
                 ChangeAnimation("FastLand");
             }
-            else if(PlayerMovement._instance._lastTimeFastLanded + 0.1f < Time.time && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("InAir"))
+            else if (PlayerMovement._instance._lastTimeFastLanded + 0.1f < Time.time && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("InAir"))
             {
                 ChangeAnimation("InAir");
             }
@@ -130,7 +133,7 @@ public class PlayerStateController : MonoBehaviour
             {
                 if (PlayerMovement._instance._lastTimeOnWallFastLanded + 0.1f >= Time.time && _Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall"))
                     ChangeAnimation("LeftOnWallFastLand");
-                else if(PlayerMovement._instance._lastTimeOnWallFastLanded + 0.1f < Time.time && _Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand"))
+                else if (PlayerMovement._instance._lastTimeOnWallFastLanded + 0.1f < Time.time && _Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand"))
                     ChangeAnimation("LeftOnWall");
             }
             else if (!(_playerAnimState as PlayerAnimations.OnWall).isWallOnTheLeftSide && !_Animator.IsInTransition(3))
@@ -141,11 +144,11 @@ public class PlayerStateController : MonoBehaviour
                     ChangeAnimation("RightOnWall");
             }
         }
-        else if((_playerAnimState is PlayerAnimations.Idle || _playerAnimState is PlayerAnimations.Walk || _playerAnimState is PlayerAnimations.Run) && !_isStaminaManual && !PlayerCombat._instance._IsBlocking && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("BlockingReverse") && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("Blocking"))
+        else if ((_playerAnimState is PlayerAnimations.Idle || _playerAnimState is PlayerAnimations.Walk || _playerAnimState is PlayerAnimations.Run) && !_isStaminaManual && PlayerMovement._instance._isHookDisabled && !PlayerCombat._instance._IsBlocking && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("BlockingReverse") && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("Blocking") && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("BlockingStart") && PlayerMovement._instance.IsGrounded() && !PlayerMovement._instance._isJumped)
         {
             if (_playerAnimState is PlayerAnimations.Idle && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("Idle") && !_Animator.IsInTransition(1))
             {
-                ChangeAnimation("Idle", 0.4f);
+                ChangeAnimation("Idle");
             }
             else if (_playerAnimState is PlayerAnimations.Walk && !_Animator.GetCurrentAnimatorStateInfo(1).IsName("Walk") && (!_Animator.IsInTransition(1) || _Animator.GetNextAnimatorStateInfo(1).IsName("Idle")))
             {
@@ -165,7 +168,7 @@ public class PlayerStateController : MonoBehaviour
         isInvertedMirrorAvailable = true;
         SmokeTriggers = new List<GameObject>();
         _jumpBufferTime = 0.3f;
-        _hookBufferTime = 0.2f;
+        _hookBufferTime = 0.3f;
         _attackBufferTime = 0.45f;
         _forwardLeapBufferTime = 0.4f;
         _throwBufferTime = 0.35f;
@@ -191,6 +194,19 @@ public class PlayerStateController : MonoBehaviour
         UIArrangements();
         ArrangeAttackBlockedCounter();
         CheckForLoopSounds();
+        CheckForPlayerFallsFromMap();
+
+        if (CheckForTimeStop())
+            GameManager._instance.SlowTime();
+        if (CheckForTimeStopEnd())
+            GameManager._instance.TimeStopEndSignal = true;
+    }
+    private void CheckForPlayerFallsFromMap()
+    {
+        if(transform.position.y < -20f)
+        {
+            GameManager._instance.Die();
+        }
     }
     private void CheckForCanDoWallMovement()
     {
@@ -233,9 +249,9 @@ public class PlayerStateController : MonoBehaviour
         }
 
         if (SmokeTriggers.Count == 0)
-            GameManager._instance._isPlayerInSmoke = false;
+            GameManager._instance.IsPlayerInSmoke = false;
         else
-            GameManager._instance._isPlayerInSmoke = true;
+            GameManager._instance.IsPlayerInSmoke = true;
     }
     private void ArrangeAttackBlockedCounter()
     {
@@ -244,8 +260,6 @@ public class PlayerStateController : MonoBehaviour
     }
     private void UIArrangements()
     {
-        bool isHookAvailable = PlayerMovement._instance._isHookAllowed && PlayerMovement._instance._isHookAllowedForAir;
-
         IThrowableItem next;
         IThrowableItem before;
         if (PlayerCombat._instance._ThrowableInventory.Count == 0)
@@ -266,7 +280,7 @@ public class PlayerStateController : MonoBehaviour
             }
         }
 
-        GameManager._instance.ArrangeUI(PlayerMovement._instance._Stamina, _playerState.ToString(), isHookAvailable, PlayerCombat._instance._CurrentThrowableItem, next, before);
+        GameManager._instance.ArrangeUI(PlayerMovement._instance._Stamina, PlayerMovement._instance._MaxStamina, _playerState.ToString(), false, PlayerCombat._instance._CurrentThrowableItem, next, before);
     }
     void LateUpdate()
     {
@@ -275,7 +289,10 @@ public class PlayerStateController : MonoBehaviour
         _playerState.DoStateLateUpdate(_rb);
         _playerAnimState.DoStateLateUpdate(_rb);
 
-        _cameraController.ArrangeFOV(50f + Mathf.Clamp(_rb.velocity.magnitude, PlayerMovement._instance._MoveSpeed, 16f) * 1f);
+        float speedFovAdditionMultiplier = 3.35f;
+        Vector3 velWithoutY = _rb.velocity;
+        velWithoutY.y = 0f;
+        _cameraController.ArrangeFOV(Options._instance.FOV - (speedFovAdditionMultiplier * PlayerMovement._instance._MoveSpeed) + Mathf.Clamp(velWithoutY.magnitude, PlayerMovement._instance._MoveSpeed, 16f) * speedFovAdditionMultiplier);
     }
     void FixedUpdate()
     {
@@ -294,7 +311,16 @@ public class PlayerStateController : MonoBehaviour
         yield return new WaitForSeconds(_jumpBufferTime);
         _jumpBuffer = false;
     }
-    
+    public IEnumerator HookBuffer()
+    {
+        if (_hookCoroutine != null)
+            StopCoroutine(_hookCoroutine);
+        _hookBuffer = true;
+        yield return new WaitForSeconds(_hookBufferTime);
+        _hookBuffer = false;
+    }
+
+
     public IEnumerator AttackBuffer()
     {
         if (_attackCoroutine != null)
@@ -319,22 +345,6 @@ public class PlayerStateController : MonoBehaviour
         yield return new WaitForSeconds(_throwBufferTime);
         _throwBuffer = false;
     }
-    public IEnumerator HookBuffer()
-    {
-        if (_hookCoroutine != null)
-            StopCoroutine(_hookCoroutine);
-        _hookBuffer = true;
-        yield return new WaitForSeconds(_hookBufferTime);
-        _hookBuffer = false;
-    }
-    public IEnumerator UpHookBuffer()
-    {
-        if (_upHookCoroutine != null)
-            StopCoroutine(_upHookCoroutine);
-        _upHookBuffer = true;
-        yield return new WaitForSeconds(_hookBufferTime);
-        _upHookBuffer = false;
-    }
     public IEnumerator IsGroundedCoyoteTime()
     {
         if (_isGroundedCoroutine != null)
@@ -354,7 +364,7 @@ public class PlayerStateController : MonoBehaviour
 
     public static void CheckForBlock()
     {
-        if (InputHandler.GetButton("Block") && PlayerCombat._instance._isAllowedToBlock && !PlayerCombat._instance._IsStunned && !PlayerCombat._instance._IsAttacking && PlayerMovement._instance._Stamina >= PlayerMovement._instance._blockedStaminaUse)
+        if (InputHandler.GetButton("Block") && PlayerCombat._instance._isAllowedToBlock && !PlayerCombat._instance._IsStunned && !PlayerCombat._instance._IsAttacking && PlayerMovement._instance._isHookDisabled && PlayerMovement._instance._Stamina >= PlayerMovement._instance._blockedStaminaUse)
         {
             if (!PlayerCombat._instance._IsBlocking)
                 SoundManager._instance.PlaySound(SoundManager._instance.BladeSlide, PlayerStateController._instance.transform.position, 0.07f, false, UnityEngine.Random.Range(0.75f, 0.85f));
@@ -370,7 +380,7 @@ public class PlayerStateController : MonoBehaviour
     }
     public static bool CheckForDodge()
     {
-        if (InputHandler.GetButtonDown("Dodge") && PlayerCombat._instance._isAllowedToDodge && PlayerMovement._instance._isDodgeAllowedForAir && !PlayerCombat._instance._IsDodgingOrForwardLeap && PlayerMovement._instance._Stamina >= PlayerMovement._instance._dodgeStaminaUse)
+        if (InputHandler.GetButtonDown("Dodge") && !IsRunning() && PlayerCombat._instance._isAllowedToDodge && PlayerMovement._instance._isDodgeAllowedForAir && PlayerMovement._instance._isHookDisabled && !PlayerCombat._instance._IsDodging && PlayerMovement._instance._Stamina >= PlayerMovement._instance._dodgeStaminaUse)
         {
             return true;
         }
@@ -379,74 +389,55 @@ public class PlayerStateController : MonoBehaviour
     }
     public static bool CheckForOnWall()
     {
-        bool onWall = !PlayerMovement._instance.IsGrounded() && PlayerMovement._instance.IsTouching() && !PlayerMovement._instance._isJumped && PlayerMovement._instance._canDoWallMovement && !PlayerCombat._instance._IsBlocking && PlayerMovement._instance._lastExitWallTime + 0.35f < Time.time;
-        return onWall;
-    }
-    public static bool CheckForHookTrigger()
-    {
-        if (!PlayerStateController._instance._hookBuffer) return false;
+        if (!PlayerMovement._instance._isHookDisabled) return false;
 
-        RaycastHit hit = PlayerMovement._instance.RaycastForHook();
-        if (hit.collider == null)
-        {
-            if (PlayerMovement._instance._lastHookNotReadyTime + 0.5f < Time.time)
-            {
-                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-                PlayerMovement._instance._lastHookNotReadyTime = Time.time;
-            }
-            return false;
-        }
-        bool isRayHit = hit.collider.gameObject.layer == LayerMask.NameToLayer("Grounds") || hit.collider.CompareTag("Wall");
+        if (PlayerMovement._instance._touchingWallColliders.Count == 0) return false;
 
-        if ((hit.point - PlayerStateController._instance.transform.position).magnitude < 3f)
-        {
-            if (PlayerMovement._instance._lastHookNotReadyTime + 0.5f < Time.time)
-            {
-                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-                PlayerMovement._instance._lastHookNotReadyTime = Time.time;
-            }
-            return false;
-        }
+        
+        bool _isWallOnLeftSide = false;
+        Vector3 playerForward = PlayerMovement._instance.GetForwardDirectionForWall(PlayerStateController._instance._rb.transform, 1f);
+        Vector3 playerLeftVector = Quaternion.AngleAxis(-90f, Vector3.up) * playerForward / 10f;
+        Vector3 a = PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.position - PlayerStateController._instance._rb.transform.position;
+        a.y = 0f;
+        if (Vector3.Dot(a.normalized, playerLeftVector) > 0)
+            _isWallOnLeftSide = true;
+        else
+            _isWallOnLeftSide = false;
 
-        if (!(PlayerMovement._instance._isHookAllowed && PlayerMovement._instance._isHookAllowedForAir && isRayHit && PlayerMovement._instance._Stamina >= PlayerMovement._instance._hookStaminaUse) && PlayerMovement._instance._lastHookTime + 0.5 < Time.time)
-        {
-            if (PlayerMovement._instance._lastHookNotReadyTime + 0.5f < Time.time)
-            {
-                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-                PlayerMovement._instance._lastHookNotReadyTime = Time.time;
-            }
-        }
+        float angleForLookingAtWall = Vector3.Angle(-PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.right, PlayerStateController._instance.transform.forward);
+        if (!(PlayerStateController._instance._playerState is PlayerStates.OnWall) && angleForLookingAtWall < 32f) return false;
 
-        return PlayerMovement._instance._isHookAllowed && PlayerMovement._instance._isHookAllowedForAir && isRayHit && PlayerMovement._instance._Stamina >= PlayerMovement._instance._hookStaminaUse;
+        bool isPressingHorizontalForLeave = _isWallOnLeftSide ? InputHandler.GetAxis("Horizontal") > 0f : InputHandler.GetAxis("Horizontal") < 0f;
+        bool onWall = !PlayerMovement._instance.IsGrounded() && PlayerMovement._instance.IsTouchingAnyWall() && !PlayerMovement._instance._isJumped && PlayerMovement._instance._canDoWallMovement && !PlayerCombat._instance._IsBlocking && PlayerMovement._instance._lastExitWallTime + 0.35f < Time.time;
+        return onWall && !isPressingHorizontalForLeave;
     }
     public static bool CheckForUpHookTrigger()
     {
-        if (!PlayerStateController._instance._upHookBuffer) return false;
+        if (!PlayerStateController._instance._hookBuffer) return false;
 
         RaycastHit hit = PlayerMovement._instance.RaycastForUpHook();
         if (hit.collider == null)
         {
-            if (PlayerMovement._instance._lastHookNotReadyTime + 0.5f < Time.time)
+            if (PlayerMovement._instance._LastHookNotReadyTime + 0.5f < Time.time)
             {
                 SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-                PlayerMovement._instance._lastHookNotReadyTime = Time.time;
+                PlayerMovement._instance._LastHookNotReadyTime = Time.time;
             }
             return false;
         }
-        bool isRayHit = hit.collider.gameObject.layer == LayerMask.NameToLayer("Grounds") || hit.collider.CompareTag("Wall");
+        bool isRayHit = (hit.collider.gameObject.layer == LayerMask.NameToLayer("Grounds") || hit.collider.CompareTag("Wall") || GameManager._instance.IsProp(hit.collider));
 
-        if (!(PlayerMovement._instance._isHookAllowed && PlayerMovement._instance._isHookAllowedForAir && isRayHit && PlayerMovement._instance._Stamina >= PlayerMovement._instance._hookStaminaUse) && PlayerMovement._instance._lastHookTime + 0.5 < Time.time)
+        if (!(PlayerMovement._instance._isHookAllowed && PlayerMovement._instance._isHookAllowedForAir && isRayHit && PlayerMovement._instance._Stamina >= PlayerMovement._instance._hookStaminaUse) && PlayerMovement._instance._LastHookTime + 0.5 < Time.time)
         {
-            if (PlayerMovement._instance._lastHookNotReadyTime + 0.5f < Time.time)
+            if (PlayerMovement._instance._LastHookNotReadyTime + 0.5f < Time.time)
             {
                 SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerMovement._instance.transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-                PlayerMovement._instance._lastHookNotReadyTime = Time.time;
+                PlayerMovement._instance._LastHookNotReadyTime = Time.time;
             }
         }
 
         return PlayerMovement._instance._isHookAllowed && PlayerMovement._instance._isHookAllowedForAir && isRayHit && PlayerMovement._instance._Stamina >= PlayerMovement._instance._hookStaminaUse;
     }
-
 
     public static void CheckForBuffers()
     {
@@ -457,28 +448,55 @@ public class PlayerStateController : MonoBehaviour
 
         if (InputHandler.GetButtonDown("Throw"))
             PlayerStateController._instance._throwCoroutine = PlayerStateController._instance.StartCoroutine(PlayerStateController._instance.ThrowBuffer());
+        if(InputHandler.GetButtonDown("Hook"))
+            PlayerStateController._instance._hookCoroutine = PlayerStateController._instance.StartCoroutine(PlayerStateController._instance.HookBuffer());
         if (InputHandler.GetButtonDown("Jump"))
             PlayerStateController._instance._jumpCoroutine = PlayerStateController._instance.StartCoroutine(PlayerStateController._instance.JumpBuffer());
-        if (InputHandler.GetButtonDown("Hook"))
-            PlayerStateController._instance._hookCoroutine = PlayerStateController._instance.StartCoroutine(PlayerStateController._instance.HookBuffer());
-        if (InputHandler.GetButtonDown("UpHook"))
-            PlayerStateController._instance._upHookCoroutine = PlayerStateController._instance.StartCoroutine(PlayerStateController._instance.UpHookBuffer());
         if (PlayerMovement._instance.IsGrounded() && !PlayerMovement._instance._isJumped)
             PlayerStateController._instance._isGroundedCoroutine = PlayerStateController._instance.StartCoroutine(PlayerStateController._instance.IsGroundedCoyoteTime());
-        if (PlayerMovement._instance.IsTouching())
+        if (PlayerMovement._instance.IsTouchingAnyWall())
             PlayerStateController._instance._isTouchingCoroutine = PlayerStateController._instance.StartCoroutine(PlayerStateController._instance.IsTouchingCoyoteTime());
+    }
+    public static bool CheckForTimeStop()
+    {
+        return false;
+        if (GameManager._instance.IsTimeSlowed) return false;
+
+        return InputHandler.GetButton("Fire1") && PlayerMovement._instance._Stamina > 5f;
+    }
+    public static bool CheckForTimeStopEnd()
+    {
+        if (!GameManager._instance.IsTimeSlowed) return false;
+
+        return !InputHandler.GetButton("Fire1") || PlayerMovement._instance._Stamina < 1f;
+        /*bool returnValue = !InputHandler.GetButton("TimeSlow") || PlayerMovement._instance._Stamina < 1f;
+        if (returnValue)
+        {
+            PlayerStateController._instance._timeStopCounter += Time.unscaledDeltaTime;
+            if (PlayerStateController._instance._timeStopCounter > 0.05f)
+            {
+                PlayerStateController._instance._timeStopCounter = 0f;
+                return true;
+            }
+            return false;
+        }
+        else
+        {
+            PlayerStateController._instance._timeStopCounter = 0f;
+            return false;
+        }*/
     }
     public static bool CheckForAttack()
     {
-        return PlayerStateController._instance._attackBuffer && PlayerCombat._instance._isAllowedToAttack && !PlayerCombat._instance._IsDodgingOrForwardLeap && PlayerMovement._instance._Stamina >= PlayerMovement._instance._attackStaminaUse;
+        return PlayerStateController._instance._attackBuffer && PlayerCombat._instance._isAllowedToAttack && PlayerMovement._instance._isHookDisabled && PlayerMovement._instance._Stamina >= PlayerMovement._instance._attackStaminaUse;
     }
     public static bool CheckForForwardLeap()
     {
-        return PlayerStateController._instance._forwardLeapBuffer && PlayerCombat._instance._isAllowedToForwardLeap && PlayerMovement._instance.IsGrounded() && !PlayerCombat._instance._IsDodgingOrForwardLeap && PlayerMovement._instance._Stamina >= PlayerMovement._instance._forwardLeapStaminaUse;
+        return PlayerStateController._instance._forwardLeapBuffer && PlayerCombat._instance._isAllowedToForwardLeap && PlayerMovement._instance._isHookDisabled && PlayerMovement._instance.IsGrounded() && !PlayerCombat._instance._IsDodging && PlayerMovement._instance._Stamina >= PlayerMovement._instance._forwardLeapStaminaUse;
     }
     public static bool CheckForThrow()
     {
-        return PlayerStateController._instance._throwBuffer && PlayerCombat._instance._isAllowedToThrow && !PlayerCombat._instance._IsDodgingOrForwardLeap && PlayerCombat._instance._CurrentThrowableItem != null;
+        return PlayerStateController._instance._throwBuffer && PlayerCombat._instance._isAllowedToThrow && !PlayerCombat._instance._IsDodging && PlayerCombat._instance._CurrentThrowableItem != null;
     }
     public static bool CheckForThrowableChange()
     {
@@ -488,7 +506,7 @@ public class PlayerStateController : MonoBehaviour
     {
         if (!GameManager._instance.isTeleportSkillOpen) return;
 
-        if (InputHandler.GetButtonDown("Teleport") && isCreateTeleportAvailable)
+        if (InputHandler.GetButtonDown("Teleport") && isCreateTeleportAvailable && PlayerMovement._instance._isHookDisabled)
         {
             ChangeAnimation("SkillUse");
             EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.4f));
@@ -534,7 +552,7 @@ public class PlayerStateController : MonoBehaviour
     {
         if (!GameManager._instance.isInvertedMirrorSkillOpen) return;
 
-        if (InputHandler.GetButtonDown("InvertedMirror") && isInvertedMirrorAvailable)
+        if (InputHandler.GetButtonDown("InvertedMirror") && isInvertedMirrorAvailable && PlayerMovement._instance._isHookDisabled)
         {
             RaycastHit hit;
             if (Physics.Raycast(_rb.transform.position, GameManager._instance.MainCamera.transform.parent.transform.forward, out hit, 100f, GameManager._instance.MirrorRayLayer))
@@ -563,7 +581,7 @@ public class PlayerStateController : MonoBehaviour
     {
         if (!GameManager._instance.isIceSkillOpen) return;
 
-        if (InputHandler.GetButtonDown("IceSkill") && isIceSkillAvailable)
+        if (InputHandler.GetButtonDown("IceSkill") && isIceSkillAvailable && PlayerMovement._instance._isHookDisabled)
         {
             GameManager._instance.CallForAction(() => IceSkillActivate(), 0.2f);
             ChangeAnimation(PlayerCombat._instance.GetThrowName());
@@ -608,7 +626,7 @@ public class PlayerStateController : MonoBehaviour
 
     public static bool CheckForManualStaminaIncrease()
     {
-        if (InputHandler.GetButton("Stamina") && PlayerMovement._instance._Stamina < PlayerMovement._instance._MaxStamina && PlayerMovement._instance.IsGrounded() && !PlayerCombat._instance._IsBlocking && !PlayerCombat._instance._IsDodgingOrForwardLeap && !PlayerCombat._instance._IsAttacking)
+        if (InputHandler.GetButton("Stamina") && PlayerMovement._instance._Stamina < PlayerMovement._instance._MaxStamina && PlayerMovement._instance._isHookDisabled && PlayerMovement._instance.IsGrounded() && !PlayerCombat._instance._IsBlocking && !PlayerCombat._instance._IsDodging && !PlayerCombat._instance._IsAttacking)
         {
             if(!PlayerStateController._instance._isStaminaManual)
                 PlayerStateController._instance.StaminaRegenSoundObject = SoundManager._instance.PlaySound(SoundManager._instance.StaminaReload, PlayerStateController._instance.transform.position, 0.3f, true, UnityEngine.Random.Range(0.93f, 1.07f));

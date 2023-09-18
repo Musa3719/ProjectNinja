@@ -24,7 +24,6 @@ public class EnemyMovement : MonoBehaviour
     private float _moveAfterAttackToGroundSpeedCounter;
 
     public Transform _footTransform;
-    public Transform _testTransformForMove;
 
     private Coroutine _attackOrBlockRotationCoroutine;
     private Coroutine _moveAfterAttackCoroutine;
@@ -33,6 +32,7 @@ public class EnemyMovement : MonoBehaviour
     public float _ChaseStoppingDistance { get; set; }
 
     private float _walkSoundCounter;
+    private float _isOnNavMeshCounter;
 
     private void Awake()
     {
@@ -76,6 +76,21 @@ public class EnemyMovement : MonoBehaviour
         if (GameManager._instance.isGameStopped || _enemyStateController._enemyCombat.IsDead || GameManager._instance.isPlayerDead) return;
 
         ArrangePlaneSound();
+
+        CheckForWarp();
+    }
+    private void CheckForWarp()
+    {
+        if (_enemyStateController._agent.enabled && !_enemyStateController._isOnOffMeshLinkPath && !_enemyStateController._agent.isOnNavMesh)
+        {
+            _isOnNavMeshCounter += Time.deltaTime;
+            if (_isOnNavMeshCounter > 0.5f)
+            {
+                Debug.LogError("Warped");
+                _enemyStateController._agent.FindClosestEdge(out NavMeshHit hit);
+                _enemyStateController._agent.Warp(hit.position);
+            }
+        }
     }
     private void ArrangePlaneSound()
     {
@@ -152,7 +167,7 @@ public class EnemyMovement : MonoBehaviour
         _enemyStateController._animator.SetTrigger("MoveAfterAttack");
         GameManager._instance.CallForAction(() => { if (_enemyStateController._enemyCombat.IsDead) return; _navMeshAgent.enabled = true; _rb.isKinematic = true; }, 0.65f);
 
-        float firstMultiplier = isFirstAttack ? 0.9f : 1f;
+        float firstMultiplier = isFirstAttack ? 0.6f : 1f;
         float subtranctByDistance = (6.5f - (GameManager._instance.PlayerRb.position - transform.position).magnitude);
         if (subtranctByDistance < 0) subtranctByDistance = subtranctByDistance / 3f;
         else subtranctByDistance = 0f;
@@ -160,7 +175,7 @@ public class EnemyMovement : MonoBehaviour
 
         //if (subtranctByDistance < 0f) distanceMultiplier /= 1.6f;
 
-        Vector3 targetVel = direction * 20f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 1.5f, 6.25f) / 5.5f;
+        Vector3 targetVel = direction * 20f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 1.5f, 6.25f) / 4.85f;
         if (_moveAfterAttackCoroutine != null)
             StopCoroutine(_moveAfterAttackCoroutine);
         _moveAfterAttackCoroutine = StartCoroutine(MoveAfterAttackCoroutine(targetVel));
@@ -169,11 +184,13 @@ public class EnemyMovement : MonoBehaviour
     {
         float startTime = Time.time;
         float firstMoveTime = 0.1f;
-        float secondMoveTime = 0.5f;
+        float secondMoveTime = 0.15f;
+
+        _rb.velocity = targetVel;
         while (Time.time < startTime + firstMoveTime)
         {
-            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 12f);
-            _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 6f);
+            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 10f);
+            _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 5f);
             ArrangeMoveAfterAttackGrounded();
             yield return null;
         }
@@ -181,8 +198,8 @@ public class EnemyMovement : MonoBehaviour
         float newTime = Time.time;
         while (Time.time < newTime + secondMoveTime)
         {
-            _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, Time.deltaTime * 5f);
-            _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 8f);
+            _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, Time.deltaTime * 8f);
+            _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 5f);
             ArrangeMoveAfterAttackGrounded();
             yield return null;
         }
@@ -299,7 +316,7 @@ public class EnemyMovement : MonoBehaviour
     }
     public void MoveToPosition(Vector3 position, Vector3 lookAtPos, float rotationLerpSpeed = 10f, float? speed = null, float speedMultiplier = 1f)
     {
-        if (!_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh || _navMeshAgent.isOnOffMeshLink) return;
+        if (!_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh || _enemyStateController._isOnOffMeshLinkPath) return;
 
         _navMeshAgent.acceleration = 5f;
 

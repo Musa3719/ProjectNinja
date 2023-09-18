@@ -28,7 +28,6 @@ public class BossMovement : MonoBehaviour
     public bool _isRetreatToSpecialAction { get; set; }
 
     public Transform _footTransform;
-    public Transform _testTransformForMove;
 
     private Coroutine _attackOrBlockRotationCoroutine;
     private Coroutine _moveAfterAttackCoroutine;
@@ -38,6 +37,7 @@ public class BossMovement : MonoBehaviour
     public float _ChaseStoppingDistance { get; set; }
 
     private float _walkSoundCounter;
+    private float _isOnNavMeshCounter;
     private bool _isInBlockOrDodgeMovement;
 
     private void Awake()
@@ -83,6 +83,21 @@ public class BossMovement : MonoBehaviour
         if (GameManager._instance.isGameStopped || _bossStateController._bossCombat.IsDead || GameManager._instance.isPlayerDead) return;
 
         ArrangePlaneSound();
+
+        CheckForWarp();
+    }
+    private void CheckForWarp()
+    {
+        if (_bossStateController._agent.enabled && !_bossStateController._isOnOffMeshLinkPath && !_bossStateController._agent.isOnNavMesh)
+        {
+            _isOnNavMeshCounter += Time.deltaTime;
+            if (_isOnNavMeshCounter > 0.5f)
+            {
+                Debug.LogError("Warped");
+                _bossStateController._agent.FindClosestEdge(out NavMeshHit hit);
+                _bossStateController._agent.Warp(hit.position);
+            }
+        }
     }
     private void ArrangePlaneSound()
     {
@@ -159,7 +174,7 @@ public class BossMovement : MonoBehaviour
         }
         _rb.velocity = Vector3.zero;
 
-        if (!_bossStateController._bossCombat.IsDead && !(_bossStateController._bossState is BossStates.Retreat) && !(_bossStateController._bossState is BossStates.SpecialAction))
+        if (!_bossStateController._bossCombat.IsDead && !(_bossStateController._bossState is BossStates.RetreatBoss1) && !(_bossStateController._bossState is BossStates.SpecialAction))
         {
             _navMeshAgent.enabled = true; _rb.isKinematic = true;
         }
@@ -177,7 +192,7 @@ public class BossMovement : MonoBehaviour
         _bossStateController._animator.SetTrigger("MoveAfterAttack");
         GameManager._instance.CallForAction(() => { if (_bossStateController._bossCombat.IsDead) return; _navMeshAgent.enabled = true; _rb.isKinematic = true; }, 0.65f);
 
-        float firstMultiplier = isFirstAttack ? 0.95f : 1f;
+        float firstMultiplier = isFirstAttack ? 0.65f : 1f;
         float subtranctByDistance = (6.5f - (GameManager._instance.PlayerRb.position - transform.position).magnitude);
         if (subtranctByDistance < 0) subtranctByDistance = subtranctByDistance / 3f;
         else subtranctByDistance = 0f;
@@ -185,7 +200,7 @@ public class BossMovement : MonoBehaviour
 
         //if (subtranctByDistance < 0f) distanceMultiplier /= 1.6f;
 
-        Vector3 targetVel = direction * 18f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 1.5f, 7f) / 5.5f;
+        Vector3 targetVel = direction * 18f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 1.5f, 8.5f) / 3.35f;
         if (_moveAfterAttackCoroutine != null)
             StopCoroutine(_moveAfterAttackCoroutine);
         _moveAfterAttackCoroutine = StartCoroutine(MoveAfterAttackCoroutine(targetVel));
@@ -193,14 +208,14 @@ public class BossMovement : MonoBehaviour
     private IEnumerator MoveAfterAttackCoroutine(Vector3 targetVel)
     {
         float startTime = Time.time;
-        float firstMoveTime = 0.1f;
-        float secondMoveTime = 0.5f;
+        float firstMoveTime = 0.15f;
+        float secondMoveTime = 0.2f;
 
         while (Time.time < startTime + firstMoveTime)
         {
             if (_bossStateController._bossCombat._IsAttackInterrupted) yield break;
 
-            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 12f);
+            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 10f);
             _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 6f);
             ArrangeMoveAfterAttackGrounded();
             yield return null;
@@ -211,7 +226,7 @@ public class BossMovement : MonoBehaviour
         {
             if (_bossStateController._bossCombat._IsAttackInterrupted) yield break;
 
-            _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, Time.deltaTime * 5f);
+            _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, Time.deltaTime * 8f);
             _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 8f);
             ArrangeMoveAfterAttackGrounded();
             yield return null;
@@ -304,7 +319,7 @@ public class BossMovement : MonoBehaviour
     /// <returns>isDodgingToRight</returns>
     public bool Dodge()
     {
-        if (_bossStateController._bossState is BossStates.Retreat || _bossStateController._bossState is BossStates.SpecialAction)
+        if (_bossStateController._bossState is BossStates.RetreatBoss1 || _bossStateController._bossState is BossStates.SpecialAction)
         {
             Debug.LogError("Special but dodge started..");
             return false;
@@ -313,8 +328,17 @@ public class BossMovement : MonoBehaviour
         Vector3 direction = _bossStateController._bossAI.GetDodgeDirection();
         _navMeshAgent.enabled = false;
         _rb.isKinematic = false;
-        GameManager._instance.CallForAction(() => { if (_bossStateController._bossCombat.IsDead || _bossStateController._bossState is BossStates.Retreat || _bossStateController._bossState is BossStates.SpecialAction) return; _navMeshAgent.enabled = true; _rb.isKinematic = true; }, _bossStateController._bossCombat._DodgeTime);
+        GameManager._instance.CallForAction(() => { if (_bossStateController._bossCombat.IsDead || _bossStateController._bossState is BossStates.RetreatBoss1 || _bossStateController._bossState is BossStates.SpecialAction) return; _navMeshAgent.enabled = true; _rb.isKinematic = true; }, _bossStateController._bossCombat._DodgeTime);
         Vector3 targetVel = direction * _dodgeSpeed;
+
+        
+        if (_attackOrBlockRotationCoroutine != null)
+            StopCoroutine(_attackOrBlockRotationCoroutine);
+        if (_blockMovementCoroutine != null)
+            StopCoroutine(_blockMovementCoroutine);
+        if (_moveAfterAttackCoroutine != null)
+            StopCoroutine(_moveAfterAttackCoroutine);
+
         if (_dodgeCoroutine != null)
             StopCoroutine(_dodgeCoroutine);
         _dodgeCoroutine = StartCoroutine(DodgeCoroutine(targetVel));
@@ -347,6 +371,7 @@ public class BossMovement : MonoBehaviour
                 StopCoroutine(_retreatCoroutine);
             _retreatCoroutine = StartCoroutine(RetreatGroundCoroutine());
         }else if*/
+
         if (Random.Range(0, 4) == 0 && (GameManager._instance.PlayerRb.transform.position - transform.position).magnitude > 13f)
         {
             if (_retreatCoroutine != null)
@@ -445,6 +470,8 @@ public class BossMovement : MonoBehaviour
 
         _bossStateController.ChangeAnimation("Retreat");
 
+        yield return new WaitForSeconds(0.4f);
+
         Vector3 retreatDir = (Vector3.up * 0.65f - transform.forward * Random.Range(0.8f, 1.2f));
         _rb.velocity = retreatDir * 22f;
         float yStartVelocity = _rb.velocity.y;
@@ -532,7 +559,7 @@ public class BossMovement : MonoBehaviour
     }
     public void MoveToPosition(Vector3 position, Vector3 lookAtPos, float rotationLerpSpeed = 10f, float? speed=null, float speedMultiplier = 1f)
     {
-        if (!_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh || _navMeshAgent.isOnOffMeshLink) return;
+        if (!_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh || _bossStateController._isOnOffMeshLinkPath) return;
 
         _navMeshAgent.acceleration = 5f;
 

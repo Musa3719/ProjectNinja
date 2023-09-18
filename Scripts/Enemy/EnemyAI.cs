@@ -8,9 +8,10 @@ public class EnemyAI : MonoBehaviour
     public Rigidbody _rb { get; private set; }
     public static Dictionary<GameObject, EnemyAI> enemyAIs;
 
-    public bool _isAttackWarned;
-    public bool _isAttackFast;
-    public Vector3 _attackPosition;
+    [HideInInspector] public bool _isAttackWarned;
+    [HideInInspector] public bool _isAttackFast;
+    [HideInInspector] public Vector3 _attackPosition;
+    [HideInInspector] public bool _isThrowStarted;
 
     private Vector3 _targetIdlePosition;
     private float _idleTimer;
@@ -78,35 +79,36 @@ public class EnemyAI : MonoBehaviour
     public List<string> ChooseAttackPattern()
     {
         int attackAnimCount = 0;
-        List<string> selectedAnimNames = new List<string>();
 
-        //selectedAnimNames.Add("Attack3");
-        //selectedAnimNames.Add("Attack6");
-        //return selectedAnimNames;
-
-        switch (_controller._enemyCombat.WeaponType)
+        switch (GetComponentInChildren<Animator>().runtimeAnimatorController.name)
         {
-            case WeaponTypeEnum.Sword:
-                attackAnimCount = GameManager._instance._swordAttackAnimCount;
+            case "Enemy1":
+                attackAnimCount = GameManager._instance._enemy1AttackAnimCount;
                 break;
-            case WeaponTypeEnum.Axe:
-                attackAnimCount = GameManager._instance._axeAttackAnimCount;
+            case "Enemy2":
+                attackAnimCount = GameManager._instance._enemy2AttackAnimCount;
                 break;
-            case WeaponTypeEnum.Halberd:
-                attackAnimCount = GameManager._instance._halberdAttackAnimCount;
+            case "Enemy3":
+                attackAnimCount = GameManager._instance._enemy3AttackAnimCount;
                 break;
-            case WeaponTypeEnum.Mace:
-                attackAnimCount = GameManager._instance._maceAttackAnimCount;
+            case "Enemy4":
+                attackAnimCount = GameManager._instance._enemy4AttackAnimCount;
                 break;
-            case WeaponTypeEnum.Hammer:
-                attackAnimCount = GameManager._instance._hammerAttackAnimCount;
+            case "Enemy5":
+                attackAnimCount = GameManager._instance._enemy5AttackAnimCount;
                 break;
-            case WeaponTypeEnum.Katana:
+            case "Katana":
                 attackAnimCount = GameManager._instance._katanaAttackAnimCount;
                 break;
             default:
                 break;
         }
+
+        List<string> selectedAnimNames = new List<string>();
+
+        //selectedAnimNames.Add("Attack3");
+        //selectedAnimNames.Add("Attack6");
+        //return selectedAnimNames;
 
         int lastSelectedIndex = -2;
         for (int i = 0; i < attackAnimCount; i++)
@@ -192,7 +194,7 @@ public class EnemyAI : MonoBehaviour
         {
             _targetIdlePosition = _rb.position + new Vector3(Random.Range(-1f, 1f), 0f, Random.Range(-1f, 1f));
             i++;
-            if (agent.enabled && agent.isOnNavMesh && !agent.isOnOffMeshLink)
+            if (agent.enabled && agent.isOnNavMesh && !_controller._isOnOffMeshLinkPath)
                 agent.SetDestination(_targetIdlePosition);
             if (agent.pathStatus == NavMeshPathStatus.PathComplete)
                 break;
@@ -225,7 +227,7 @@ public class EnemyAI : MonoBehaviour
     {
         if (_controller._enemyCombat._IsDodging || _controller._enemyCombat._IsBlocking || _controller._enemyCombat._isInAttackPattern) return false;
 
-        if (_StepBackValue * 6f * Time.deltaTime * 60f > Random.Range(0,1000))
+        if (_StepBackValue * 3f * Time.deltaTime * 60f > Random.Range(0,1000))
         {
             return true;
         }
@@ -236,7 +238,11 @@ public class EnemyAI : MonoBehaviour
         if (_controller._enemyCombat._ThrowableItem.CountInterface == 0) return false;
         if (_controller._enemyCombat._IsRanged || _controller._enemyCombat._IsDodging || _controller._enemyCombat._IsBlocking || _controller._enemyCombat._isInAttackPattern) return false;
 
-        if (_ThrowValue / 4f * Time.deltaTime * 60f > Random.Range(0, 1000))
+        float chanceMultiplier = 1f;
+        if (_isThrowStarted)
+            chanceMultiplier = 5f;
+
+        if (_ThrowValue / 4f * chanceMultiplier * Time.deltaTime * 60f > Random.Range(0, 1000))
         {
             return true;
         }
@@ -252,11 +258,15 @@ public class EnemyAI : MonoBehaviour
         
         if (IsAttackComing())
         {
-            if (IsAttackFast())
-                chanceMultiplier *= 0.66f;
-            if (_lastStanceAnimCounter < 0.7f)
-                chanceMultiplier *= 2;
-            if (_DodgeOrBlockEfficiencyValue * 0.6f * chanceMultiplier * 1000 >= Random.Range(0, 1000))
+            if (_controller._enemyCombat._lastAttackDeflectedTime + 1.25f > Time.time)
+                chanceMultiplier *= 0.5f;
+            else if (IsAttackFast())
+                chanceMultiplier *= 0.25f;
+            else
+                chanceMultiplier += (1000f - _DodgeOrBlockEfficiencyValue * 0.85f * chanceMultiplier * 1000) / 3f;
+            if (_lastStanceAnimCounter < 0.5f)
+                chanceMultiplier += (1000f - _DodgeOrBlockEfficiencyValue * 0.85f * chanceMultiplier * 1000) / 2f;
+            if (_DodgeOrBlockEfficiencyValue * 0.85f * chanceMultiplier * 1000 >= Random.Range(0, 1000))
                 return true;
             return false;
         }
@@ -313,7 +323,7 @@ public class EnemyAI : MonoBehaviour
             Physics.Raycast(transform.position + direction, direction, out RaycastHit hit, _controller._enemyCombat.AttackRange, GameManager._instance.LayerMaskForVisible);
             if (IsRayHitPlayer(hit) && _controller._enemyCombat._IsAllowedToAttack)
             {
-                if (_AgressiveValue * 40f * Time.deltaTime * 60f > Random.Range(0, 1000) && !CheckForAttackFriendlyFire())
+                if (_AgressiveValue * 80f * Time.deltaTime * 60f > Random.Range(0, 1000) && !CheckForAttackFriendlyFire())
                 {
                     return true;
                 }
@@ -366,10 +376,12 @@ public class EnemyAI : MonoBehaviour
 
     public static void MakeArtificialSoundForPlayer(Vector3 position, float radius)
     {
-        radius *= 1.25f;
+        radius *= 1.3f;
         foreach (var nearEnemy in GameManager._instance.enemiesNearPlayer)
         {
-            if ((position - nearEnemy.transform.position).magnitude < radius)
+            if ((position - nearEnemy.transform.position).magnitude < radius / 2f)
+                enemyAIs[nearEnemy].HearArtificialSound(position);
+            else if ((position - nearEnemy.transform.position).magnitude < radius)
             {
                 RaycastHit hit;
                 Vector3 dir = (position - nearEnemy.transform.position).normalized;
@@ -385,8 +397,10 @@ public class EnemyAI : MonoBehaviour
     
     public void MakeArtificialSoundForProjectileHit(Vector3 position, float radius)
     {
-        radius *= 1.25f;
-        if((position-transform.position).magnitude <= radius)
+        radius *= 1.5f;
+        if ((position - transform.position).magnitude <= radius / 2f)
+            HearArtificialSound(position);
+        else if ((position-transform.position).magnitude <= radius)
         {
             RaycastHit hit;
             Physics.Raycast(position, (transform.position - position).normalized, out hit, GameManager._instance.LayerMaskForVisible);

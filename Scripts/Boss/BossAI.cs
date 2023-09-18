@@ -8,15 +8,15 @@ public class BossAI : MonoBehaviour
     public Rigidbody _rb { get; private set; }
     public BossSpecial _bossSpecial;
 
-    public bool _isAttackWarned;
-    public Vector3 _attackPosition;
+    [HideInInspector] public bool _isAttackWarned;
+    [HideInInspector] public Vector3 _attackPosition;
 
     [SerializeField]
     private int _bossNumber;
     public int _BossNumber => _bossNumber;
 
     private Vector3 _targetIdlePosition;
-    public float _idleTimer;
+    [HideInInspector] public float _idleTimer;
     private NavMeshAgent _agent;
     private BossStateController _controller;
 
@@ -79,17 +79,25 @@ public class BossAI : MonoBehaviour
     
     private void Update()
     {
-        if (GameManager._instance.isGameStopped || _controller._isDead) return;
+        if (GameManager._instance.isGameStopped || _controller._isDead || GameManager._instance.isOnCutscene) return;
 
         if (_agent.isOnOffMeshLink)
         {
-            StartCoroutine(Parabola(_agent, 1.5f, 1f));
-            _agent.CompleteOffMeshLink();
-            _controller.ChangeAnimation("Jump");
-            SoundManager._instance.PlaySound(SoundManager._instance.Jump, transform.position, 0.1f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            ToTheLink();
         }
+        /*if ((transform.position - _lastFramePos).magnitude > 1.5f)
+        {
+            _controller._bossMovement.Teleport();
+        }*/
     }
     #region SpecialActionMovement
+    private void ToTheLink()
+    {
+        StartCoroutine(Parabola(_agent, 1.5f, 1f));
+        _agent.CompleteOffMeshLink();
+        _controller.ChangeAnimation("Jump");
+        SoundManager._instance.PlaySound(SoundManager._instance.Jump, transform.position, 0.1f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+    }
     public void SpecialActionMovement(Rigidbody rb, float speed)
     {
         if (_specialActionMovementCoroutine != null)
@@ -155,14 +163,18 @@ public class BossAI : MonoBehaviour
 
         _controller.ChangeAnimation("OnWall", 0.3f);
 
-        timeCounter = 0f;
-        while (timeCounter < 0.2f)
+        if (_controller._bossMovement.IsTouchingAnyWalls() && _controller.TouchingWalls[_controller.TouchingWalls.Count - 1].GetComponent<Collider>().isTrigger)//do it for normal walls, not for props
         {
-            timeCounter += Time.deltaTime;
-            rb.transform.forward = Vector3.Lerp(rb.transform.forward, wallNormal, Time.deltaTime * 8f);
-            yield return null;
+            timeCounter = 0f;
+            while (timeCounter < 0.2f)
+            {
+                timeCounter += Time.deltaTime;
+                rb.transform.forward = Vector3.Lerp(rb.transform.forward, wallNormal, Time.deltaTime * 8f);
+                yield return null;
+            }
+            rb.transform.forward = wallNormal;
         }
-        rb.transform.forward = wallNormal;
+       
 
         yield return new WaitForSeconds(Random.Range(0.3f, 0.7f));
 
@@ -295,7 +307,7 @@ public class BossAI : MonoBehaviour
         int attackAnimCount = _controller._bossCombat._AttackAnimCount;
         List<string> selectedAnimNames = new List<string>();
 
-        //selectedAnimNames.Add("Attack2");
+        //selectedAnimNames.Add("Attack5");
         //return selectedAnimNames;
 
         int lastSelectedIndex = -2;
@@ -356,7 +368,6 @@ public class BossAI : MonoBehaviour
 
         _controller._isOnOffMeshLinkPath = false;
     }
-
     public Vector3 GetIdleMovementPosition(NavMeshAgent agent)
     {
         if (_targetIdlePosition == Vector3.zero || (_targetIdlePosition - _rb.position).magnitude < 1f)
@@ -378,7 +389,7 @@ public class BossAI : MonoBehaviour
         {
             _targetIdlePosition = _rb.transform.position + (new Vector3(Random.Range(-1f, 1f), 0f, Random.Range(-1f, 1f)) * 1.5f);
             i++;
-            if(agent.enabled && agent.isOnNavMesh && !agent.isOnOffMeshLink)
+            if(agent.enabled && agent.isOnNavMesh && !_controller._isOnOffMeshLinkPath)
                 agent.SetDestination(_targetIdlePosition);
             if (agent.pathStatus == NavMeshPathStatus.PathComplete)
                 break;
@@ -426,9 +437,9 @@ public class BossAI : MonoBehaviour
 
         if ((transform.position - _controller._playerTransform.position).magnitude > 8f)
         {
-            return UnityEngine.Random.Range(0, 1000) < Time.deltaTime * 60f * 5f * (1f - _IdleValue);
+            return UnityEngine.Random.Range(0, 1000) < Time.deltaTime * 60f * 25f * (1f - _IdleValue);
         }
-        return UnityEngine.Random.Range(0, 1000) < Time.deltaTime * 60f * 15f * (1f - _IdleValue);
+        return UnityEngine.Random.Range(0, 1000) < Time.deltaTime * 60f * 100f * (1f - _IdleValue);
     }
     public bool CheckForRetreatToSpecialAction()
     {
@@ -447,8 +458,8 @@ public class BossAI : MonoBehaviour
         if (!IsRaycastHittingForRetreat()) return false;
 
         if ((_controller._playerTransform.position - _controller.transform.position).magnitude < 7f)
-            return Random.Range(0, 1000) < Time.deltaTime * 60f * 2f * _RetreatValue;
-        return Random.Range(0, 1000) < Time.deltaTime * 60f * 4f * _RetreatValue;
+            return Random.Range(0, 1000) < Time.deltaTime * 60f * 3.5f * _RetreatValue;
+        return Random.Range(0, 1000) < Time.deltaTime * 60f * 7f * _RetreatValue;
     }
     private bool IsRaycastHittingForRetreat()
     {
@@ -495,20 +506,25 @@ public class BossAI : MonoBehaviour
         float attackRange = _controller._bossCombat.AttackRange / Mathf.Clamp(Mathf.Abs((_controller._playerTransform.position - _controller._rb.transform.position).y), 1f, 4f);
 
         float chanceMultiplier = 1f;
+        bool allowAttack = false;
         if (_controller._bossCombat._IsDeflectedLately)
         {
             attackRange *= 1.5f;
-            chanceMultiplier = 10f;
+            allowAttack = true;
         }
         else if (_controller._bossCombat._IsDodgedLately)
         {
-            attackRange *= 2.25f;
-            chanceMultiplier = 10f;
+            attackRange *= 1.5f;
+            allowAttack = true;
         }
 
-        if ((_controller._playerTransform.position - _controller._rb.transform.position).magnitude < attackRange && _controller._bossCombat._IsAllowedToAttack)
+        if(allowAttack && (_controller._playerTransform.position - _controller._rb.transform.position).magnitude < attackRange)
         {
-            if (_AgressiveValue * chanceMultiplier * 25f * Time.deltaTime * 60f > Random.Range(0, 1000))
+            return true;
+        }
+        else if ((_controller._playerTransform.position - _controller._rb.transform.position).magnitude < attackRange && _controller._bossCombat._IsAllowedToAttack)
+        {
+            if (_AgressiveValue * chanceMultiplier * 12.5f * Time.deltaTime * 60f > Random.Range(0, 1000))
             {
                 return true;
             }

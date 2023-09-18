@@ -11,6 +11,11 @@ public class PlayerHandMeshFollow : MonoBehaviour
 
     private Vector3 _lastCamAngle;
 
+    private Vector3 _scale;
+    private void Awake()
+    {
+        _scale = new Vector3(1.5f, 1.5f, 1.9f);
+    }
     private void LateUpdate()
     {
         Vector3 targetRot = new Vector3(_camTransform.transform.eulerAngles.x < 180 ? _camTransform.transform.eulerAngles.x / 1.6f : (_camTransform.transform.eulerAngles.x - 360) / 1.1f, _camTransform.transform.eulerAngles.y, 0f);
@@ -23,6 +28,8 @@ public class PlayerHandMeshFollow : MonoBehaviour
         //ArrangeByCameraMovement();
 
         _lastCamAngle = _camTransform.transform.eulerAngles;
+        transform.localScale = _scale + _scale* (Options._instance.FOV - 80f) / 70f;
+        _positionOffset = new Vector3(0f, -0.4f - (Options._instance.FOV - 90f) / 360f, 0.7f + (Options._instance.FOV - 85f) / 250f);
     }
    
     private void ArrangeByCameraMovement()

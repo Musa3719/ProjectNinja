@@ -15,7 +15,9 @@ public enum WeaponTypeEnum
     Bow,
     Crossbow,
     Gun,
-    Katana
+    Katana,
+    Exist,
+    Zweihander
 }
 public enum ThrowableEnemyTypeEnum
 {
@@ -36,9 +38,15 @@ public class EnemyCombat : MonoBehaviour, IKillable
     public float _CollisionVelocity => _collisionVelocity;
 
     private CapsuleCollider _collider;
-    private CapsuleCollider _attackCollider;
-    private CapsuleCollider _attackColliderWarning;
+    private Collider _attackCollider;
+    private Collider _attackColliderWarning;
     private MeleeWeapon _meleeWeapon;
+
+    public BoxCollider _rightBladeAttackCollider { get; private set; }
+    public BoxCollider _rightBladeAttackWarning { get; private set; }
+    public BoxCollider _leftBladeAttackCollider { get; private set; }
+    public BoxCollider _leftBladeAttackWarning { get; private set; }
+
     public GameObject _weaponObject { get; private set; }
     private RangedWeapon _rangedWeapon;
 
@@ -65,6 +73,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
     public bool _IsAllowedToAttack { get; set; }
     public bool _IsAllowedToThrow { get; set; }
     public IThrowableItem _ThrowableItem { get; set; }
+    public float _lastAttackDeflectedTime { get; private set; }
 
     private float _attackRange;
     public float AttackRange => _attackRange;
@@ -111,11 +120,11 @@ public class EnemyCombat : MonoBehaviour, IKillable
 
         _IsAllowedToAttack = true;
         _IsAllowedToThrow = true;
-        _attackWaitTime = 1.5f;
-        _throwWaitTime = 1.5f;
+        _attackWaitTime = 0.75f;
+        _throwWaitTime = 0.4f;
         _dodgeTime = 0.8f;
         _blockMoveTime = 0.8f;
-        _crashStunCheckValue = 10f;
+        _crashStunCheckValue = 13.5f;
     }
     
     private void Start()
@@ -125,15 +134,44 @@ public class EnemyCombat : MonoBehaviour, IKillable
         ArrangeThrowableCount();
         ArrangeMainWeapon();
 
-        if (!_IsRanged)
+        if (!_IsRanged && _weaponObject != null)
         {
             _attackCollider = _weaponObject.transform.Find("AttackCollider").GetComponent<CapsuleCollider>();
             _attackColliderWarning = _weaponObject.transform.Find("AttackColliderWarning").GetComponent<CapsuleCollider>();
             _meleeWeapon = _attackCollider.GetComponent<MeleeWeapon>();
         }
+        else if (_weaponObject == null)
+        {
+            _attackCollider = _rightBladeAttackCollider;
+            _attackColliderWarning = _rightBladeAttackWarning;
+        }
     }
     private void ArrangeMainWeapon()
     {
+        
+        switch (GetComponentInChildren<Animator>().runtimeAnimatorController.name)
+        {
+            case "Enemy1":
+                _attackNameToHitOpenTime = GameManager._instance.Enemy1AttackNameToHitOpenTime;
+                break;
+            case "Enemy2":
+                _attackNameToHitOpenTime = GameManager._instance.Enemy2AttackNameToHitOpenTime;
+                break;
+            case "Enemy3":
+                _attackNameToHitOpenTime = GameManager._instance.Enemy3AttackNameToHitOpenTime;
+                break;
+            case "Enemy4":
+                _attackNameToHitOpenTime = GameManager._instance.Enemy4AttackNameToHitOpenTime;
+                break;
+            case "Enemy5":
+                _attackNameToHitOpenTime = GameManager._instance.Enemy5AttackNameToHitOpenTime;
+                break;
+            case "Katana":
+                _attackNameToHitOpenTime = GameManager._instance.KatanaAttackNameToHitOpenTime;
+                break;
+            default:
+                break;
+        }
         switch (_weaponType)
         {
             case WeaponTypeEnum.Sword:
@@ -142,12 +180,31 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 _enemyStateController._enemyMovement._runSpeed = 11f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.SwordPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
-                _weaponObject.transform.localPosition = new Vector3(0.01773758f, 0.06871963f, -0.00327652f);
-                _weaponObject.transform.localEulerAngles = new Vector3(173.077f, 30.243f, 1.591003f);
-                _enemyStateController._enemyAI.SetValuesForAI(0.7f, 0.65f, 0.25f, 0.5f, 0.5f);
+                switch (_enemyStateController.EnemyNumber)
+                {
+                    case 1:
+                        _weaponObject.transform.localPosition = new Vector3(0.01773758f, 0.06871963f, -0.00327652f);
+                        _weaponObject.transform.localEulerAngles = new Vector3(173.077f, 30.243f, 1.591003f);
+                        break;
+                    case 2:
+                        _weaponObject.transform.localPosition = new Vector3(-0.0062f, 0.0963f, -0.0112f);
+                        _weaponObject.transform.localEulerAngles = new Vector3(-174.082f, -78.83499f, 6.264008f);
+                        break;
+                    case 3:
+                        _weaponObject.transform.localPosition = new Vector3(-0.0007f, 0.0941f, 0.0158f);
+                        _weaponObject.transform.localEulerAngles = new Vector3(185.918f, -78.83499f, 4.585007f);
+                        break;
+                    case 4:
+                        _weaponObject.transform.localPosition = new Vector3(0.058f, 0.056f, -0.013f);
+                        _weaponObject.transform.localEulerAngles = new Vector3(171.496f, 15.78f, 3.740997f);
+                        break;
+                    default:
+                        Debug.LogError("Number Not Found...");
+                        break;
+                }
+                _enemyStateController._enemyAI.SetValuesForAI(0.7f, 0.75f, 0.25f, 0.5f, 0.5f);
                 //_enemyStateController._enemyAI.SetValuesForAI(0.7f, 1f, 0f, 0.5f, 0.5f);
                 _attackNameToPrepareName = GameManager._instance.AttackNameToPrepareName;
-                _attackNameToHitOpenTime = GameManager._instance.SwordAttackNameToHitOpenTime;
                 _IsRanged = false;
                 break;
             case WeaponTypeEnum.Axe:
@@ -158,9 +215,8 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0.013f, -0.002f, 0.005f);
                 _weaponObject.transform.localEulerAngles = new Vector3(-188.181f, -182.17f, 11.242f);
-                _enemyStateController._enemyAI.SetValuesForAI(0.85f, 0.55f, 0.1f, 0.65f, 0.3f);
+                _enemyStateController._enemyAI.SetValuesForAI(0.75f, 0.65f, 0.1f, 0.65f, 0.3f);
                 _attackNameToPrepareName = GameManager._instance.AttackNameToPrepareName;
-                _attackNameToHitOpenTime = GameManager._instance.AxeAttackNameToHitOpenTime;
                 _IsRanged = false;
                 break;
             case WeaponTypeEnum.Halberd:
@@ -171,9 +227,8 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0.006f, 0.035f, 0.01f);
                 _weaponObject.transform.localEulerAngles = new Vector3(5.095f, -2.786f, -171.695f);
-                _enemyStateController._enemyAI.SetValuesForAI(0.9f, 0.65f, 0.05f, 0.7f, 0.2f);
+                _enemyStateController._enemyAI.SetValuesForAI(0.9f, 0.75f, 0.05f, 0.7f, 0.2f);
                 _attackNameToPrepareName = GameManager._instance.AttackNameToPrepareName;
-                _attackNameToHitOpenTime = GameManager._instance.HalberdAttackNameToHitOpenTime;
                 _IsRanged = false;
                 break;
             case WeaponTypeEnum.Mace:
@@ -183,11 +238,10 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 _weaponObject = Instantiate(PrefabHolder._instance.MacePrefab, _weaponHolderTransform);
                 _weaponObject.transform.Find("AttackCollider").GetComponent<MeleeWeapon>().IsHardHitWeapon = true;
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
-                _weaponObject.transform.localPosition = new Vector3(0f, 0.08f, 0f);
-                _weaponObject.transform.localEulerAngles = new Vector3(180f, 0f, 0f);
-                _enemyStateController._enemyAI.SetValuesForAI(0.35f, 0.7f, 0.1f, 0.75f, 0.3f);
+                _weaponObject.transform.localPosition = new Vector3(0.045f, 0.03f, -0.002f);
+                _weaponObject.transform.localEulerAngles = new Vector3(-192.652f, -0.9320068f, -5.200989f);
+                _enemyStateController._enemyAI.SetValuesForAI(0.35f, 0.8f, 0.1f, 0.75f, 0.3f);
                 _attackNameToPrepareName = GameManager._instance.AttackNameToPrepareName;
-                _attackNameToHitOpenTime = GameManager._instance.MaceAttackNameToHitOpenTime;
                 _IsRanged = false;
                 break;
             case WeaponTypeEnum.Hammer:
@@ -197,41 +251,40 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 _weaponObject = Instantiate(PrefabHolder._instance.HammerPrefab, _weaponHolderTransform);
                 _weaponObject.transform.Find("AttackCollider").GetComponent<MeleeWeapon>().IsHardHitWeapon = true;
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
-                _weaponObject.transform.localPosition = new Vector3(0.05f, -0.319f, 0.063f);
-                _weaponObject.transform.localEulerAngles = new Vector3(18.326f, 1.483f, 96.699f);
-                _enemyStateController._enemyAI.SetValuesForAI(0.9f, 0.5f, 0.05f, 0.75f, 0.15f);
+                _weaponObject.transform.localPosition = new Vector3(0.177f, -0.422f, 0.052f);
+                _weaponObject.transform.localEulerAngles = new Vector3(35.244f, -49.668f, -253.006f);
+                _enemyStateController._enemyAI.SetValuesForAI(0.9f, 0.6f, 0.05f, 0.75f, 0.15f);
                 _attackNameToPrepareName = GameManager._instance.AttackNameToPrepareName;
-                _attackNameToHitOpenTime = GameManager._instance.HammerAttackNameToHitOpenTime;
                 _IsRanged = false;
                 break;
             case WeaponTypeEnum.Bow:
-                _attackRange = 25f;
+                _attackRange = 15f;
                 _enemyStateController._enemyMovement._moveSpeed = 3f * _enemyTypeSpeedMultiplier;
                 _enemyStateController._enemyMovement._runSpeed = 8f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.BowPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(-0.007174938f, -0.01599412f, -0.02786018f);
                 _weaponObject.transform.localEulerAngles = new Vector3(77.399f, -213.311f, -14.257f);
-                _enemyStateController._enemyAI.SetValuesForAI(50f, 0.4f, 1f, 0.2f, 0f);
+                _enemyStateController._enemyAI.SetValuesForAI(50f, 0.6f, 1f, 0.2f, 0f);
                 _IsRanged = true;
                 transform.Find("RangedWeapon").gameObject.SetActive(true);
                 _rangedWeapon = GetComponentInChildren<RangedWeapon>();
                 break;
             case WeaponTypeEnum.Crossbow:
-                _attackRange = 35f;
+                _attackRange = 12f;
                 _enemyStateController._enemyMovement._moveSpeed = 2f * _enemyTypeSpeedMultiplier;
                 _enemyStateController._enemyMovement._runSpeed = 7.5f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.CrossbowPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0.155f, 0.075f, -0.093f);
                 _weaponObject.transform.localEulerAngles = new Vector3(2.278f, -60.697f, -34.288f);
-                _enemyStateController._enemyAI.SetValuesForAI(60f, 0.2f, 1f, 0.2f, 0f);
+                _enemyStateController._enemyAI.SetValuesForAI(60f, 0.3f, 1f, 0.2f, 0f);
                 _IsRanged = true;
                 transform.Find("RangedWeapon").gameObject.SetActive(true);
                 _rangedWeapon = GetComponentInChildren<RangedWeapon>();
                 break;
             case WeaponTypeEnum.Gun:
-                _attackRange = 13f;
+                _attackRange = 7f;
                 _enemyStateController._enemyMovement._moveSpeed = 6f * _enemyTypeSpeedMultiplier;
                 _enemyStateController._enemyMovement._runSpeed = 14f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.GunPrefab, _weaponHolderTransform);
@@ -249,11 +302,82 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 _enemyStateController._enemyMovement._runSpeed = 14f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.KatanaPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
-                _weaponObject.transform.localPosition = new Vector3(0.01773758f, 0.06871963f, -0.00327652f);
-                _weaponObject.transform.localEulerAngles = new Vector3(173.077f, 30.243f, 1.591003f);
-                _enemyStateController._enemyAI.SetValuesForAI(0.85f, 0.8f, 0.1f, 0.8f, 0.75f);
+                switch (_enemyStateController.EnemyNumber)
+                {
+                    case 3:
+                        _weaponObject.transform.localPosition = new Vector3(0.002f, 0.084f, 0.01f);
+                        _weaponObject.transform.localEulerAngles = new Vector3(-177.844f, 11.32899f, 6.315994f);
+                        break;
+                    case 6:
+                        _weaponObject.transform.localPosition = new Vector3(0.01773758f, 0.06871963f, -0.00327652f);
+                        _weaponObject.transform.localEulerAngles = new Vector3(173.077f, 30.243f, 1.591003f);
+                        break;
+                    case 2:
+                        _weaponObject.transform.localPosition = new Vector3(0.0007f, 0.0936f, -0.0003f);
+                        _weaponObject.transform.localEulerAngles = new Vector3(-181.055f, 16.806f, -3.485992f);
+                        break;
+                    default:
+                        Debug.LogError("Number Not Found...");
+                        break;
+                }
+                _enemyStateController._enemyAI.SetValuesForAI(0.95f, 0.85f, 0.05f, 0.15f, 0.6f);
                 _attackNameToPrepareName = GameManager._instance.AttackNameToPrepareName;
-                _attackNameToHitOpenTime = GameManager._instance.KatanaAttackNameToHitOpenTime;
+                _IsRanged = false;
+                break;
+            case WeaponTypeEnum.Exist:
+                _attackRange = 9f;
+                _enemyStateController._enemyMovement._moveSpeed = 6f * _enemyTypeSpeedMultiplier;
+                _enemyStateController._enemyMovement._runSpeed = 14f * _enemyTypeSpeedMultiplier;
+                _enemyStateController._enemyAI.SetValuesForAI(0.85f, 0.75f, 0.2f, 0.25f, 1f);
+                _attackNameToPrepareName = GameManager._instance.AttackNameToPrepareName;
+                _IsRanged = false;
+                if (_weaponHolderTransform.Find("Weapon") == null)
+                {
+                    _weaponObject = null;
+                    var components = GetComponentsInChildren<RotateBladeHumanoid>();
+                    foreach (var item in components)
+                    {
+                        if (item.name == "R_Blade")
+                        {
+                            _rightBladeAttackCollider = item.transform.GetChild(0).GetComponent<BoxCollider>();
+                            _rightBladeAttackWarning = item.transform.GetChild(1).GetComponent<BoxCollider>();
+                        }
+                        else if (item.name == "L_Blade")
+                        {
+                            _leftBladeAttackCollider = item.transform.GetChild(0).GetComponent<BoxCollider>();
+                            _leftBladeAttackWarning = item.transform.GetChild(1).GetComponent<BoxCollider>();
+                        }
+                    }
+                }
+                else
+                    _weaponObject = _weaponHolderTransform.Find("Weapon").gameObject;
+                break;
+            case WeaponTypeEnum.Zweihander:
+                _attackRange = 12f;
+                _enemyStateController._enemyMovement._moveSpeed = 3f * _enemyTypeSpeedMultiplier;
+                _enemyStateController._enemyMovement._runSpeed = 9f * _enemyTypeSpeedMultiplier;
+                _weaponObject = Instantiate(PrefabHolder._instance.ZweihanderPrefab, _weaponHolderTransform);
+                GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
+                switch (_enemyStateController.EnemyNumber)
+                {
+                    case 3:
+                        _weaponObject.transform.localPosition = new Vector3(-0.0014f, 0.0324f, 0.0143f);
+                        _weaponObject.transform.localEulerAngles = new Vector3(-183.127f, -80.23901f, 3.561005f);
+                        break;
+                    case 2:
+                        _weaponObject.transform.localPosition = new Vector3(0.0102f, 0.0681f, 0.0072f);
+                        _weaponObject.transform.localEulerAngles = new Vector3(183.871f, 91.047f, -6.632019f);
+                        break;
+                    case 4:
+                        _weaponObject.transform.localPosition = new Vector3(0.0253f, 0.0165f, -0.0018f);
+                        _weaponObject.transform.localEulerAngles = new Vector3(161.349f, 15.692f, 4.076996f);
+                        break;
+                    default:
+                        Debug.LogError("Number Not Found...");
+                        break;
+                }
+                _enemyStateController._enemyAI.SetValuesForAI(0.95f, 0.75f, 0f, 0.075f, 0.15f);
+                _attackNameToPrepareName = GameManager._instance.AttackNameToPrepareName;
                 _IsRanged = false;
                 break;
             default:
@@ -350,6 +474,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
     }
     public void AttackDeflected(IKillable deflectedKillable)
     {
+        _lastAttackDeflectedTime = Time.time;
         StopAttackInstantly();
         Stun(0.7f, false, deflectedKillable.Object.transform);
         _enemyStateController._enemyMovement.BlockMovement(deflectedKillable.Object.transform.position);
@@ -419,9 +544,12 @@ public class EnemyCombat : MonoBehaviour, IKillable
         {
             GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.SparksVFX), _sparkPosition.position, Quaternion.identity);
             Destroy(sparksVFX, 4f);
+            GameObject combatSmokeVFX = Instantiate(GameManager._instance.CombatSmokeVFX, transform.position, Quaternion.LookRotation(attacker.Object.transform.position - transform.position));
+            combatSmokeVFX.GetComponent<Rigidbody>().velocity = -transform.forward * 2f;
+            Destroy(combatSmokeVFX, 4f);
 
             _enemyStateController.ChangeAnimation(GetBlockAnimName(), 0.2f, true);
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.175f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
             _enemyStateController._enemyMovement.BlockMovement(_enemyStateController._BlockedEnemyPosition);
 
@@ -433,11 +561,15 @@ public class EnemyCombat : MonoBehaviour, IKillable
         else
         {
             GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.ShiningSparksVFX), _sparkPosition.position, Quaternion.identity);
+            Destroy(sparksVFX, 4f);
+            GameObject combatSmokeVFX = Instantiate(GameManager._instance.CombatSmokeVFX, transform.position, Quaternion.LookRotation(attacker.Object.transform.position - transform.position));
+            combatSmokeVFX.GetComponent<Rigidbody>().velocity = -transform.forward * 2f;
+            Destroy(combatSmokeVFX, 4f);
+
             if (attacker != null && !isRangedAttack)
                 attacker.AttackDeflected(this as IKillable);
             _enemyStateController.ChangeAnimation(GetDeflectAnimName(), 0.2f, true);
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-            Destroy(sparksVFX, 4f);
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.175f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
             _IsAllowedToAttack = false;
             if (_openIsAllowedToAttackCoroutine != null)
@@ -640,13 +772,13 @@ public class EnemyCombat : MonoBehaviour, IKillable
         if (isUsingCurrent)
         {
             animTime = _enemyStateController._animator.GetCurrentAnimatorClipInfo(animLayer)[0].clip.length / _enemyStateController._animator.GetCurrentAnimatorStateInfo(animLayer).speed;
-            animTime = animTime * 0.7f;
+            animTime = animTime * 0.85f;
             animTime -= time;
         }
         else
         {
             animTime = _enemyStateController._animator.GetNextAnimatorClipInfo(animLayer)[0].clip.length / _enemyStateController._animator.GetNextAnimatorStateInfo(animLayer).speed;
-            animTime = animTime * 0.7f;
+            animTime = animTime * 0.85f;
             animTime -= time;
         }
 
@@ -663,20 +795,32 @@ public class EnemyCombat : MonoBehaviour, IKillable
 
         GameManager._instance.CallForAction(() => { if (_isAttackInterrupted) return; _attackColliderWarning.gameObject.SetActive(false); }, animTime);
 
-        Action OpenAttackCollider = () => {
+        /*Action OpenAttackCollider = () => {
             if (_enemyStateController._isDead || _isAttackInterrupted) return;
             _attackCollider.gameObject.SetActive(true);
             
         };
         GameManager._instance.CallForAction(OpenAttackCollider, hitOpenTime);
 
-        GameManager._instance.CallForAction(() => { SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f)); }, hitOpenTime * 1.75f);
+        GameManager._instance.CallForAction(() => { SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f))}, hitOpenTime * 1.75f);
 
         Action CloseAttackCollider = () => {
             if (_isAttackInterrupted) return;
             _attackCollider.gameObject.SetActive(false);
         };
-        GameManager._instance.CallForAction(CloseAttackCollider, animTime);
+        GameManager._instance.CallForAction(CloseAttackCollider, animTime);*/
+    }
+    public void OpenAttackCollider()
+    {
+        if (_enemyStateController._isDead || _isAttackInterrupted) return;
+
+        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        _attackCollider.gameObject.SetActive(true);
+    }
+    public void CloseAttackCollider()
+    {
+        if (_isAttackInterrupted) return;
+        _attackCollider.gameObject.SetActive(false);
     }
     public void AttackWarning(Collider collider, bool isFast, Vector3 attackPosition)
     {
@@ -699,12 +843,13 @@ public class EnemyCombat : MonoBehaviour, IKillable
     }
     private IEnumerator RangedAttackContinueOneFrameLater()
     {
-        float startTime = Time.time;
         _rangedWarning.SetActive(true);
 
         while (_enemyStateController._animator.GetNextAnimatorClipInfo(1).Length == 0)
             yield return null;
-        while(startTime + 0.15f > Time.time)
+
+        float startTime = Time.time;
+        while(startTime + 0.55f > Time.time)
         {
             RangedAttackLookToPlayer();
             yield return null;
@@ -811,7 +956,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
     public void Push()
     {
         _enemyStateController.ChangeAnimation("Push", 0.05f);
-        GameManager._instance._pushEvent?.Invoke((GameManager._instance.PlayerRb.transform.position - transform.position).normalized * 1f);
+        GameManager._instance._pushEvent?.Invoke((GameManager._instance.PlayerRb.transform.position - transform.position).normalized * 0.75f);
     }
     public void HitBreakable(GameObject breakable)
     {
@@ -838,11 +983,13 @@ public class EnemyCombat : MonoBehaviour, IKillable
     }
     private string GetDeflectAnimName()
     {
+        if (_enemyStateController.EnemyNumber == 3 && _weaponType == WeaponTypeEnum.Exist) return "Deflect";
         string name = "Deflect" + UnityEngine.Random.Range(1, 3);
         return name;
     }
     private string GetAttackDeflectedAnimName()
     {
+        if (_enemyStateController.EnemyNumber == 3 && _weaponType == WeaponTypeEnum.Exist) return "AttackDeflected";
         string name = "AttackDeflected" + UnityEngine.Random.Range(1, 3);
         return name;
     }
@@ -864,6 +1011,8 @@ public class EnemyCombat : MonoBehaviour, IKillable
     }
     public void ThrowKillObject()
     {
+        if (IsDead) return;
+
         _rangedWarning.SetActive(false);
 
         if (_ThrowableItem.CountInterface == 0) return;
@@ -900,7 +1049,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
         GameManager._instance.allEnemies.Remove(gameObject);
 
         //_enemyStateController._animator.SetTrigger("Death");
-        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.2f, false, UnityEngine.Random.Range(1.15f, 1.25f));
         SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds), transform.position, 0.4f, false, UnityEngine.Random.Range(0.95f, 1.1f));
         GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.EnemyDeathSounds), transform.position, 0.04f, false, UnityEngine.Random.Range(0.95f, 1.05f)), 1f);
         //die vfx, blood and sound etc
@@ -908,7 +1057,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
         bloodDir.y = 0f;
         Vector3 VFXposition = transform.position + bloodDir * 0.33f + Vector3.up * 0.07f;
         GameObject bloodVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.BloodVFX), VFXposition, Quaternion.identity);
-        bloodVFX.GetComponentInChildren<Rigidbody>().velocity = Vector3.up * 2f + transform.right * UnityEngine.Random.Range(-1f, 1f) + dir * UnityEngine.Random.Range(2.5f, 4f);
+        bloodVFX.GetComponentInChildren<Rigidbody>().velocity = Vector3.up * 1.25f + killersVelocityMagnitude * dir * 0.75f;
         Destroy(bloodVFX, 5f);
 
         GameObject bloodPrefab = GameManager._instance.BloodDecalPrefabs[UnityEngine.Random.Range(0, GameManager._instance.BloodDecalPrefabs.Count)];
@@ -930,7 +1079,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
 
         if (!GameManager._instance.isPlayerDead)
         {
-            GameManager._instance.SlowTime();
+            GameManager._instance.SlowTime(0.6f);
             //GameManager._instance.ActivateWarningUI();
         }
     }
@@ -940,6 +1089,8 @@ public class EnemyCombat : MonoBehaviour, IKillable
 
         foreach (var collider in _ragdollColliders)
         {
+            if (collider.gameObject.layer == LayerMask.NameToLayer("Ignore Raycast")) continue;
+
             collider.gameObject.AddComponent(typeof(PlaySoundOnCollision));
             collider.GetComponent<PlaySoundOnCollision>()._soundClip = SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.ArmorHitSounds);
             collider.isTrigger = true;
@@ -954,8 +1105,8 @@ public class EnemyCombat : MonoBehaviour, IKillable
     {
         if (!IsDead) return;
 
-        float forceMultiplier = 400f;
-        float forceUpMultiplier = 12f;
+        float forceMultiplier = 600f;
+        float forceUpMultiplier = -20f;
 
         _enemyStateController._animator.enabled = false;
         //_enemyStateController._animator.avatar = null;
@@ -966,17 +1117,25 @@ public class EnemyCombat : MonoBehaviour, IKillable
         _enemyStateController._rb.velocity = Vector3.zero;
         _enemyStateController._rb.isKinematic = true;
 
-        _enemyStateController._mesh.updateWhenOffscreen = true;
+        foreach (SkinnedMeshRenderer mesh in _enemyStateController._meshes)
+        {
+            mesh.updateWhenOffscreen = true;
+        }
 
         if (_ragdollColliders == null)
             _ragdollColliders = transform.Find("Model").GetComponentsInChildren<Collider>();
 
         GetComponentInChildren<TransformBonePosition>().TransformPosition();
-        Vector3 tempDirForWeapon = dir + new Vector3(UnityEngine.Random.Range(-0.6f, 0.6f), UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.6f, 0.6f));
+        Vector3 tempDirForWeapon = dir + new Vector3(UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.1f, 0.1f), UnityEngine.Random.Range(-0.25f, 0.25f));
         GetComponentInChildren<RagdollForWeapon>().SeperateWeaponsFromRagdoll(tempDirForWeapon, forceMultiplier, forceUpMultiplier, killersVelocityMagnitude);
 
         foreach (var collider in _ragdollColliders)
         {
+            if (collider.GetComponent<PlaySoundOnCollision>() == null)
+            {
+                Debug.LogWarning(collider.name + " object does not have a playsoundoncollision component");
+                continue;
+            }
             collider.GetComponent<PlaySoundOnCollision>()._isEnabled = true;
             collider.isTrigger = false;
             collider.GetComponent<Rigidbody>().velocity = currentVelocity;
@@ -986,9 +1145,9 @@ public class EnemyCombat : MonoBehaviour, IKillable
             tempDir += new Vector3(UnityEngine.Random.Range(-0.6f, 0.6f), UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.6f, 0.6f));
             //tempDir = tempDir.normalized; commented for power variety
             if (collider.gameObject.name == "CC_Base_Hip" || collider.gameObject.name == "CC_Base_Head")
-                collider.GetComponent<Rigidbody>().AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 50f + tempDir * forceMultiplier + Vector3.up * forceUpMultiplier) * 6f);
+                collider.GetComponent<Rigidbody>().AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 4f + tempDir * forceMultiplier + Vector3.up * forceUpMultiplier) * 6f);
             else
-                collider.GetComponent<Rigidbody>().AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 50f + tempDir * forceMultiplier + Vector3.up * forceUpMultiplier) * 2.5f);
+                collider.GetComponent<Rigidbody>().AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 4f + tempDir * forceMultiplier + Vector3.up * forceUpMultiplier) * 2.5f);
         }
 
         //Destroy(_enemyStateController._rb);

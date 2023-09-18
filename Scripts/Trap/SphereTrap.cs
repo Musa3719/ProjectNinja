@@ -5,6 +5,8 @@ using UnityEngine;
 public class SphereTrap : MonoBehaviour, ITrap, IKillObject
 {
     public bool _Activated { get; set; }
+    [SerializeField]
+    private bool _isStatic;
 
     [SerializeField]
     private bool _checkForActivate;
@@ -13,7 +15,7 @@ public class SphereTrap : MonoBehaviour, ITrap, IKillObject
 
     void Update()
     {
-        if (!_Activated && _CheckForActivate)
+        if (!_Activated && _CheckForActivate && !_isStatic)
         {
             Activate();
         }
@@ -31,7 +33,7 @@ public class SphereTrap : MonoBehaviour, ITrap, IKillObject
    
     private void OnTriggerEnter(Collider other)
     {
-        if (_Activated && other != null && other.CompareTag("HitBox"))
+        if ((_Activated || _isStatic) && other != null && other.CompareTag("HitBox"))
         {
             Kill(GameManager._instance.GetHitBoxIKillable(other), GetComponent<Rigidbody>().velocity.normalized, GetComponent<Rigidbody>().velocity.magnitude);
         }

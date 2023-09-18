@@ -19,6 +19,10 @@ public class EnemyStateController : MonoBehaviour
     public EnemyAI _enemyAI { get; private set; }
     public Transform _playerTransform { get; private set; }
     public Rig _rig { get; private set; }
+    [SerializeField]
+    private int _enemyNumber;
+
+    public int EnemyNumber => _enemyNumber;
 
     [SerializeField]
     private MultiAimConstraint headAimConstraint;
@@ -29,6 +33,7 @@ public class EnemyStateController : MonoBehaviour
     private Material _dissolveMaterial;
 
     public SkinnedMeshRenderer _mesh { get; private set; }
+    public SkinnedMeshRenderer[] _meshes { get; private set; }
     public bool _isDead { get; set; }
     public bool _isOnOffMeshLinkPath { get; set; }
     public bool _isInSmoke { get; set; }
@@ -37,7 +42,7 @@ public class EnemyStateController : MonoBehaviour
 
     public float _searchStartTime { get; set; }
 
-    public Vector3 _BlockedEnemyPosition;
+    [HideInInspector] public Vector3 _BlockedEnemyPosition;
 
     private float _searchingTime;
     private float _seeAngleHalf;
@@ -47,8 +52,8 @@ public class EnemyStateController : MonoBehaviour
 
     private float _pushCounter;
 
-    public bool _isHearTriggered;
-    public float _lastTimeCheckForPlayerInSeenCalled;
+    [HideInInspector] public bool _isHearTriggered;
+    [HideInInspector] public float _lastTimeCheckForPlayerInSeenCalled;
 
     private List<GameObject> SmokeTriggers;
 
@@ -59,6 +64,7 @@ public class EnemyStateController : MonoBehaviour
     private Coroutine _enableHeadAimCoroutine;
     private Coroutine _disableHeadAimCoroutine;
     private Coroutine _halfHeadAimCoroutine;
+    private Coroutine _pushCoroutine;
 
     private Coroutine _dissolveCoroutine;
 
@@ -81,9 +87,11 @@ public class EnemyStateController : MonoBehaviour
         _seeAngleHalf = 110f;
         _checkDistance = 25f;
         _checkDistanceWhileInSmoke = 2.75f;
-        float yScaleMultiplier = Random.Range(0.95f, 1.05f);
-        transform.localScale = new Vector3(transform.localScale.x, transform.localScale.y * yScaleMultiplier, transform.localScale.z);
-        _agent.baseOffset = 1f + (1f - yScaleMultiplier);
+        float yScaleMultiplier = Random.Range(0.975f, 1.04f);
+        Transform model = transform.Find("Model");
+        model.localScale = new Vector3(model.localScale.x, model.localScale.y * yScaleMultiplier, model.localScale.z);
+        _meshes = GetComponentsInChildren<SkinnedMeshRenderer>();
+        //_agent.baseOffset = _agent.baseOffset + (_agent.baseOffset - yScaleMultiplier * _agent.baseOffset);
     }
     private void Start()
     {
@@ -275,6 +283,8 @@ public class EnemyStateController : MonoBehaviour
     
     private void ArrangeAnimStateParameter()
     {
+        bool isStanding = _agent.enabled ? _agent.velocity.magnitude < 0.1f : _rb.velocity.magnitude < 0.1f;
+        _animator.SetBool("IsStanding", isStanding);
         if (_enemyAnimState is EnemyAnimations.InAir && !_animator.GetCurrentAnimatorStateInfo(6).IsName("InAir") && !_animator.IsInTransition(6))
         {
             ChangeAnimation("InAir", 0.5f);
@@ -295,8 +305,16 @@ public class EnemyStateController : MonoBehaviour
         {
             if (_animator.GetCurrentAnimatorStateInfo(1).IsName("Empty"))
             {
-                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
-                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 1f, Time.deltaTime * 3f));
+                if (_agent.velocity.magnitude < 0.1f)
+                {
+                    _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
+                    _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 3f));
+                }
+                else
+                {
+                    _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
+                    _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 1f, Time.deltaTime * 3f));
+                }
             }
             else
             {
@@ -308,8 +326,16 @@ public class EnemyStateController : MonoBehaviour
         {
             if (_animator.GetCurrentAnimatorStateInfo(1).IsName("Empty"))
             {
-                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
-                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 1f, Time.deltaTime * 3f));
+                if (_agent.velocity.magnitude < 0.1f)
+                {
+                    _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
+                    _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 3f));
+                }
+                else
+                {
+                    _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
+                    _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 1f, Time.deltaTime * 3f));
+                }
             }
             else
             {
@@ -409,7 +435,35 @@ public class EnemyStateController : MonoBehaviour
             {
                 TouchingGrounds.Add(collision.collider.gameObject);
             }
+            if (collision.collider.CompareTag("Player") && GameManager._instance.PlayerLastSpeed > 13.5f && !GameManager._instance.isPlayerAttacking)
+            {
+                ChangeAnimation("Stun");
+                SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                if (_pushCoroutine != null)
+                    StopCoroutine(_pushCoroutine);
+                _pushCoroutine = StartCoroutine(PushCoroutine());
+            }
         }
+    }
+    private IEnumerator PushCoroutine()
+    {
+        _agent.enabled = false;
+        _rb.isKinematic = false;
+        Vector3 direction = (transform.position - GameManager._instance.PlayerRb.transform.position).normalized;
+        float startTime = Time.time;
+        while (startTime + 0.15f > Time.time)
+        {
+            _rb.velocity = Vector3.Lerp(_rb.velocity, (direction * GameManager._instance.PlayerLastSpeed * 2f), Time.deltaTime * 15f);
+            yield return null;
+        }
+        _rb.velocity = (direction * 2f * GameManager._instance.PlayerLastSpeed);
+        while (startTime + 0.65f > Time.time)
+        {
+            _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, Time.deltaTime * 2.5f);
+            yield return null;
+        }
+        _agent.enabled = true;
+        _rb.isKinematic = true;
     }
     private void OnCollisionExit(Collision collision)
     {
@@ -457,7 +511,7 @@ public class EnemyStateController : MonoBehaviour
             else
             {
                 localCheckDistance = _checkDistance;
-                if (GameManager._instance._isPlayerInSmoke)
+                if (GameManager._instance.IsPlayerInSmoke)
                 {
                     return false;
                 }

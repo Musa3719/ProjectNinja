@@ -49,7 +49,7 @@ public class PlayerMovement : MonoBehaviour
     private float _maxHookLenght;
     public float _MaxHookLenght => _maxHookLenght;
 
-    private Transform _HandOffsetForHook;
+    public Transform _HandOffsetForHook;
     private float _hookAnimTime;
 
     public float _MaxStamina { get; private set; }
@@ -93,19 +93,15 @@ public class PlayerMovement : MonoBehaviour
     public Coroutine _attackMoveCoroutine;
     public Coroutine _attackDeflectedMoveCoroutine;
     public Coroutine _runSpeedAdditionToZeroCoroutine;
+    public Coroutine _aimAssistCoroutine;
 
     public bool _canDoWallMovement;
     public bool _canRunWithStamina { get; private set; }
     public bool _isJumped { get; private set; }
     public bool _isOnAttackOrAttackDeflectedMove { get; private set; }
     public bool _isAllowedToVelocityForward { get; private set; }
-    public bool _isHookAllowed { get; private set; }
-    public bool _isHookAllowedForAir { get; private set; }
     public bool _isDodgeAllowedForAir { get; private set; }
     public bool _isAllowedToWallRun { get; set; }
-
-    private float _hookWaitTime;
-    private float _hookTime;
 
     private float _airStopMultiplier;
     private float _airFrictionMultiplier;
@@ -115,24 +111,24 @@ public class PlayerMovement : MonoBehaviour
     private float _lastCrouchStartTime;
     public float _lastExitWallTime;
 
-    private bool _isUpHookLastTime;
-    private bool _isHookDisabled;
+    public bool _isHookDisabled { get; private set; }
+    public bool _isHookAllowed{ get; private set; }
+    public bool _isHookAllowedForAir { get; private set; }
 
-
+    private float _hookWaitTime;
+    private float _hookTime;
+    public float _LastHookTime { get; private set; }
+    public float _LastHookNotReadyTime { get;  set; }
 
     public List<Collider> _touchingWallColliders { get; private set; }
     public List<Collider> _touchingGroundColliders { get; private set; }
+    public List<Collider> _touchingPropColliders { get; private set; }
 
 
     private float _walkSoundCounter;
     private float _fastLandCounter;
     public float _lastTimeFastLanded { get; private set; }
     public float _lastTimeOnWallFastLanded { get; private set; }
-
-    public float _lastHookTime;
-    public float _lastHookNotReadyTime;
-
-    private float _lastEnemyDiedTime;
 
     public bool _isGroundedWorkedThisFrame;
 
@@ -150,6 +146,7 @@ public class PlayerMovement : MonoBehaviour
         GameManager._instance._playAnimEvent += ChangeAnimFromEvent;
         GameManager._instance._bornEvent += Born;
         GameManager._instance._enemyDiedEvent += EnemyDied;
+        Application.onBeforeRender += ArrangeLineRendererPlayerPosition;
     }
     private void OnDisable()
     {
@@ -158,9 +155,12 @@ public class PlayerMovement : MonoBehaviour
         GameManager._instance._playAnimEvent -= ChangeAnimFromEvent;
         GameManager._instance._bornEvent -= Born;
         GameManager._instance._enemyDiedEvent -= EnemyDied;
+        Application.onBeforeRender -= ArrangeLineRendererPlayerPosition;
     }
     private void EnemyDied()
     {
+        _Stamina += 40f;
+
         _runSpeedAddition++;
         if (_runSpeedAddition > 4)
             _runSpeedAddition = 4;
@@ -176,11 +176,10 @@ public class PlayerMovement : MonoBehaviour
         if (_runSpeedAdditionToZeroCoroutine != null)
             StopCoroutine(_runSpeedAdditionToZeroCoroutine);
         _runSpeedAdditionToZeroCoroutine = StartCoroutine(RunSpeedAdditionToZeroCoroutine(GameManager._instance.RunSpeedAdditionActiveTime));
-
-        _lastEnemyDiedTime = Time.time;
     }
     private IEnumerator RunSpeedAdditionToZeroCoroutine(float time)
     {
+        yield return new WaitForSeconds(0.1f);
         PlayerCombat._instance._isImmune = true;
         yield return new WaitForSeconds(time);
 
@@ -222,22 +221,24 @@ public class PlayerMovement : MonoBehaviour
     private void Awake()
     {
         _instance = this;
-        _MaxStamina = 100f;
-        _hookWaitTime = 5f;
+        _MaxStamina = 110f;
+        _Stamina = _MaxStamina;
+        _hookWaitTime = 3f;
         _hookTime = 0.15f;
-        _canDoWallMovement = true;
-        _isAllowedToVelocityForward = true;
+        _isHookDisabled = true;
         _isHookAllowed = true;
         _isHookAllowedForAir = true;
+        _canDoWallMovement = true;
+        _isAllowedToVelocityForward = true;
         _isDodgeAllowedForAir = true;
         _canRunWithStamina = true;
         _touchingWallColliders = new List<Collider>();
         _touchingGroundColliders = new List<Collider>();
-        _needStaminaForJump = 8f;
-        _staminaDecreasePerSecond = 8f;
-        _staminaIncreasePerSecond = 5f;
-        _Stamina = 100f;
-        _hookStaminaUse = 20f;
+        _touchingPropColliders = new List<Collider>();
+        _needStaminaForJump = 6f;
+        _staminaDecreasePerSecond = 6f;
+        _staminaIncreasePerSecond = 3f;
+        _hookStaminaUse = _staminaIncreasePerSecond;
         _attackStaminaUse = 8f;
         _forwardLeapStaminaUse = 16f;
         _dodgeStaminaUse = 16f;
@@ -249,17 +250,17 @@ public class PlayerMovement : MonoBehaviour
         _constantForceUp = GetComponent<ConstantForce>();
         normalYScale = 1f;
         crouchedYScale = 0.4f;
-        _airStopMultiplier = 1.75f;
-        _airFrictionMultiplier = 0.75f;
+        _airStopMultiplier = 1.25f;
+        _airFrictionMultiplier = 0.07f;
         _lastTimeFastLanded = -1f;
         _lastCrouchStartTime = -1f;
         _lastTimeOnWallFastLanded = -1f;
-        _lastHookTime = -1f;
-        _lastHookNotReadyTime = -1f;
+        _LastHookTime = -1f;
+        _LastHookNotReadyTime = -1f;
         _HandOffsetForHook = _rightHandTransform;
         GameManager._instance._isGroundedWorkedThisFrameEvent += () => _isGroundedWorkedThisFrame = false;
         GameManager._instance.PlayerRunningSpeed = _MoveSpeed;
-        _hookAnimTime = 0.15f;
+        _hookAnimTime = 0.125f;
     }
     private void Update()
     {
@@ -272,39 +273,35 @@ public class PlayerMovement : MonoBehaviour
 
         if (PlayerStateController._instance._isStaminaManual)
         {
-            _Stamina += Time.deltaTime * _staminaIncreasePerSecond * Mathf.Clamp((PlayerStateController._instance._staminaManualCounter + 0.25f) * 4f, 1f, 7.5f);
+            _Stamina += Time.deltaTime * _staminaIncreasePerSecond * Mathf.Clamp((PlayerStateController._instance._staminaManualCounter + 0.25f) * 5.5f, 1f, 15f);
         }
         else if(PlayerCombat._instance._IsBlocking)
         {
-            _Stamina += Time.deltaTime * _staminaIncreasePerSecond * 0.1f;
+            _Stamina += Time.deltaTime * _staminaIncreasePerSecond * 0.2f;
         }
         else
         {
             _Stamina += Time.deltaTime * _staminaIncreasePerSecond;
         }
-
     }
     private void LateUpdate()
     {
-        ArrangeLineRendererPlayerPosition();
+        //ArrangeLineRendererPlayerPosition();
         //GameManager._instance.BlurVolume.weight = (PlayerStateController._instance._rb.velocity.magnitude > _RunSpeed - 2f) && IsGrounded() ? 1f : 0f;
     }
     private void ArrangeLineRendererPlayerPosition()
     {
-        Vector3 offsetType = Vector3.zero;
-        if (_isUpHookLastTime)
-            offsetType = _HandOffsetForUpHook.position;
-        else
-            offsetType = _HandOffsetForHook.position;
+
+        Vector3 offsetType = _HandOffsetForUpHook.position;
 
         //Vector3 offsetByRotation = transform.up * offsetType.y + transform.right * offsetType.x + transform.forward * offsetType.z;
 
         PlayerStateController._instance._lineRenderer.SetPosition(0, offsetType);
         if (_hookConnectedTransform != null && !_isHookDisabled)
         {
-            if (PlayerMovement._instance._lastHookTime + _hookAnimTime > Time.time)
+            if (PlayerMovement._instance._LastHookTime + _hookAnimTime > Time.time)
             {
-                PlayerStateController._instance._lineRenderer.SetPosition(1, Vector3.Lerp(offsetType, _hookConnectedTransform.position + _hookConnectedPositionOffset, (Time.time - PlayerMovement._instance._lastHookTime) / _hookAnimTime));
+                PlayerStateController._instance._lineRenderer.SetPosition(1, Vector3.Lerp(offsetType, _hookConnectedTransform.position + _hookConnectedPositionOffset, (Time.time - PlayerMovement._instance._LastHookTime) / _hookAnimTime));
             }
             else
                 PlayerStateController._instance._lineRenderer.SetPosition(1, _hookConnectedTransform.position + _hookConnectedPositionOffset);
@@ -338,6 +335,10 @@ public class PlayerMovement : MonoBehaviour
 
         rays[5] = Physics.Raycast(transform.position, -Vector3.up, out hits[5], 1.15f);
 
+        bool rayForOnWall = false;
+        if (_touchingWallColliders.Count > 0)
+            rayForOnWall = Physics.Raycast(transform.position + _touchingWallColliders[_touchingWallColliders.Count - 1].transform.right * 0.35f, -Vector3.up, out hits[5], 1.15f);
+
         /*if(!(rays[0] || rays[1] || rays[2] || rays[3] || rays[4]))
         {
             if (rays[5])
@@ -358,7 +359,7 @@ public class PlayerMovement : MonoBehaviour
 
         bool isGrounded;
         if (PlayerStateController._instance._playerState is PlayerStates.OnWall)
-            isGrounded = rays[5];
+            isGrounded = rays[5] || rayForOnWall || IsGroundedCheckFromProps();
         else
             isGrounded = rays[0] || rays[1] || rays[2] || rays[3] || rays[4] || rays[5];
 
@@ -409,7 +410,7 @@ public class PlayerMovement : MonoBehaviour
                 }
                 else
                 {
-                    _walkSoundCounter -= Time.deltaTime * speed / 3.2f;
+                    _walkSoundCounter -= Time.deltaTime * speed / 2.675f;
                 }
 
                 break;
@@ -444,15 +445,30 @@ public class PlayerMovement : MonoBehaviour
     /// <summary>
     /// Checks for touching any walls
     /// </summary>
-    public bool IsTouching()
+    public bool IsTouchingAnyWall()
     {
         return _touchingWallColliders.Count > 0;
+    }
+    public bool IsTouchingAnyProp()
+    {
+        return _touchingPropColliders.Count > 0;
     }
     public bool IsGroundedFromList()
     {
         if (_touchingGroundColliders.Count > 0) return true;
         return false;
     }
+    public bool IsGroundedCheckFromProps()
+    {
+        if (_touchingPropColliders.Count == 0) return false;
+        foreach (Collider col in _touchingPropColliders)
+        {
+            if (col.transform.position.y < GameManager._instance.PlayerFootPos.position.y)
+                return true;
+        }
+        return false;
+    }
+    
     private void OnTriggerEnter(Collider collider)
     {
         if (collider.gameObject == null || !collider.CompareTag("WallTrigger")) return;
@@ -471,18 +487,26 @@ public class PlayerMovement : MonoBehaviour
     }
     private void OnCollisionEnter(Collision collision)
     {
-        if (collision.collider == null || collision.collider.gameObject.layer != LayerMask.NameToLayer("Grounds")) return;
-        if (!_touchingGroundColliders.Contains(collision.collider))
+        if (collision.collider == null) return;
+        if (collision.collider.gameObject.layer == LayerMask.NameToLayer("Grounds") && !_touchingGroundColliders.Contains(collision.collider))
         {
             _touchingGroundColliders.Add(collision.collider);
+        }
+        if (GameManager._instance.IsProp(collision.collider) && !_touchingPropColliders.Contains(collision.collider))
+        {
+            _touchingPropColliders.Add(collision.collider);
         }
     }
     private void OnCollisionExit(Collision collision)
     {
-        if (collision.collider == null || collision.collider.gameObject.layer != LayerMask.NameToLayer("Grounds")) return;
-        if (_touchingGroundColliders.Contains(collision.collider))
+        if (collision.collider == null) return;
+        if (collision.collider.gameObject.layer == LayerMask.NameToLayer("Grounds") && _touchingGroundColliders.Contains(collision.collider))
         {
             _touchingGroundColliders.Remove(collision.collider);
+        }
+        if (GameManager._instance.IsProp(collision.collider) && _touchingPropColliders.Contains(collision.collider))
+        {
+            _touchingPropColliders.Remove(collision.collider);
         }
     }
     private void PushMove(Vector3 direction)
@@ -544,9 +568,7 @@ public class PlayerMovement : MonoBehaviour
     }
     public void AttackMove(Rigidbody rb)
     {
-        Vector3 tempVel = rb.velocity;
-        tempVel.y = 0f;
-        if ((!IsGrounded() && rb.velocity.y < 0f) || tempVel.magnitude < 7f) return;
+        if (PlayerCombat._instance._IsDodging) return;
 
         if (_attackMoveCoroutine != null)
             StopCoroutine(_attackMoveCoroutine);
@@ -554,26 +576,19 @@ public class PlayerMovement : MonoBehaviour
     }
     private IEnumerator AttackMoveCoroutine(Rigidbody rb)
     {
-        float moveTime = 0.2f;
-        //ArrangeIsVelocityToForward(moveTime / 2f);
         _isOnAttackOrAttackDeflectedMove = true;
-        float startTime = Time.time;
-        Vector3 tempVel = rb.velocity;
-        tempVel.y = 0f;
 
-        //rb.velocity = transform.forward * 5f;
-        //yield return new WaitForFixedUpdate();
-        while (startTime + moveTime > Time.time)
+        float moveTime = 0.2f;
+        float startTime = Time.time;
+
+        rb.velocity += transform.forward * 1.5f;
+        while (startTime + moveTime > Time.time && InputHandler.GetButton("Fire1"))
         {
-            rb.velocity = Vector3.Lerp(rb.velocity, rb.velocity.normalized * _AttackMoveSpeed * 0.75f, Time.deltaTime * 3f);
+            if ((Time.time - startTime) / moveTime > 0.35f)
+                rb.velocity += transform.forward * Time.deltaTime * 100f * ((Time.time - startTime) / moveTime - 0.225f);
             yield return null;
         }
-
-        Vector3 velocityExceptY = rb.velocity;
-        velocityExceptY.y = 0f;
-        rb.velocity += transform.forward * velocityExceptY.magnitude / 2.5f;
-        if (velocityExceptY.magnitude == 0f) rb.velocity += transform.forward;
-        yield return new WaitForSeconds(0.3f);
+        PlayerCombat._instance.Attack();
 
         _isOnAttackOrAttackDeflectedMove = false;
     }
@@ -599,19 +614,20 @@ public class PlayerMovement : MonoBehaviour
     }
     public void FastLandInAir(Rigidbody rb)
     {
-        if (_lastTimeFastLanded + 1f < Time.time)
+        if (_lastTimeFastLanded + 0.25f < Time.time)
             _fastLandCounter = 0f;
 
         FastLand(rb);
-        _fastLandCounter = Mathf.Clamp(_fastLandCounter + Time.deltaTime * 1.15f, 0.1f, 1f);
+        _fastLandCounter = Mathf.Clamp(_fastLandCounter + Time.deltaTime * 1.5f, 0.1f, 0.65f);
         _lastTimeFastLanded = Time.time;
-        rb.transform.eulerAngles = new Vector3(rb.transform.eulerAngles.x, rb.transform.eulerAngles.y + Time.deltaTime * 60f * 12f * _fastLandCounter, rb.transform.eulerAngles.z);
+        //rb.transform.eulerAngles = new Vector3(rb.transform.eulerAngles.x, rb.transform.eulerAngles.y + Time.deltaTime * 60f * 20f * _fastLandCounter, rb.transform.eulerAngles.z);
+        CameraController._instance.transform.eulerAngles = new Vector3(CameraController._instance.transform.eulerAngles.x + Time.deltaTime * 60f * 2f, CameraController._instance.transform.eulerAngles.y, CameraController._instance.transform.eulerAngles.z);
     }
     private void FastLand(Rigidbody rb)
     {
-        float lerpSpeed = 6f;
-        Vector3 targetVelocity = -Vector3.up * 70f;
-        rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed / (targetVelocity - rb.velocity).magnitude);
+        float lerpSpeed = 0.25f;
+        Vector3 targetVelocity = -Vector3.up * 60f;
+        rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed);
     }
     IEnumerator CrouchRoutine()
     {
@@ -628,12 +644,14 @@ public class PlayerMovement : MonoBehaviour
     }
     public void Jump(Rigidbody rb)
     {
+        if (!_isHookDisabled) return;
+
         CameraController.ShakeCamera(1.5f, 1.1f, 0.15f, 0.35f);
         SoundManager._instance.PlaySound(SoundManager._instance.Jump, transform.position, 0.05f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
         float jumpPowerBySpeed = _JumpPower + _JumpPower * 0.5f * Mathf.Clamp(rb.velocity.magnitude, _MoveSpeed, _RunSpeed) / _RunSpeed;
 
-        rb.velocity = new Vector3(rb.velocity.x, jumpPowerBySpeed, rb.velocity.z);
+        rb.velocity = new Vector3(rb.velocity.x + Mathf.Clamp(rb.velocity.x, 0f, 4f) * 0.4f, jumpPowerBySpeed, rb.velocity.z + Mathf.Clamp(rb.velocity.z, 0f, 4f) * 0.4f);
         _Stamina -= _needStaminaForJump;
 
         if (_jumpCoroutine != null)
@@ -647,6 +665,8 @@ public class PlayerMovement : MonoBehaviour
     }
     public void JumpFromWall(Rigidbody rb)
     {
+        if (!_isHookDisabled) return;
+
         CameraController.ShakeCamera(1.5f, 1.1f, 0.15f, 0.35f);
 
         float horizontal = InputHandler.GetAxis("Horizontal");
@@ -684,7 +704,7 @@ public class PlayerMovement : MonoBehaviour
         }
         if (rb.velocity.y > 0)
         {
-            rb.velocity = new Vector3(rb.velocity.x, rb.velocity.y * 2f / 3f, rb.velocity.z);
+            rb.velocity = new Vector3(rb.velocity.x, rb.velocity.y * 0.45f, rb.velocity.z);
         }
 
     }
@@ -698,13 +718,7 @@ public class PlayerMovement : MonoBehaviour
         //rb.velocity = new Vector3(rb.velocity.x * 7f / 8f, rb.velocity.y, rb.velocity.z * 7f / 8f);
 
     }
-    public IEnumerator IsAllowedHookTimer()
-    {
-        GameManager._instance.HookTimerUI.StartTimer(_hookWaitTime);
-        yield return new WaitForSeconds(_hookWaitTime);
-        _isHookAllowed = true;
-        SoundManager._instance.PlaySound(SoundManager._instance.HookReady, transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-    }
+    
     private void ArrangeIsVelocityToForward(float time)
     {
         _isAllowedToVelocityForward = false;
@@ -718,48 +732,11 @@ public class PlayerMovement : MonoBehaviour
         _isAllowedToVelocityForward = true;
     }
 
-    public RaycastHit RaycastForHook()
-    {
-        //Vector3 offsetByRotation = transform.up * _HandOffsetForHook.position.y + transform.right * _HandOffsetForHook.position.x + transform.forward * _HandOffsetForHook.position.z;
-        RaycastHit hit;
-        Physics.Raycast(_HandOffsetForHook.position, PlayerStateController._instance._cameraController.transform.forward, out hit, _MaxHookLenght, GameManager._instance.LayerMaskForVisible);
-        return hit;
-    }
-    public RaycastHit RaycastForUpHook()
-    {
-        Vector3 dir = Vector3.zero;
-        float velocityMagnitudeWithoutYAxis = new Vector3(PlayerStateController._instance._rb.velocity.x, 0f, PlayerStateController._instance._rb.velocity.z).magnitude;
-
-        if (InputHandler.GetAxis("Horizontal") > 0f)
-        {
-            dir += PlayerStateController._instance.transform.right;
-        }
-        else if(InputHandler.GetAxis("Horizontal") < 0f)
-        {
-            dir -= PlayerStateController._instance.transform.right;
-        }
-
-        if (InputHandler.GetAxis("Vertical") > 0f)
-        {
-            dir += PlayerStateController._instance.transform.forward;
-        }
-        else if (InputHandler.GetAxis("Vertical") < 0f && velocityMagnitudeWithoutYAxis < _MoveSpeed + 2f)
-        {
-            dir -= PlayerStateController._instance.transform.forward;
-        }
-
-        dir += PlayerStateController._instance.transform.up * 1.75f;
-        dir = dir.normalized;
-
-        //Vector3 offsetByRotation = transform.up * _HandOffsetForUpHook.position.y + transform.right * _HandOffsetForUpHook.position.x + transform.forward * _HandOffsetForUpHook.position.z;
-        RaycastHit hit;
-        Physics.Raycast(_HandOffsetForUpHook.position, dir, out hit, _MaxHookLenght, GameManager._instance.LayerMaskForVisible);
-        return hit;
-    }
     private string GetThrowHookName()
     {
-        bool isLeft = false;
+        return "RightHookThrow";
 
+        bool isLeft = false;
 
         if (PlayerStateController._instance._playerState is PlayerStates.OnWall)
         {
@@ -781,21 +758,52 @@ public class PlayerMovement : MonoBehaviour
             return "RightHookThrow";
         }
     }
+    public RaycastHit RaycastForUpHook()
+    {
+        Vector3 dir = Vector3.zero;
+        float velocityMagnitudeWithoutYAxis = new Vector3(PlayerStateController._instance._rb.velocity.x, 0f, PlayerStateController._instance._rb.velocity.z).magnitude;
+
+        if (InputHandler.GetAxis("Horizontal") > 0f)
+        {
+            dir += PlayerStateController._instance.transform.right;
+        }
+        else if (InputHandler.GetAxis("Horizontal") < 0f)
+        {
+            dir -= PlayerStateController._instance.transform.right;
+        }
+
+        if (InputHandler.GetAxis("Vertical") > 0f)
+        {
+            dir += PlayerStateController._instance.transform.forward;
+        }
+        else if (InputHandler.GetAxis("Vertical") < 0f && velocityMagnitudeWithoutYAxis < _MoveSpeed + 2f)
+        {
+            dir -= PlayerStateController._instance.transform.forward;
+        }
+
+        dir += PlayerStateController._instance.transform.up * 1.75f;
+        dir = dir.normalized;
+
+        //Vector3 offsetByRotation = transform.up * _HandOffsetForUpHook.position.y + transform.right * _HandOffsetForUpHook.position.x + transform.forward * _HandOffsetForUpHook.position.z;
+        RaycastHit hit;
+        Physics.Raycast(_HandOffsetForUpHook.position, dir, out hit, _MaxHookLenght, GameManager._instance.LayerMaskForVisible);
+        return hit;
+    }
     public void ThrowUpHook(Rigidbody rb)
     {
 
         RaycastHit hit = RaycastForUpHook();
         if (hit.collider == null)
         {
-            if (_lastHookNotReadyTime + 0.5f < Time.time)
+            if (_LastHookNotReadyTime + 0.5f < Time.time)
             {
                 SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-                _lastHookNotReadyTime = Time.time;
+                _LastHookNotReadyTime = Time.time;
             }
-            
+
             return;
         }
-            
+
         bool isWallOrGround = hit.collider.gameObject.layer == LayerMask.NameToLayer("Grounds") || hit.collider.CompareTag("Wall");
         if (hit.collider != null && isWallOrGround)
         {
@@ -811,69 +819,21 @@ public class PlayerMovement : MonoBehaviour
             PlayerMovement._instance._hookConnectedTransform = hit.collider.transform;
             PlayerMovement._instance._hookConnectedPositionOffset = hit.point - hit.collider.transform.position;
 
-            _lastHookTime = Time.time;
+            _LastHookTime = Time.time;
             _isHookAllowed = false;
             _isHookAllowedForAir = false;
-            _isUpHookLastTime = true;
             GameManager._instance.CallForAction(() => HookPullMovement(rb, true, hit), _hookAnimTime);
-            GameManager._instance.CallForAction(PullHook, _hookTime);
-            GameManager._instance.CallForAction(()=> { _isHookAllowedForAir = false; }, 0.15f);
-        }
-        else
-        {
-            if (_lastHookNotReadyTime + 0.5f < Time.time)
-            {
-                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-                _lastHookNotReadyTime = Time.time;
-            }
-        }
-
-    }
-    public void ThrowHook(Rigidbody rb)
-    {
-        RaycastHit hit = RaycastForHook();
-        if (hit.collider == null)
-        {
-            if (_lastHookNotReadyTime + 0.5f < Time.time)
-            {
-                SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-                _lastHookNotReadyTime = Time.time;
-            }
-            return;
-        }
-        bool isWallOrGround = hit.collider.gameObject.layer == LayerMask.NameToLayer("Grounds") || hit.collider.CompareTag("Wall");
-        if (isWallOrGround)
-        {
-            //PlayerStateController._instance._lineRenderer.SetPosition(1, hit.point);
-            PlayerStateController._instance._lineRenderer.enabled = true;
-            PlayerStateController._instance._hookAnchor.SetActive(true);
-            _isHookDisabled = false;
-
-            PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.7f));
-            PlayerStateController._instance.ChangeAnimation(GetThrowHookName());
-            SoundManager._instance.PlaySound(SoundManager._instance.ThrowHook, transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-            CameraController.ShakeCamera(4f, 1.75f, 0.15f, 0.8f);
-
-            PlayerMovement._instance._hookConnectedTransform = hit.collider.transform;
-            PlayerMovement._instance._hookConnectedPositionOffset = hit.point - hit.collider.transform.position;
-
-            _lastHookTime = Time.time;
-            _isHookAllowed = false;
-            _isHookAllowedForAir = false;
-            _isUpHookLastTime = false;
-            GameManager._instance.CallForAction(() => HookPullMovement(rb, false, hit), _hookAnimTime);
             GameManager._instance.CallForAction(PullHook, _hookTime);
             GameManager._instance.CallForAction(() => { _isHookAllowedForAir = false; }, 0.15f);
         }
         else
         {
-            if (_lastHookNotReadyTime + 0.5f < Time.time)
+            if (_LastHookNotReadyTime + 0.5f < Time.time)
             {
                 SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-                _lastHookNotReadyTime = Time.time;
+                _LastHookNotReadyTime = Time.time;
             }
         }
-
     }
     public void PullHook()
     {
@@ -887,6 +847,13 @@ public class PlayerMovement : MonoBehaviour
         if (_pullHookPositionCoroutine != null)
             StopCoroutine(_pullHookPositionCoroutine);
         _pullHookPositionCoroutine = StartCoroutine(PullHookPositionCoroutine());
+    }
+    public IEnumerator IsAllowedHookTimer()
+    {
+        //GameManager._instance.HookTimerUI.StartTimer(_hookWaitTime);
+        yield return new WaitForSeconds(_hookWaitTime);
+        _isHookAllowed = true;
+        SoundManager._instance.PlaySound(SoundManager._instance.HookReady, transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
     }
     private IEnumerator PullHookPositionCoroutine()
     {
@@ -902,6 +869,7 @@ public class PlayerMovement : MonoBehaviour
         PlayerStateController._instance._lineRenderer.enabled = false;
         PlayerStateController._instance._hookAnchor.SetActive(false);
     }
+
     public void HookPullMovement(Rigidbody rb, bool isUpHook, RaycastHit hit)
     {
         SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, hit.point, 0.3f, false, UnityEngine.Random.Range(0.6f, 0.7f));
@@ -921,40 +889,7 @@ public class PlayerMovement : MonoBehaviour
         if (_hookCoroutine != null)
             StopCoroutine(_hookCoroutine);
 
-        if (isUpHook)
-            _hookCoroutine = StartCoroutine(HookMovement(rb, direction, distance.magnitude));
-        else
-            _hookCoroutine = StartCoroutine(HookMovement(rb, direction));
-    }
-    /// <summary>
-    /// Hook Coroutine for  Normal Hook
-    /// </summary>
-    private IEnumerator HookMovement(Rigidbody rb, Vector3 dir)
-    {
-        float startTime = Time.time;
-        float lerpSpeed = 4.5f;
-        /*if (dir.y > 0)
-        {
-            lerpSpeed *= 1f;
-            dir.y *= 1.1f;
-        }
-        dir.y += 0.1f;*/
-
-        float speed = PlayerMovement._instance._HookMovementSpeed - PlayerMovement._instance._HookMovementSpeed * 0.4f * Mathf.Clamp(rb.velocity.magnitude, _MoveSpeed, _RunSpeed) / _RunSpeed;
-
-        while (Time.time < startTime + _hookTime * 0.75f)
-        {
-            if (PlayerCombat._instance._IsDodgingOrForwardLeap) yield break;
-            rb.velocity = Vector3.Lerp(rb.velocity, dir * 1.2f * speed, Time.deltaTime * lerpSpeed);
-            yield return null;
-        }
-        startTime = Time.time;
-        while (Time.time < startTime + _hookTime * 0.75f)
-        {
-            if (PlayerCombat._instance._IsDodgingOrForwardLeap) yield break;
-            rb.velocity = Vector3.Lerp(rb.velocity, dir * 0.8f * speed, Time.deltaTime * lerpSpeed);
-            yield return null;
-        }
+        _hookCoroutine = StartCoroutine(HookMovement(rb, direction, distance.magnitude));
     }
     /// <summary>
     /// Hook Coroutine for Up Hook
@@ -979,6 +914,26 @@ public class PlayerMovement : MonoBehaviour
             yield return null;
         }
     }
+    public void AimAssistToEnemy(GameObject enemy)
+    {
+        if (_aimAssistCoroutine != null)
+            StopCoroutine(_aimAssistCoroutine);
+        _aimAssistCoroutine = StartCoroutine(AimAssistCoroutine(enemy));
+    }
+    private IEnumerator AimAssistCoroutine(GameObject enemy)
+    {
+        float startTime = Time.time;
+        while (Time.time < startTime + 0.25f)
+        {
+            if (Time.timeScale > 0.8f)
+            {
+                float angle = Vector3.SignedAngle(transform.forward, enemy.transform.position - transform.position, Vector3.up);
+                transform.eulerAngles = new Vector3(transform.eulerAngles.x, transform.eulerAngles.y + Time.deltaTime * 60f * 0.16f * angle, transform.eulerAngles.z);
+            }
+            
+            yield return null;
+        }
+    }
     public void Dodge(Rigidbody rb)
     {
         CameraController.ShakeCamera(1.5f, 1f, 0.05f, 0.1f);
@@ -990,18 +945,27 @@ public class PlayerMovement : MonoBehaviour
         Vector3 tempForward = rb.transform.forward;
         tempForward.y = 0f;
         float angle = -Vector3.SignedAngle(tempForward, Vector3.forward, Vector3.up);
-        Vector3 axis = new Vector3(InputHandler.GetAxis("Horizontal"), 0f, InputHandler.GetAxis("Vertical")).normalized;
+
+        float horizontal = InputHandler.GetAxis("Horizontal");
+        float vertical = InputHandler.GetAxis("Vertical");
+        vertical = IsGrounded() ? Mathf.Clamp(vertical, -1f, 0f) : vertical;
+        Vector3 axis = new Vector3(horizontal, 0f, vertical).normalized;
         if (axis == Vector3.zero)
         {
             if (IsGrounded()) axis = -Vector3.forward;
             else axis = Vector3.forward;
         }
         Vector3 direction = Quaternion.AngleAxis(angle, Vector3.up) * axis;
-        rb.velocity = direction * _DodgeSpeed + rb.velocity * 0.5f;
+        rb.velocity = direction * _DodgeSpeed * 1.2f + rb.velocity * 0.1f;
 
         if (InputHandler.GetAxis("Vertical") > 0)
         {
-            rb.velocity *= 1.3f;
+            rb.velocity *= 1.1f;
+            PlayerStateController._instance.ChangeAnimation("InAir");
+        }
+        else
+        {
+            PlayerStateController._instance.ChangeAnimation("Dodge");
         }
     }
     public void BlockedMove(Rigidbody rb, Vector3 direction)
@@ -1045,7 +1009,7 @@ public class PlayerMovement : MonoBehaviour
     }
     public void WallMovementStarted(Rigidbody rb)
     {
-        rb.velocity += Vector3.up * 2f;
+        rb.velocity += Vector3.up * 4f;
         if (_touchingWallColliders.Count == 0) return;
 
         Vector3 temp = rb.velocity;
@@ -1060,7 +1024,7 @@ public class PlayerMovement : MonoBehaviour
     }
     public void Walk(Rigidbody rb)
     {
-        float lerpSpeed = rb.velocity.magnitude < _MoveSpeed? 30f : 15f;
+        float lerpSpeed = rb.velocity.magnitude < _MoveSpeed? 50f : 22.5f;
         Movement(rb, _MoveSpeed, lerpSpeed);
     }
     public void Run(Rigidbody rb)
@@ -1071,17 +1035,18 @@ public class PlayerMovement : MonoBehaviour
         float directionToSpeedAngle = Vector3.Angle(speed, direction);
 
         if (rb.velocity.magnitude < 3.5f)
-            Movement(rb, _RunSpeed, 45f);
+            Movement(rb, _RunSpeed, 55f);
         else if (rb.velocity.magnitude < 7f)
-            Movement(rb, _RunSpeed, 40f);
+            Movement(rb, _RunSpeed, 50f);
         else if (directionToSpeedAngle > 45f)
-            Movement(rb, _RunSpeed * 0.6f, 22f);
+            Movement(rb, _RunSpeed * 0.45f, 22f);
         else if (directionToSpeedAngle > 7f)
-            Movement(rb, _RunSpeed * 0.85f, 15f);
+            Movement(rb, _RunSpeed * 0.7f, 15f);
         else if (rb.velocity.magnitude < _MoveSpeed + (_RunSpeed - _MoveSpeed) / 2f)
-            Movement(rb, _RunSpeed, 4f);
+            Movement(rb, _RunSpeed, 2.15f);
         else
-            Movement(rb, _RunSpeed, 2f);
+            Movement(rb, _RunSpeed, 1.55f);
+
         _Stamina -= Time.deltaTime * _staminaDecreasePerSecond;
     }
     public void WallWalk(Rigidbody rb)
@@ -1235,7 +1200,7 @@ public class PlayerMovement : MonoBehaviour
         if (yInput > 0f && tempVelocity.magnitude < 7f)
         {
             Vector3 temp = transform.forward * 7f;
-            targetVelocity += new Vector3(temp.x, 0f, temp.z) * Time.deltaTime * 1.75f;
+            targetVelocity += new Vector3(temp.x, 0f, temp.z) * Time.deltaTime * 2f;
         }
         else if (yInput == 0f)
         {
@@ -1259,18 +1224,9 @@ public class PlayerMovement : MonoBehaviour
     }
     public void DeathMove(Vector3 dir, float killersVelocityMagnitude)
     {
-        float deathSpeed = 2.5f;
-        PlayerStateController._instance._rb.velocity += dir * deathSpeed + dir * killersVelocityMagnitude / 5f;
-        StartCoroutine(DeathMoveCoroutine(PlayerStateController._instance._rb.velocity));
+        float deathSpeed = 24f;
+        PlayerStateController._instance._rb.AddForce(dir * deathSpeed + dir * killersVelocityMagnitude / 2.5f, ForceMode.Impulse);
     }
-    private IEnumerator DeathMoveCoroutine(Vector3 vel)
-    {
-        float startTime = Time.time;
-        while (true)
-        {
-            PlayerStateController._instance._rb.velocity = vel;
-            yield return null;
-        }
-    }
+    
 }
 

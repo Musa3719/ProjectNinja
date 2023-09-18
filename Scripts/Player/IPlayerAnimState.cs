@@ -12,7 +12,6 @@ namespace PlayerAnimations
 
     public class Idle : IPlayerAnimState
     {
-        private float lastVelocityValueFrom;
         public void Enter(Rigidbody rb, IPlayerAnimState oldState)
         {
            
@@ -29,11 +28,11 @@ namespace PlayerAnimations
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Sliding());
             }
-            else if (!PlayerMovement._instance.IsGrounded(1.5f) && !PlayerCombat._instance._IsBlocking)
+            else if ((!PlayerMovement._instance.IsGrounded(1.5f) && !PlayerCombat._instance._IsBlocking) || (PlayerMovement._instance._isJumped && !PlayerCombat._instance._IsBlocking))
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.InAir());
             }
-            else if (lastVelocityValueFrom > 0.25f)
+            else if (rb.velocity.magnitude > 1f)
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Walk());
             }
@@ -49,7 +48,7 @@ namespace PlayerAnimations
 
         public void DoStateFixedUpdate(Rigidbody rb)
         {
-            lastVelocityValueFrom = rb.velocity.magnitude;
+            
         }
 
         public void DoStateLateUpdate(Rigidbody rb)
@@ -84,7 +83,7 @@ namespace PlayerAnimations
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Sliding());
             }
-            else if (!PlayerMovement._instance.IsGrounded(1.5f) && !PlayerCombat._instance._IsBlocking)
+            else if ((!PlayerMovement._instance.IsGrounded(1.5f) && !PlayerCombat._instance._IsBlocking) || (PlayerMovement._instance._isJumped && !PlayerCombat._instance._IsBlocking))
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.InAir());
             }
@@ -148,7 +147,7 @@ namespace PlayerAnimations
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Sliding());
             }
-            else if (!PlayerMovement._instance.IsGrounded(1.5f) && !PlayerCombat._instance._IsBlocking)
+            else if ((!PlayerMovement._instance.IsGrounded(1.5f) && !PlayerCombat._instance._IsBlocking) || (PlayerMovement._instance._isJumped && !PlayerCombat._instance._IsBlocking))
             {
                 PlayerStateController._instance.EnterAnimState(new PlayerAnimations.InAir());
             }
@@ -286,6 +285,50 @@ namespace PlayerAnimations
             }
         }
     }
+    public class Hook : IPlayerAnimState
+    {
+        public void Enter(Rigidbody rb, IPlayerAnimState oldState)
+        {
+
+        }
+
+        public void Exit(Rigidbody rb, IPlayerAnimState newState)
+        {
+
+        }
+
+        public void DoState(Rigidbody rb)
+        {
+            if (!PlayerStateController._instance._lineRenderer.enabled)
+            {
+                if (PlayerMovement._instance.IsGrounded())
+                {
+                    PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Idle());
+                }
+                else
+                {
+                    PlayerStateController._instance.EnterAnimState(new PlayerAnimations.InAir());
+                }
+            }
+        }
+
+        public void DoStateFixedUpdate(Rigidbody rb)
+        {
+
+        }
+
+        public void DoStateLateUpdate(Rigidbody rb)
+        {
+            if (!PlayerStateController._instance._Animator.IsInTransition(2) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(2).IsName("LeftOnWallFastLand")))
+            {
+                PlayerStateController._instance.ChangeAnimation("EmptyLeft");
+            }
+            if (!PlayerStateController._instance._Animator.IsInTransition(3) && (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWall") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(3).IsName("RightOnWallFastLand")))
+            {
+                PlayerStateController._instance.ChangeAnimation("EmptyRight");
+            }
+        }
+    }
 
 
     public class ToGround : IPlayerAnimState
@@ -305,9 +348,9 @@ namespace PlayerAnimations
             }
 
             if (PlayerMovement._instance._lastTimeFastLanded + 0.5f < Time.time)
-                PlayerStateController._instance.ChangeAnimation("AirToGround", 0.05f);
+                PlayerStateController._instance.ChangeAnimation("AirToGround", 0.075f);
             else
-                PlayerStateController._instance.ChangeAnimation("FastLandToGround", 0.05f);
+                PlayerStateController._instance.ChangeAnimation("FastLandToGround", 0.075f);
         }
 
         public void Exit(Rigidbody rb, IPlayerAnimState newState)

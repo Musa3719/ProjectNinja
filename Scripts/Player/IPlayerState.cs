@@ -17,6 +17,7 @@ namespace PlayerStates
         public void Enter(Rigidbody rb, IPlayerState oldState)
         {
             GameManager._instance.MidScreenDot.color = GameManager._instance.MidScreenDotMovementColor;
+            GameManager._instance.IsPlayerOnWall = false;
         }
         public void Exit(Rigidbody rb, IPlayerState newState)
         {
@@ -42,10 +43,10 @@ namespace PlayerStates
 
             PlayerStateController.CheckForBlock();
 
-            PlayerStateController._instance.CheckForTeleport();
-            PlayerStateController._instance.CheckForInvertedMirror();
+            //PlayerStateController._instance.CheckForTeleport();
+            //PlayerStateController._instance.CheckForInvertedMirror();
 
-            if (PlayerCombat._instance._IsDodgingOrForwardLeap)
+            if (PlayerCombat._instance._IsDodging)
             {
                 //do nothing
             }
@@ -60,18 +61,14 @@ namespace PlayerStates
             }
             else if (PlayerStateController.CheckForUpHookTrigger())
             {
+                PlayerStateController._instance._hookBuffer = false;
                 PlayerMovement._instance.ThrowUpHook(rb);
-            }
-            else if (PlayerStateController.CheckForHookTrigger())
-            {
-                PlayerMovement._instance.ThrowHook(rb);
             }
             else if (PlayerStateController.CheckForAttack())
             {
                 PlayerStateController._instance.StopCoroutine(PlayerStateController._instance._attackCoroutine);
                 PlayerStateController._instance._attackBuffer = false;
 
-                PlayerCombat._instance.Attack();
                 PlayerMovement._instance.AttackMove(PlayerStateController._instance._rb);
             }
             else if (PlayerStateController.CheckForForwardLeap())
@@ -124,11 +121,12 @@ namespace PlayerStates
 
                 PlayerMovement._instance.Jump(rb);
             }
-
+            
             else if (PlayerStateController.CheckForCrouch())
             {
                 PlayerMovement._instance.Crouch(rb);
             }
+
             else if (PlayerMovement._instance.IsGrounded())
             {
                 if (_isCrouching)
@@ -191,6 +189,7 @@ namespace PlayerStates
         
         public void Enter(Rigidbody rb, IPlayerState oldState)
         {
+            GameManager._instance.IsPlayerOnWall = true;
             PlayerStateController._instance._isSpinEnding = false;
             PlayerMovement._instance.WallMovementStarted(rb);
 
@@ -201,7 +200,9 @@ namespace PlayerStates
 
                 Vector3 a = PlayerMovement._instance._touchingWallColliders[PlayerMovement._instance._touchingWallColliders.Count - 1].transform.position - rb.transform.position;
                 a.y = 0f;
-                
+
+                PlayerStateController._instance.ChangeAnimation("InAir");
+
                 if (Vector3.Dot(a.normalized, playerLeftVector) > 0)
                 {
                     _isWallOnLeftSide = true;
@@ -239,8 +240,8 @@ namespace PlayerStates
 
             PlayerStateController.CheckForBlock();
 
-            PlayerStateController._instance.CheckForTeleport();
-            PlayerStateController._instance.CheckForInvertedMirror();
+            //PlayerStateController._instance.CheckForTeleport();
+            //PlayerStateController._instance.CheckForInvertedMirror();
 
             PlayerMovement._instance.ArrangeOnWallSound();
 
@@ -264,17 +265,8 @@ namespace PlayerStates
             }
             else if (PlayerStateController.CheckForUpHookTrigger())
             {
-                PlayerStateController._instance.StopCoroutine(PlayerStateController._instance._upHookCoroutine);
-                PlayerStateController._instance._upHookBuffer = false;
-
-                PlayerMovement._instance.ThrowUpHook(rb);
-            }
-            else if (PlayerStateController.CheckForHookTrigger())
-            {
-                PlayerStateController._instance.StopCoroutine(PlayerStateController._instance._hookCoroutine);
                 PlayerStateController._instance._hookBuffer = false;
-
-                PlayerMovement._instance.ThrowHook(rb);
+                PlayerMovement._instance.ThrowUpHook(rb);
             }
             else if (PlayerStateController.CheckForAttack())
             {
@@ -328,7 +320,7 @@ namespace PlayerStates
                 rb.velocity = Vector3.Lerp(rb.velocity, targetVelocity, Time.deltaTime * lerpSpeed / (targetVelocity - rb.velocity).magnitude);
                 _firstLerpTime -= Time.deltaTime;
             }
-            else if (PlayerMovement._instance.IsTouching())
+            else if (PlayerMovement._instance.IsTouchingAnyWall())
             {
                 if (PlayerStateController.IsRunning())
                 {
@@ -434,9 +426,8 @@ namespace PlayerStates
             PlayerStateController._instance.OnWallSpark = GameObject.Instantiate(GameManager._instance.SparksVFX[0], pos, Quaternion.identity);
             PlayerStateController._instance.OnWallSpark.GetComponentInChildren<Animator>().speed *= 4.5f;
             PlayerStateController._instance.OnWallSpark.transform.localScale *= 0.4f;
-            GameObject.Destroy(PlayerStateController._instance.OnWallSpark, 0.14f);
-
-            GameObject.Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds), PlayerStateController._instance.transform.position, Random.Range(0.17f, 0.2f), false, Random.Range(1.05f, 1.25f)), 2f);
+            GameObject.Destroy(PlayerStateController._instance.OnWallSpark, 0.12f);
+            GameObject.Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds), PlayerStateController._instance.transform.position, Random.Range(0.14f, 0.17f), false, Random.Range(0.72f, 0.78f)), 2f);
 
             /*GameObject decal = GameObject.Instantiate(GameManager._instance.HoleDecal, pos, Quaternion.identity);
             decal.transform.forward = wallCollider.transform.right;
