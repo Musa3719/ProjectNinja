@@ -5,9 +5,13 @@ using UnityEngine;
 public class TransformBonePosition : MonoBehaviour
 {
     [SerializeField]
-    private SkinnedMeshRenderer _mesh;
-    [SerializeField]
     private Transform _targetTransform;
+
+    private SkinnedMeshRenderer[] skinnedMeshRenderers;
+    private void Awake()
+    {
+        skinnedMeshRenderers = transform.parent.gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
+    }
 
     public void TransformPosition()
     {
@@ -18,9 +22,12 @@ public class TransformBonePosition : MonoBehaviour
         yield return new WaitForSeconds(7f);
 
         Vector3 distance = _targetTransform.position - transform.position;
-        transform.position += distance;
+        transform.parent.parent.position += distance;
         _targetTransform.position -= distance;
 
-        _mesh.updateWhenOffscreen = false;
+        foreach (SkinnedMeshRenderer mesh in skinnedMeshRenderers)
+        {
+            mesh.updateWhenOffscreen = false;
+        }
     }
 }
