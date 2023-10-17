@@ -54,11 +54,11 @@ public class AttackWarning : MonoBehaviour
         if (other != null && otherKillable != null && !otherKillable.IsDead && !Killables.Contains(otherKillable))
         {
             Killables.Add(otherKillable);
-            if (IgnoreCollisionCollider.gameObject.CompareTag("Player"))
+            if (IgnoreCollisionCollider.gameObject.CompareTag("Player") && isMeleeWeapon)
             {
                 Rigidbody rb = transform.parent.gameObject.GetComponent<Rigidbody>();
                 if (rb == null) return;
-                bool isFast = rb.velocity.magnitude > 11f ? true : false;
+                bool isFast = rb.velocity.magnitude > 9.5f ? true : false;
                 otherKillable.AttackWarning(GetComponent<Collider>(), isFast, rb.transform.position);
             }
             else if (IgnoreCollisionCollider != null)

@@ -6,10 +6,18 @@ public class AnimationEventHandler : MonoBehaviour
 {
     public void OpenAttackCollider()
     {
-        transform.parent.GetComponent<IKillable>().OpenAttackCollider();
+        GetParent().GetComponent<IKillable>().OpenAttackCollider();
     }
     public void CloseAttackCollider()
     {
-        transform.parent.GetComponent<IKillable>().CloseAttackCollider();
+        GetParent().GetComponent<IKillable>().CloseAttackCollider();
+    }
+
+    private Transform GetParent()
+    {
+        Transform parent = transform;
+        while (parent.parent != null)
+            parent = parent.parent;
+        return parent;
     }
 }

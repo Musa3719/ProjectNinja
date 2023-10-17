@@ -22,6 +22,7 @@ public class GameManager : MonoBehaviour
     public GameObject MainCamera;
 
     public Transform PlayerFootPos;
+    public Transform PlayerRightHandHolder;
 
     public bool IsTimeSlowed;
 
@@ -85,6 +86,8 @@ public class GameManager : MonoBehaviour
     public Color ThrowableColor;
 
     [SerializeField]
+    public GameObject TeleportIllusion;
+    [SerializeField]
     public GameObject CanDoWallMovementUI;
     [SerializeField]
     public GameObject TutorialTextUI;
@@ -144,8 +147,12 @@ public class GameManager : MonoBehaviour
     private Queue<int> _frameRates;
     private int _frameRateCountForAvarage;
 
+    private float _clothTimer;
+    private float _volumetricCheckTimer;
+
     private Color _originalStaminaColor;
     public List<GameObject> Projectiles { get; private set; }
+    public List<Cloth> Cloths { get; private set; }
 
     [HideInInspector]
     public Rigidbody PlayerRb;
@@ -309,6 +316,7 @@ public class GameManager : MonoBehaviour
         ThrowableColor = new Color(219f / 255f, 219f / 255f, 219f / 255f, 219f / 255f);
 
         Projectiles = new List<GameObject>();
+        Cloths = new List<Cloth>();
 
         PlayerFootPos = GameObject.FindGameObjectWithTag("Player").transform.Find("FootPos");
 
@@ -366,6 +374,7 @@ public class GameManager : MonoBehaviour
     {
         //if (InputHandler.GetButtonDown("PastLevelDebug")) SceneController._instance.LoadNextSceneAsync();
         _isGroundedWorkedThisFrameEvent?.Invoke();
+
         if (InputHandler.GetButtonDown("Esc") && !isPlayerDead)
         {
             if (isOnCutscene)
@@ -386,7 +395,7 @@ public class GameManager : MonoBehaviour
             }
             else if (lookingToPainting != null)
             {
-                lookingToPainting.ClosePainting();
+                //lookingToPainting.ClosePainting();
                 lookingToPainting = null;
             }
             else
@@ -402,6 +411,66 @@ public class GameManager : MonoBehaviour
             }
         }
 
+        ClothRender();
+    }
+    private void ClothRender()
+    {
+        _clothTimer += Time.deltaTime;
+        if (_clothTimer < 0.5f) return;
+        _clothTimer = 0f;
+
+        SortCloths();
+        int numberOfCloths = 0;
+        switch (Options._instance.Quality)
+        {
+            case 0:
+                numberOfCloths = 3;
+                break;
+            case 1:
+                numberOfCloths = 2;
+                break;
+            case 2:
+                numberOfCloths = 1;
+                break;
+            default:
+                break;
+        }
+        int i = 0;
+        foreach (Cloth cloth in Cloths)
+        {
+            if (i < numberOfCloths)
+            {
+                if (!cloth.enabled) cloth.enabled = true;
+            }
+            else
+            {
+                if (cloth.enabled) cloth.enabled = false;
+            }
+                
+            i++;
+        }
+    }
+    private void SortCloths()
+    {
+        List<Cloth> tempList = new List<Cloth>();
+        int count = Cloths.Count;
+        for (int i = 0; i < count; i++)
+        {
+            float minLenght = 1000f;
+            Cloth tempCloth = null;
+            foreach (Cloth cloth in Cloths)
+            {
+                float distance = (cloth.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude;
+                if (distance < minLenght)
+                {
+                    tempCloth = cloth;
+                    minLenght = distance;
+                }
+            }
+            tempList.Add(tempCloth);
+            Cloths.Remove(tempCloth);
+        }
+        Cloths = tempList;
     }
     public bool IsProp(Collider other)
     {
@@ -419,21 +488,23 @@ public class GameManager : MonoBehaviour
         while (true)
         {
             CheckForRenderShadows();
+            //CheckForVolumetrics();
             yield return null;
         }
     }
     private void CheckForRenderShadows()
     {
+        float distanceMultiplier = Options._instance.Quality == 2 ? 0.5f : 1f;
         foreach (HDAdditionalLightData light in MixedLights)
         {
             bool isGoingToRender = false;
-            if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 10f && Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.03f)
+            if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 10f * distanceMultiplier && Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.03f)
                 isGoingToRender = true;
-            else if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 15f && Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.07f)
+            else if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 15f * distanceMultiplier && Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.07f)
                 isGoingToRender = true;
-            else if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 20f && Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.12f)
+            else if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 20f * distanceMultiplier && Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.12f)
                 isGoingToRender = true;
-            else if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 30f && Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.2f)
+            else if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 30f * distanceMultiplier && Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.2f)
                 isGoingToRender = true;
             else if (Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.5f)
                 isGoingToRender = true;
@@ -446,6 +517,32 @@ public class GameManager : MonoBehaviour
             
         }
     }
+    private void CheckForVolumetrics()
+    {
+        if (Options._instance.Quality == 2) return;
+
+        if (_volumetricCheckTimer < 0.25f)
+        {
+            _volumetricCheckTimer += Time.deltaTime;
+            return;
+        }
+        _volumetricCheckTimer = 0f;
+
+        foreach (HDAdditionalLightData light in MixedLights)
+        {
+            if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 15f)
+            {
+                if (light.GetComponentInChildren<HDAdditionalLightData>().affectsVolumetric == false)
+                    light.GetComponentInChildren<HDAdditionalLightData>().affectsVolumetric = true;
+            }
+            else
+            {
+                if (light.GetComponentInChildren<HDAdditionalLightData>().affectsVolumetric == true)
+                    light.GetComponentInChildren<HDAdditionalLightData>().affectsVolumetric = false;
+            }
+            
+        }
+    }
     private void SetMixedLights()
     {
         if (MixedLights != null) return;
@@ -454,7 +551,7 @@ public class GameManager : MonoBehaviour
         Transform lights = GameObject.Find("Level").transform.Find("Lights");
         foreach (Transform light in lights)
         {
-            if (light.name != "Sky and Fog Volume" && light.Find("Lights").GetComponentInChildren<Light>() != null && light.Find("Lights").Find("Mixed") != null)
+            if (light.name != "Sky and Fog Volume" && light.Find("Lights") != null && light.Find("Lights").GetComponentInChildren<Light>() != null && light.Find("Lights").Find("Mixed") != null)
             {
                 MixedLights.Add(light.Find("Lights").GetComponentInChildren<HDAdditionalLightData>());
             }
@@ -468,28 +565,22 @@ public class GameManager : MonoBehaviour
                 StopCoroutine(_graphicsBackToNormalCoroutine);
 
             
-            GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(false);
-            GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(true);
+            //GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(false);
+            //GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(true);
 
             Transform lights = GameObject.Find("Level").transform.Find("Lights");
             foreach (Transform light in lights)
             {
-                if (light.name== "Sky and Fog Volume")
+                if (light.name == "Sky and Fog Volume")
                 {
                     light.GetComponent<Volume>().profile = LowSettingsVolume;
                 }
-                else
+                else if (light.Find("Lights") != null)
                 {
-                    light.Find("Lights").gameObject.SetActive(false);
+                    light.GetComponentInChildren<HDAdditionalLightData>().affectsVolumetric = false;
                 }
 
             }
-
-            /*GameObject[] carpets = GameObject.FindGameObjectsWithTag("Carpet");
-            foreach (var item in carpets)
-            {
-                item.GetComponent<MeshRenderer>().material = CarpetLowSetting;
-            }*/
         }
     }
     public void GraphicsBackToNormal()
@@ -500,12 +591,6 @@ public class GameManager : MonoBehaviour
     }
     private IEnumerator GraphicsBackToNormalCoroutine()
     {
-        /*GameObject[] carpets = GameObject.FindGameObjectsWithTag("Carpet");
-        foreach (var item in carpets)
-        {
-            item.GetComponent<MeshRenderer>().material = CarpetNormalSetting;
-        }*/
-
         Transform lights = GameObject.Find("Level").transform.Find("Lights");
         foreach (Transform light in lights)
         {
@@ -513,21 +598,14 @@ public class GameManager : MonoBehaviour
             {
                 light.GetComponent<Volume>().profile = NormalSettingsVolume;
             }
-            else
+            else if (light.Find("Lights") != null)
             {
-                light.Find("Lights").gameObject.SetActive(true);
-                yield return null;
-                yield return null;
-                yield return null;
-                yield return null;
-                yield return null;
-                yield return null;
-                yield return null;
-                yield return null;
+                light.GetComponentInChildren<HDAdditionalLightData>().affectsVolumetric = true;
             }
+            yield return null;
         }
-        GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(false);
-        GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(true);
+        //GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(false);
+        //GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(true);
     }
     public void PlayerGainStamina(float additionStamina)
     {
@@ -844,26 +922,33 @@ public class GameManager : MonoBehaviour
     }
     
 
-    public void EnemyDied()
+    public void EnemyDied(bool isKilledByPlayer)
     {
-        _enemyDiedEvent?.Invoke();
+        if (isPlayerDead) return;
+
         GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
 
         int numberOfEnemies = 0;
         foreach (var enemy in enemies)
         {
-            if (!enemy.GetComponent<IKillable>().IsDead)
+            if (enemy.GetComponent<IKillable>()!=null && !enemy.GetComponent<IKillable>().IsDead)
                 numberOfEnemies++;
         }
 
-        if (numberOfEnemies == 0)
+        if (numberOfEnemies <= 2)
         {
             ActivatePassageToNextScene();
         }
 
-        if (_openInvincibleScreen != null)
-            StopCoroutine(_openInvincibleScreen);
-        _openInvincibleScreen = StartCoroutine(OpenInvincibleScreen());
+        if (isKilledByPlayer)
+        {
+            _enemyDiedEvent?.Invoke();
+            if (_openInvincibleScreen != null)
+                StopCoroutine(_openInvincibleScreen);
+            _openInvincibleScreen = StartCoroutine(OpenInvincibleScreen());
+            GameManager._instance.SlowTime(0.6f);
+        }
+        
     }
     private IEnumerator OpenInvincibleScreen()
     {
@@ -876,7 +961,7 @@ public class GameManager : MonoBehaviour
         while(startTime + 0.2f > Time.time)
         {
             color = InvincibleScreen.transform.Find("Panel").GetComponent<Image>().color;
-            InvincibleScreen.transform.Find("Panel").GetComponent<Image>().color = new Color(color.r, color.g, color.b, Mathf.Lerp(color.a, 8f / 255f, Time.deltaTime * 7f));
+            InvincibleScreen.transform.Find("Panel").GetComponent<Image>().color = new Color(color.r, color.g, color.b, Mathf.Lerp(color.a, 15f / 255f, Time.deltaTime * 7f));
             yield return null;
         }
 
@@ -990,7 +1075,7 @@ public class GameManager : MonoBehaviour
         {
             foreach (var enemy in allEnemies)
             {
-                if ((PlayerRb.position-enemy.transform.position).magnitude < 45f && !enemiesNearPlayer.Contains(enemy))
+                if (enemy.GetComponent<Collider>().enabled && (PlayerRb.position-enemy.transform.position).magnitude < 45f && !enemiesNearPlayer.Contains(enemy))
                 {
                     enemiesNearPlayer.Add(enemy);
                 }
@@ -1004,7 +1089,7 @@ public class GameManager : MonoBehaviour
 
             foreach (var enemyNear in tempListForNearPlayers)
             {
-                if((PlayerRb.position - enemyNear.transform.position).magnitude >= 45f)
+                if((!enemyNear.GetComponent<Collider>().enabled) || ((PlayerRb.position - enemyNear.transform.position).magnitude >= 45f && enemiesNearPlayer.Contains(enemyNear)))
                 {
                     enemiesNearPlayer.Remove(enemyNear);
                 }
@@ -1018,8 +1103,8 @@ public class GameManager : MonoBehaviour
         GameObject nearestEnemy = GetNearestAliveEnemy();
         if (nearestEnemy == null) return null;
 
-        bool isInAngle = Vector3.Angle(PlayerRb.transform.forward, nearestEnemy.transform.position - PlayerRb.transform.position) < 40f;
-        if ((nearestEnemy.transform.position - PlayerRb.transform.position).magnitude < 5f + Math.Clamp(PlayerRb.velocity.magnitude, 0f, 15f) / 3.5f && isInAngle)
+        bool isInAngle = Vector3.Angle(PlayerRb.transform.forward, nearestEnemy.transform.position - PlayerRb.transform.position) < 33f;
+        if ((nearestEnemy.transform.position - PlayerRb.transform.position).magnitude < 5f + Math.Clamp(PlayerRb.velocity.magnitude, 0f, 15f) / 4f && isInAngle)
         {
             return nearestEnemy;
         }
@@ -1073,12 +1158,13 @@ public class GameManager : MonoBehaviour
         if (item == null)
         {
             objectsImage.sprite = PrefabHolder._instance.EmptyImage;
+            objectsImage.enabled = false;
             objectsImage.transform.parent.GetComponentInChildren<TextMeshProUGUI>().text = "";
         }
         else
         {
             objectsImage.transform.parent.GetComponentInChildren<TextMeshProUGUI>().text = item.CountInterface.ToString();
-
+            objectsImage.enabled = true;
             switch (item)
             {
                 case Knife k:
@@ -1270,6 +1356,7 @@ public class GameManager : MonoBehaviour
     private IEnumerator SlowTimeCoroutine()
     {
         IsTimeSlowed = true;
+        GameManager._instance.BlurVolume.enabled = true;
 
         SoundManager._instance.SlowDownMusic();
         SoundManager._instance.SlowDownAllSound();
@@ -1303,6 +1390,7 @@ public class GameManager : MonoBehaviour
             yield return null;
         }
 
+        GameManager._instance.BlurVolume.enabled = false;
         ChromaticVolume.weight = 0f;
         Time.timeScale = 1f;
         SoundManager._instance.UnSlowDownMusic();

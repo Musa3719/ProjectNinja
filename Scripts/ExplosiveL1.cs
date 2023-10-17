@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ExplosiveL1 : MonoBehaviour
+public class ExplosiveL1 : MonoBehaviour, IKillObject
 {
     public List<IKillable> killables;
     public List<IKillable> Killables
@@ -16,6 +16,7 @@ public class ExplosiveL1 : MonoBehaviour
             return killables;
         }
     }
+    public GameObject Owner => gameObject;
 
 
     private Transform _playerTransform;
@@ -146,7 +147,7 @@ public class ExplosiveL1 : MonoBehaviour
             if (colliderKillable != null && !Killables.Contains(colliderKillable))
             {
                 Killables.Add(colliderKillable);
-                colliderKillable.Die((collider.transform.position - transform.position).normalized, _rb.velocity.magnitude);
+                Kill(colliderKillable, (collider.transform.position - transform.position).normalized, _rb.velocity.magnitude, this);
             }
         }
         SoundManager.ProjectileTriggeredSoundArtificial?.Invoke(transform.position, 12.5f);
@@ -155,12 +156,16 @@ public class ExplosiveL1 : MonoBehaviour
         foreach (Transform item in broken.transform)
         {
             Rigidbody tempRB = item.GetComponent<Rigidbody>();
-            tempRB.AddForce((item.transform.position - broken.transform.position) * 40f);
+            tempRB.AddForce((item.transform.position - broken.transform.position).normalized * 40f);
             GameManager._instance.CallForAction(() => { tempRB.isKinematic = true; tempRB.GetComponent<Collider>().enabled = false; }, 20f);
         }
 
         Destroy(explodingSound);
         Destroy(transform.parent.gameObject);
+    }
+    public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude, IKillObject killer)
+    {
+        killable.Die(dir, _rb.velocity.magnitude, killer);
     }
     public void DestroyWithoutExploding(Transform other)
     {
@@ -172,8 +177,8 @@ public class ExplosiveL1 : MonoBehaviour
         foreach (Transform item in broken.transform)
         {
             Rigidbody tempRB = item.GetComponent<Rigidbody>();
-            tempRB.AddForce((item.transform.position - broken.transform.position) * 10f);
-            tempRB.AddForce((broken.transform.position - other.position).normalized / 3f);
+            tempRB.AddForce(new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)) * 5f);
+            tempRB.AddForce((broken.transform.position - other.position).normalized * 15f);
             GameManager._instance.CallForAction(() => { tempRB.isKinematic = true; tempRB.GetComponent<Collider>().enabled = false; }, 20f);
         }
 
