@@ -34,7 +34,7 @@ public class Knife : IThrowableItem
         GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
         {
-            throwable.GetComponentInChildren<Rigidbody>().velocity = GameManager._instance.MainCamera.transform.forward * 45f;
+            throwable.GetComponentInChildren<Rigidbody>().velocity = GameManager._instance.MainCamera.transform.forward * 32f;
             throwable.transform.position = GameManager._instance.IsLeftThrowing ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
         }
         else
@@ -67,11 +67,11 @@ public class Bomb : IThrowableItem
         GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
         {
-            throwable.GetComponentInChildren<Rigidbody>().velocity = GameManager._instance.MainCamera.transform.forward * 40f / 2f;
+            throwable.GetComponentInChildren<Rigidbody>().velocity = GameManager._instance.MainCamera.transform.forward * 16f;
             throwable.transform.position = GameManager._instance.IsLeftThrowing ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
         }
         else
-            throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 30f / 2.75f;
+            throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 11f;
         throwable.transform.forward = throwable.GetComponentInChildren<Rigidbody>().velocity.normalized;
         throwable.GetComponentInChildren<Rigidbody>().angularVelocity = new Vector3(1f, 1f, 1f);
         throwable.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = IgnoredCollider;
@@ -131,7 +131,7 @@ public class Shuriken : IThrowableItem
         GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
         {
-            throwable.GetComponentInChildren<Rigidbody>().velocity = GameManager._instance.MainCamera.transform.forward * 45f;
+            throwable.GetComponentInChildren<Rigidbody>().velocity = GameManager._instance.MainCamera.transform.forward * 32f;
             throwable.transform.position = GameManager._instance.IsLeftThrowing ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
         }
         else

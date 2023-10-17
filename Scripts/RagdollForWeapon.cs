@@ -14,9 +14,9 @@ public class RagdollForWeapon : MonoBehaviour
         {
             weapon.transform.parent = null;
             if (weapon.transform.Find("AttackCollider") != null)
-                weapon.transform.Find("AttackCollider").GetComponent<Collider>().enabled = false;
+                weapon.transform.Find("AttackCollider").gameObject.SetActive(false);
             if (weapon.transform.Find("AttackColliderWarning") != null)
-                weapon.transform.Find("AttackColliderWarning").GetComponent<Collider>().enabled = false;
+                weapon.transform.Find("AttackColliderWarning").gameObject.SetActive(false);
 
 
             PlaySoundOnCollision weaponMeshPlaySound = weapon.GetComponentInChildren<PlaySoundOnCollision>();

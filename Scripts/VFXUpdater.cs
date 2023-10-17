@@ -4,8 +4,13 @@ using UnityEngine;
 
 public class VFXUpdater : MonoBehaviour
 {
+    [SerializeField] private bool _isTurning;
+    [SerializeField] private float _speed;
     void Update()
     {
-        transform.forward = -(GameManager._instance.MainCamera.transform.position - transform.position).normalized;
+        if(_isTurning)
+            transform.localEulerAngles += Vector3.forward * Time.deltaTime * _speed;
+        else
+            transform.forward = -(GameManager._instance.MainCamera.transform.position - transform.position).normalized;
     }
 }

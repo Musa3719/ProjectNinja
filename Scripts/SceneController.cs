@@ -30,8 +30,13 @@ public class SceneController : MonoBehaviour
 
     public static SceneController _instance;
     public static AsyncOperation NextSceneAsyncOperation;
+
+    public int SceneBuildIndex;
+
     private void Awake()
     {
+        SceneBuildIndex = SceneManager.GetActiveScene().buildIndex;
+
         if (SceneManager.GetActiveScene().buildIndex == 7 || SceneManager.GetActiveScene().buildIndex == 0)
         {
             Cursor.visible = true;
@@ -89,7 +94,7 @@ public class SceneController : MonoBehaviour
     public void PlayButtonSound()
     {
         GameObject cam = GameManager._instance == null ? Camera.main.gameObject : GameManager._instance.MainCamera;
-        SoundManager._instance.PlaySound(SoundManager._instance.Button, cam.transform.position, 0.1f, false, UnityEngine.Random.Range(0.65f, 0.75f));
+        SoundManager._instance.PlaySound(SoundManager._instance.Button, cam.transform.position, 0.15f, false, UnityEngine.Random.Range(0.65f, 0.75f));
     }
     private IEnumerator OpeningCinematicArrangement()
     {

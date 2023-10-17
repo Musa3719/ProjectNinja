@@ -39,13 +39,13 @@ public class InputHandler : MonoBehaviour
                 if (Keyboard.current == null) return false;
                 key = ChangedKeys.ContainsKey("Esc") ? ChangedKeys["Esc"] : Keyboard.current.escapeKey;
                 return isCheckingButtonDown ? key.wasPressedThisFrame : key.isPressed;
-            case "Hook":
+            case "MiddleMouse":
                 if (Mouse.current == null) return false;
-                key = ChangedKeys.ContainsKey("Hook") ? ChangedKeys["Hook"] : Mouse.current.middleButton;
+                key = ChangedKeys.ContainsKey("MiddleMouse") ? ChangedKeys["MiddleMouse"] : Mouse.current.middleButton;
                 return isCheckingButtonDown ? key.wasPressedThisFrame : key.isPressed;
             case "WeaponChange":
                 if (Keyboard.current == null) return false;
-                key = ChangedKeys.ContainsKey("Hook") ? ChangedKeys["Hook"] : Keyboard.current.eKey;
+                key = ChangedKeys.ContainsKey("WeaponChange") ? ChangedKeys["WeaponChange"] : Keyboard.current.eKey;
                 return isCheckingButtonDown ? key.wasPressedThisFrame : key.isPressed;
             case "Jump":
                 if (Keyboard.current == null) return false;
@@ -106,11 +106,11 @@ public class InputHandler : MonoBehaviour
             case "Esc":
                 key = ChangedKeys.ContainsKey("Esc") ? ChangedKeys["Esc"] : Gamepad.current.startButton;
                 return isCheckingButtonDown ? key.wasPressedThisFrame : key.isPressed;
-            case "Hook":
-                key = ChangedKeys.ContainsKey("Hook") ? ChangedKeys["Hook"] : Gamepad.current.leftShoulder;
+            case "MiddleMouse":
+                key = ChangedKeys.ContainsKey("MiddleMouse") ? ChangedKeys["MiddleMouse"] : Gamepad.current.rightShoulder;
                 return isCheckingButtonDown ? key.wasPressedThisFrame : key.isPressed;
             case "WeaponChange":
-                key = ChangedKeys.ContainsKey("Hook") ? ChangedKeys["Hook"] : Gamepad.current.rightShoulder;
+                key = ChangedKeys.ContainsKey("WeaponChange") ? ChangedKeys["WeaponChange"] : Gamepad.current.leftShoulder;
                 return isCheckingButtonDown ? key.wasPressedThisFrame : key.isPressed;
             case "Jump":
                 key = ChangedKeys.ContainsKey("Jump") ? ChangedKeys["Jump"] : Gamepad.current.aButton;
@@ -139,7 +139,7 @@ public class InputHandler : MonoBehaviour
                 key = ChangedKeys.ContainsKey("InvertedMirror") ? ChangedKeys["InvertedMirror"] : Gamepad.current.dpad.left;
                 return isCheckingButtonDown ? key.wasPressedThisFrame : key.isPressed;
             case "Stamina":
-                key = ChangedKeys.ContainsKey("ThStaminarow") ? ChangedKeys["Stamina"] : Gamepad.current.xButton;
+                key = ChangedKeys.ContainsKey("Stamina") ? ChangedKeys["Stamina"] : Gamepad.current.xButton;
                 return isCheckingButtonDown ? key.wasPressedThisFrame : key.isPressed;
             default:
                 return false;
@@ -184,7 +184,7 @@ public class InputHandler : MonoBehaviour
         }
 
         value -= Mouse.current.scroll.ReadValue().y;
-        value += Gamepad.current.selectButton.wasPressedThisFrame ? 1f : 0f;
+        value += Gamepad.current.dpad.left.wasPressedThisFrame ? 1f : (Gamepad.current.dpad.right.wasPressedThisFrame ? -1f : 0f);
         return value;
     }
     public static float GetAxis(string str)

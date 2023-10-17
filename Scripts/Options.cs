@@ -12,6 +12,7 @@ public class Options : MonoBehaviour
     public float MaxSensitivity { get; private set; }
 
     public float FOV { get; private set; }
+    public int Quality { get; private set; }
 
 
 
@@ -27,10 +28,11 @@ public class Options : MonoBehaviour
         MaxSensitivity = 3f;
         SoundVolume = PlayerPrefs.GetFloat("Sound", 0.33f);
         MusicVolume = PlayerPrefs.GetFloat("Music", 0.33f);
-        FOV = PlayerPrefs.GetFloat("FOV", 70f);
+        FOV = PlayerPrefs.GetFloat("FOV", 63f);
         SoundSlider.value = SoundVolume;
         MusicSlider.value = MusicVolume;
         FovSlider.value = FOV;
+        Quality = QualitySettings.GetQualityLevel();
     }
 
     private void Start()
@@ -69,6 +71,7 @@ public class Options : MonoBehaviour
         int oldQuality = PlayerPrefs.GetInt("Quality");
         QualitySettings.SetQualityLevel(number);
         PlayerPrefs.SetInt("Quality", number);
+        Quality = number;
 
         if (oldQuality == 2 && number != 2 && GameObject.Find("Level") != null)
         {

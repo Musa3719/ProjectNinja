@@ -23,6 +23,8 @@ public class SoundManager : MonoBehaviour
     [SerializeField]
     public AudioClip Button;
     [SerializeField]
+    public AudioClip ButtonHover;
+    [SerializeField]
     public AudioClip Jump;
     [SerializeField]
     public AudioClip Sliding;
@@ -164,6 +166,12 @@ public class SoundManager : MonoBehaviour
     private List<AudioClip> BossMusics;
 
     [SerializeField]
+    public List<AudioClip> Boss1Grunts;
+    [SerializeField]
+    public List<AudioClip> Boss2Grunts;
+    [SerializeField]
+    public List<AudioClip> Boss3Grunts;
+
     public List<AudioClip> BossGrunts;
 
     private AudioClip Boss2Phase2Music;
@@ -179,6 +187,21 @@ public class SoundManager : MonoBehaviour
     {
         _instance = this;
         int sceneNumber = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex;
+
+        switch (sceneNumber)
+        {
+            case 8:
+                BossGrunts = Boss1Grunts;
+                break;
+            case 16:
+                BossGrunts = Boss2Grunts;
+                break;
+            case 24:
+                BossGrunts = Boss3Grunts;
+                break;
+            default:
+                break;
+        }
 
         CurrentMusicObject = GameObject.Find("MusicObject");
         CurrentAtmosphereObject = GameObject.Find("AtmosphereObject");
@@ -246,9 +269,10 @@ public class SoundManager : MonoBehaviour
     /// </summary>
     public void PlayPlaneOrWallSound(PlaneSoundType type, float speed, float pitchMultiplier = 1f, float volumeMultiplier = 0.75f)
     {
+        if (Camera.main == null) return;
+
         float pitchFromSpeed = speed / 45f + 0.8f;
         pitchFromSpeed *= pitchMultiplier;
-
         switch (type)
         {
             case PlaneSoundType.Metal:

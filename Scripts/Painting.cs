@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 public class Painting : MonoBehaviour
 {
-    public string _Text;
+    /*public string _Text;
     public int _Number;
     public Sprite _Image;
 
@@ -21,8 +21,8 @@ public class Painting : MonoBehaviour
     }
     private void Update()
     {
-        /*if((GameManager._instance.PlayerRb.transform.position-transform.position).magnitude < 1.4f && InputHandler.GetButtonDown("Stamina") && !GameManager._instance.PaintingUI.activeInHierarchy)
-            OpenPainting();*/
+        if((GameManager._instance.PlayerRb.transform.position-transform.position).magnitude < 1.4f && InputHandler.GetButtonDown("Stamina") && !GameManager._instance.PaintingUI.activeInHierarchy)
+            OpenPainting();
     }
     public void OpenPainting()
     {
@@ -56,5 +56,5 @@ public class Painting : MonoBehaviour
     {
         if (Localization._instance.GetComponent<Localization>().Paintings[_Number] != null)
             _Text = Localization._instance.Paintings[_Number];
-    }
+    }*/
 }

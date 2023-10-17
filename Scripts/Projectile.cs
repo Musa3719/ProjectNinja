@@ -20,6 +20,7 @@ public class Projectile : MonoBehaviour, IKillObject
     }
 
     public Collider IgnoreCollisionCollider;
+    public GameObject Owner => IgnoreCollisionCollider == null ? null : IgnoreCollisionCollider.gameObject;
 
     public Action<Collider, Vector3> WhenTriggered;
 
@@ -71,10 +72,10 @@ public class Projectile : MonoBehaviour, IKillObject
             transform.parent.GetComponent<VisualEffect>().enabled = false;
         }
     }
-    public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude)
+    public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude, IKillObject killer)
     {
         SoundManager._instance.PlaySound(SoundManager._instance.Stab, transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-        killable.Die(dir / 2f, killersVelocityMagnitude / 2f);
+        killable.Die(dir / 2f, killersVelocityMagnitude / 2f, killer);
     }
 
     private void OnTriggerEnter(Collider other)
@@ -83,11 +84,11 @@ public class Projectile : MonoBehaviour, IKillObject
         {
             other.GetComponent<BreakableObject>().BrakeObject((transform.position - other.transform.position).normalized);
         }
-
+        
         if (other.isTrigger && !other.CompareTag("HitBox")) return;
-
+        
         if (isTrap && (other.CompareTag("Wall") || IsProp(other)) && startTime + 0.1f > Time.time) return;
-
+        
         WhenTriggered?.Invoke(other, transform.position);
     }
     private bool IsInAngle(Collider other)
@@ -134,13 +135,13 @@ public class Projectile : MonoBehaviour, IKillObject
                 if (!isTargetBlocking && !isTargetDodging)
                 {
                     if (!otherKillable.Object.CompareTag("Boss"))
-                        Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f);
+                        Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f, this);
                 }
                 else if (isTargetDodging)
                 {
                     if (otherKillable.Object.CompareTag("Enemy"))
                     {
-                        Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f);
+                        Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f, this);
                     }
                 }
                 else if (isTargetBlocking)
@@ -152,7 +153,7 @@ public class Projectile : MonoBehaviour, IKillObject
                     else
                     {
                         if (!otherKillable.Object.CompareTag("Boss"))
-                            Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f);
+                            Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f, this);
                     }
                 }
             }
@@ -240,7 +241,7 @@ public class Projectile : MonoBehaviour, IKillObject
             if (colliderKillable != null && !Killables.Contains(colliderKillable))
             {
                 Killables.Add(colliderKillable);
-                colliderKillable.Die((collider.transform.position - position).normalized, rb.velocity.magnitude);
+                colliderKillable.Die((collider.transform.position - position).normalized, rb.velocity.magnitude, this);
             }
         }
         SoundManager.ProjectileTriggeredSoundArtificial?.Invoke(position, 50f);
@@ -278,7 +279,9 @@ public class Projectile : MonoBehaviour, IKillObject
         if (IgnoreCollisionCheck(IgnoreCollisionCollider, other)) return;
         if (other == null || other.CompareTag("ProjectileTrap") || other.CompareTag("Enemy") || other.CompareTag("Boss")) return;
 
-        Instantiate(GameManager._instance.SmokePrefab, position - rb.velocity * 0.1f, Quaternion.identity);
+        GameObject obj = Instantiate(GameManager._instance.SmokePrefab, position - rb.velocity * 0.1f, Quaternion.identity);
+        if (GameManager._instance._isInBossLevel) obj.transform.localScale *= 3f;
+
         SoundManager._instance.PlaySound(SoundManager._instance.SmokeExplode, transform.position, 0.3f, false, UnityEngine.Random.Range(1.25f, 1.5f));
         Destroy(gameObject);
     }
@@ -301,13 +304,13 @@ public class Projectile : MonoBehaviour, IKillObject
                 if (!isTargetBlocking && !isTargetDodging)
                 {
                     if (!otherKillable.Object.CompareTag("Boss"))
-                        Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f);
+                        Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f, this);
                 }
                 else if (isTargetDodging)
                 {
                     if (otherKillable.Object.CompareTag("Enemy"))
                     {
-                        Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f);
+                        Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f, this);
                     }
                 }
                 else if (isTargetBlocking)
@@ -319,7 +322,7 @@ public class Projectile : MonoBehaviour, IKillObject
                     else
                     {
                         if (!otherKillable.Object.CompareTag("Boss"))
-                            Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f);
+                            Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f, this);
                     }
                 }
             }

@@ -13,9 +13,9 @@ public class RotateBlade : MonoBehaviour
         if (GameManager._instance.isGameStopped) { transform.localEulerAngles = new Vector3(transform.localEulerAngles.x, transform.localEulerAngles.y, _lastZAngle); return; }
 
         _lastSpeed = _speed;
-        _speed = Mathf.Clamp(GameManager._instance.PlayerRb.velocity.magnitude, 0.25f, 200f) * 50f;
-        if (GameManager._instance.PlayerRb.velocity.magnitude > GameManager._instance.PlayerRunningSpeed + 1f) _speed *= 1.5f;
-        if (GameManager._instance.isPlayerAttacking) _speed *= 10f;
+        _speed = Mathf.Clamp(GameManager._instance.PlayerRb.velocity.magnitude, 0.25f, 200f) * 70f;
+        if (GameManager._instance.PlayerRb.velocity.magnitude > GameManager._instance.PlayerRunningSpeed + 1f) _speed *= 4f;
+        if (GameManager._instance.isPlayerAttacking) _speed *= 30f;
 
         Vector2 tempDir = new Vector2(GameManager._instance.PlayerRb.transform.forward.x, GameManager._instance.PlayerRb.transform.forward.z);
         Vector2 tempVel = new Vector2(GameManager._instance.PlayerRb.velocity.x, GameManager._instance.PlayerRb.velocity.z);

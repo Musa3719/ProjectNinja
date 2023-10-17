@@ -23,5 +23,5 @@ public interface IKillable
     public void Stun(float time, bool isSpeedChanges, Transform otherTransform);
     public void HitBreakable(GameObject breakable);
     public void StopBlockingAndDodge();
-    public void Die(Vector3 dir, float killersVelocityMagnitude);
+    public void Die(Vector3 dir, float killersVelocityMagnitude, IKillObject killer);
 }

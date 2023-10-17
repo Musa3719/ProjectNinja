@@ -26,10 +26,10 @@ public class RotateBladeHumanoid : MonoBehaviour
 
         _lastSpeed = _speed;
         _speed = Mathf.Clamp(_rb.velocity.magnitude, 1f, 200f) * 60f;
-        if (_killable.AttackCollider.activeInHierarchy) _speed *= 8f;
+        if (_killable.AttackCollider != null && _killable.AttackCollider.activeInHierarchy) _speed *= 8f;
         else if (_rb.velocity.magnitude > 3f) _speed *= 2f;
         else if (_rb.velocity.magnitude > 7f) _speed *= 3f;
-        else if(_rb.velocity.magnitude > 10f) _speed *= 5f;
+        else if (_rb.velocity.magnitude > 10f) _speed *= 5f;
 
         if (_haveWeapon) _speed /= 5f;
 
@@ -43,5 +43,10 @@ public class RotateBladeHumanoid : MonoBehaviour
         while (getParent.parent != null)
             getParent = getParent.parent;
         return getParent;
+    }
+
+    public void DisableHaveWeapon()
+    {
+        _haveWeapon = false;
     }
 }

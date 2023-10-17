@@ -18,30 +18,37 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
     }
     public bool IsHardHitWeapon;
     private Collider IgnoreCollisionCollider;
-    private bool _isRanged;
+    public GameObject Owner => IgnoreCollisionCollider == null ? null : IgnoreCollisionCollider.gameObject;
+    public bool IsRanged;
     private bool _isDecalCreatedForThisAttack;
 
     private void Awake()
     {
-        IgnoreCollisionCollider = GetParent(transform).GetComponent<Collider>();
+        if (IgnoreCollisionCollider == null)
+            IgnoreCollisionCollider = GetParent(transform).GetComponent<Collider>();
     }
 
     private void OnEnable()
     {
         Killables.Clear();
-        _isRanged = false;
+        IsRanged = false;
         _isDecalCreatedForThisAttack = false;
     }
     public void SetIgnoreCollisionColliderForThrow(Collider col)
     {
         IgnoreCollisionCollider = col;
-        _isRanged = true;
+        IsRanged = true;
+    }
+    public void SetIgnoreCollisionColliderForTakeWeapon(Collider col)
+    {
+        IgnoreCollisionCollider = col;
+        IsRanged = false;
     }
 
-    public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude)
+    public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude, IKillObject killer)
     {
         if (IsHardHitWeapon) SoundManager._instance.PlaySound(SoundManager._instance.HardHit, transform.position, 0.25f, false, Random.Range(0.9f, 1f));
-        killable.Die(dir, killersVelocityMagnitude);
+        killable.Die(dir, killersVelocityMagnitude, killer);
     }
 
     private void OnTriggerEnter(Collider other)
@@ -112,32 +119,32 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
             bool isTargetBlocking = otherKillable.IsBlockingGetter;
             if (!isTargetBlocking && !isTargetDodging)
             {
-                Kill(otherKillable, (otherKillable.Object.transform.position- GetParent(transform).position).normalized, GetParent(transform).GetComponent<Rigidbody>().velocity.magnitude);
+                Kill(otherKillable, (otherKillable.Object.transform.position - GetParent(transform).position).normalized, GetParent(transform).GetComponent<Rigidbody>().velocity.magnitude, this);
             }
             else if (isTargetDodging)
             {
                 if (otherKillable.Object.CompareTag("Enemy"))
                 {
-                    Kill(otherKillable, (otherKillable.Object.transform.position - GetParent(transform).position).normalized, GetParent(transform).GetComponent<Rigidbody>().velocity.magnitude);
+                    Kill(otherKillable, (otherKillable.Object.transform.position - GetParent(transform).position).normalized, GetParent(transform).GetComponent<Rigidbody>().velocity.magnitude, this);
                 }
             }
             else if (isTargetBlocking)
             {
                 if (IsInAngle(other))
                 {
-                    if (_isRanged) return;
+                    if (IsRanged) return;
                     otherKillable.DeflectWithBlock((GetParent(transform).position - otherKillable.Object.transform.position).normalized, IgnoreCollisionCollider.GetComponent<IKillable>(), false);
                 }
                 else
                 {
                     if (otherKillable.Object.CompareTag("Boss"))
                     {
-                        if (_isRanged) return;
+                        if (IsRanged) return;
                         otherKillable.StopBlockingAndDodge();
                     }
                     else
                     {
-                        Kill(otherKillable, (other.transform.position - GetParent(transform).position).normalized, GetParent(transform).GetComponent<Rigidbody>().velocity.magnitude);
+                        Kill(otherKillable, (other.transform.position - GetParent(transform).position).normalized, GetParent(transform).GetComponent<Rigidbody>().velocity.magnitude, this);
                     }
                 }
             }

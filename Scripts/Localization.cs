@@ -16,7 +16,6 @@ public class Localization : MonoBehaviour
     public Language _ActiveLanguage { get; private set; }
 
     public List<string> Newspapers;
-    public List<string> Paintings;
     public List<string> Dialogues;
     public List<string> UI;
     public List<string> Tutorial;
@@ -28,7 +27,6 @@ public class Localization : MonoBehaviour
         _instance = this;
         _ActiveLanguage = (Language)PlayerPrefs.GetInt("Language", 0);
         Newspapers = new List<string>();
-        Paintings = new List<string>();
         Dialogues = new List<string>();
         UI = new List<string>();
         Tutorial = new List<string>();
@@ -53,7 +51,6 @@ public class Localization : MonoBehaviour
     private void LocalizeTexts()
     {
         ArrangeList("/Newspapers/", Newspapers);
-        ArrangeList("/Paintings/", Paintings);
         ArrangeList("/Dialogues/", Dialogues);
         ArrangeList("/Tutorial/", Tutorial);
         ArrangeUI();
