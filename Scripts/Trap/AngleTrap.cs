@@ -9,8 +9,9 @@ public class AngleTrap : MonoBehaviour, ITrap, IKillObject
     [SerializeField]
     private bool _checkForActivate;
     public bool _CheckForActivate { get { return _checkForActivate; } set { _checkForActivate = value; } }
+    public GameObject Owner => gameObject;
 
-    
+
     void Update()
     {
         if (!_Activated && _CheckForActivate)
@@ -25,16 +26,16 @@ public class AngleTrap : MonoBehaviour, ITrap, IKillObject
         _Activated = true;
     }
 
-    public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude)
+    public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude, IKillObject killer)
     {
-        killable.Die(dir, killersVelocityMagnitude);
+        killable.Die(dir, killersVelocityMagnitude, killer);
     }
     
     private void OnTriggerEnter(Collider other)
     {
         if (_Activated && other != null && other.CompareTag("HitBox"))
         {
-            Kill(GameManager._instance.GetHitBoxIKillable(other), Vector3.zero, 0f);
+            Kill(GameManager._instance.GetHitBoxIKillable(other), Vector3.zero, 0f, this);
         }
     }
 

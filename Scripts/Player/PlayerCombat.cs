@@ -44,13 +44,17 @@ public class PlayerCombat : MonoBehaviour, IKillable
     private BoxCollider _leftAttackColliderForLeap;
     private int _interruptAttackCounter;
 
-    private MeleeWeapon _meleeWeapon;
+    private MeleeWeapon _blades;
+
+    public GameObject MeleeWeapon;
 
     public List<IThrowableItem> _ThrowableInventory { get; private set; }
     public IThrowableItem _CurrentThrowableItem { get; set; }
 
     private Coroutine _isBlockedOrDeflectedCoroutine;
     private Coroutine _customPassOpenCoroutine;
+    private Coroutine _attackMoveCoroutine;
+    private Coroutine _dropWeaponStartCoroutine;
 
     public bool _IsStunned { get; private set; }
 
@@ -91,12 +95,14 @@ public class PlayerCombat : MonoBehaviour, IKillable
     private float _crashStunCheckValue;
     public float CollisionVelocity;
 
+    private GameObject _illusion;
+    private Vector3 _weaponScale;
     private void Awake()
     {
         _instance = this;
         _collider = GetComponent<CapsuleCollider>();
         _ThrowableInventory = new List<IThrowableItem>();
-        _meleeWeapon = _attackCollider.GetComponent<MeleeWeapon>();
+        _blades = _attackCollider.GetComponent<MeleeWeapon>();
         _isAllowedToBlock = true;
         _isAllowedToDodge = true;
         _isAllowedToAttack = true;
@@ -213,7 +219,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
         {
             if (PlayerMovement._instance._Stamina < PlayerMovement._instance._blockedStaminaUse)
             {
-                Die(dir, attacker.Object.GetComponent<Rigidbody>().velocity.magnitude);
+                Die(dir, attacker.Object.GetComponent<Rigidbody>().velocity.magnitude, null);
                 return;
             }
 
@@ -308,31 +314,224 @@ public class PlayerCombat : MonoBehaviour, IKillable
         _IsBlockedOrDeflected = false;
     }
 
+    public void TakeWeapon()
+    {
+        if (MeleeWeapon != null) return;
+
+        MeleeWeaponForPlayer meleeWeaponForPlayer = null;
+        RaycastHit[] hits = new RaycastHit[9];
+        Physics.Raycast(Camera.main.transform.position + Camera.main.transform.forward / 4f, Camera.main.transform.forward, out hits[0], 4f);
+        Physics.Raycast(Camera.main.transform.position + Camera.main.transform.forward / 4f + transform.right / 5f, Camera.main.transform.forward, out hits[1], 4f);
+        Physics.Raycast(Camera.main.transform.position + Camera.main.transform.forward / 4f - transform.right / 5f, Camera.main.transform.forward, out hits[2], 4f);
+        Physics.Raycast(Camera.main.transform.position + Camera.main.transform.forward / 4f + transform.up / 5f, Camera.main.transform.forward, out hits[3], 4f);
+        Physics.Raycast(Camera.main.transform.position + Camera.main.transform.forward / 4f - transform.up / 5f, Camera.main.transform.forward, out hits[4], 4f);
+        Physics.Raycast(Camera.main.transform.position + Camera.main.transform.forward / 4f + transform.right / 5f + transform.up / 5f, Camera.main.transform.forward, out hits[5], 4f);
+        Physics.Raycast(Camera.main.transform.position + Camera.main.transform.forward / 4f - transform.right / 5f + transform.up / 5f, Camera.main.transform.forward, out hits[6], 4f);
+        Physics.Raycast(Camera.main.transform.position + Camera.main.transform.forward / 4f + transform.right / 5f - transform.up / 5f, Camera.main.transform.forward, out hits[7], 4f);
+        Physics.Raycast(Camera.main.transform.position + Camera.main.transform.forward / 4f - transform.right / 5f - transform.up / 5f, Camera.main.transform.forward, out hits[8], 4f);
+        foreach (var hit in hits)
+        {
+            if (hit.transform != null && hit.transform.GetComponent<MeleeWeaponForPlayer>() != null)
+            {
+                meleeWeaponForPlayer = hit.transform.GetComponent<MeleeWeaponForPlayer>();
+                break;
+            }
+            else if (hit.transform != null && hit.transform.parent != null && hit.transform.parent.GetComponent<MeleeWeaponForPlayer>() != null)
+            {
+                meleeWeaponForPlayer = hit.transform.parent.GetComponent<MeleeWeaponForPlayer>();
+                break;
+            }
+        }
+
+        if (meleeWeaponForPlayer == null) return;
+
+        MeleeWeapon = meleeWeaponForPlayer.gameObject;
+        _weaponScale = MeleeWeapon.transform.localScale;
+        MeleeWeapon.GetComponentInChildren<MeshRenderer>().renderingLayerMask = 1;
+        MeleeWeapon.transform.parent = GameManager._instance.PlayerRightHandHolder;
+
+        MeleeWeapon.transform.Find("AttackCollider").GetComponent<MeleeWeapon>().SetIgnoreCollisionColliderForTakeWeapon(_collider);
+
+        if (MeleeWeapon.GetComponentInChildren<Collider>() != null)
+            Destroy(MeleeWeapon.GetComponentInChildren<Collider>());
+        if (MeleeWeapon.GetComponentInChildren<Rigidbody>() != null)
+            Destroy(MeleeWeapon.GetComponentInChildren<Rigidbody>());
+        if (MeleeWeapon.GetComponentInChildren<MeleeWeaponThrowed>() != null)
+            Destroy(MeleeWeapon.GetComponentInChildren<MeleeWeaponThrowed>());
+
+        MeleeWeapon.transform.Find("AttackCollider").gameObject.SetActive(false);
+        MeleeWeapon.transform.Find("AttackColliderWarning").gameObject.SetActive(false);
+
+        switch (meleeWeaponForPlayer.WeaponType)
+        {
+            case MeleeWeaponType.Sword:
+                MeleeWeapon.transform.localPosition = new Vector3(0.00136f, 0.00403f, 0.00045f);
+                MeleeWeapon.transform.localEulerAngles = new Vector3(7.847f, 12.163f, 95.998f);
+                break;
+            case MeleeWeaponType.Katana:
+                MeleeWeapon.transform.localPosition = new Vector3(-0.00019f, 0.00416f, 0.00119f);
+                MeleeWeapon.transform.localEulerAngles = new Vector3(89.158f, 111.111f, 192.244f);
+                MeleeWeapon.transform.localScale = new Vector3(4f, 4f, 4f);
+                break;
+            case MeleeWeaponType.Mace:
+                MeleeWeapon.transform.localPosition = new Vector3(0f, 0f, 0f);
+                MeleeWeapon.transform.localEulerAngles = new Vector3(0f, 0f, 0f);
+                break;
+            case MeleeWeaponType.Hammer:
+                MeleeWeapon.transform.localPosition = new Vector3(0f, 0f, 0f);
+                MeleeWeapon.transform.localEulerAngles = new Vector3(0f, 0f, 0f);
+                break;
+            case MeleeWeaponType.Axe:
+                MeleeWeapon.transform.localPosition = new Vector3(0f, 0f, 0f);
+                MeleeWeapon.transform.localEulerAngles = new Vector3(0f, 0f, 0f);
+                break;
+            case MeleeWeaponType.Zweihander:
+                MeleeWeapon.transform.localPosition = new Vector3(0f, 0f, 0f);
+                MeleeWeapon.transform.localEulerAngles = new Vector3(0f, 0f, 0f);
+                break;
+            default:
+                break;
+        }
+        MeleeWeapon.GetComponentInChildren<MeshRenderer>().gameObject.layer = LayerMask.NameToLayer("HandMesh");
+    }
+    public void DropWeaponStart()
+    {
+        if (_dropWeaponStartCoroutine != null)
+            StopCoroutine(_dropWeaponStartCoroutine);
+        _dropWeaponStartCoroutine = StartCoroutine(DropWeaponStartCoroutine());
+    }
+    private IEnumerator DropWeaponStartCoroutine()
+    {
+        PlayerStateController._instance.ChangeAnimation("ThrowWeaponStart");
+        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Wait());
+
+        float startTime = Time.time;
+        while (InputHandler.GetButton("WeaponChange"))
+        {
+            yield return null;
+        }
+        DropWeapon(Time.time - startTime + 1f);
+    }
+    private void DropWeapon(float power)
+    {
+        power = Mathf.Clamp(power, 1f, 3f);
+
+        PlayerStateController._instance.ChangeAnimation("ThrowWeapon");
+        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.8f));
+
+        MeleeWeapon.transform.parent = null;
+        MeleeWeapon.GetComponentInChildren<MeshRenderer>().renderingLayerMask = 257;
+
+        if (MeleeWeapon.transform.Find("AttackCollider") != null)
+            if (power > 2f)
+                MeleeWeapon.transform.Find("AttackCollider").gameObject.SetActive(true);
+            else
+                MeleeWeapon.transform.Find("AttackCollider").gameObject.SetActive(false);
+
+        if (MeleeWeapon.GetComponentInChildren<MeshRenderer>() != null)
+            MeleeWeapon.GetComponentInChildren<MeshRenderer>().gameObject.AddComponent(typeof(MeshCollider)).GetComponent<MeshCollider>().convex = true;
+        else
+            MeleeWeapon.AddComponent(typeof(BoxCollider));
+
+        Rigidbody rb = (Rigidbody)MeleeWeapon.AddComponent(typeof(Rigidbody));
+        MeleeWeaponThrowed weaponInAir = (MeleeWeaponThrowed)MeleeWeapon.AddComponent(typeof(MeleeWeaponThrowed));
+        weaponInAir.IgnoreCollisionCollider = _collider;
+        rb.useGravity = true;
+        rb.isKinematic = false;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+
+        switch (MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().WeaponType)
+        {
+            case MeleeWeaponType.Sword:
+                power *= 0.8f;
+                break;
+            case MeleeWeaponType.Katana:
+                power *= 0.9f;
+                break;
+            case MeleeWeaponType.Mace:
+                power *= 0.8f;
+                break;
+            case MeleeWeaponType.Hammer:
+                power *= 0.7f;
+                break;
+            case MeleeWeaponType.Axe:
+                power *= 0.6f;
+                break;
+            case MeleeWeaponType.Zweihander:
+                power *= 0.6f;
+                break;
+            default:
+                break;
+        }
+
+        rb.velocity = Camera.main.transform.forward * 15f * power + Vector3.up * 1f * power;
+        rb.angularVelocity = power * MeleeWeapon.transform.forward * -7f;
+
+        MeleeWeapon.GetComponentInChildren<MeshRenderer>().gameObject.layer = LayerMask.NameToLayer("Default");
+        MeleeWeapon.transform.localScale = _weaponScale;
+
+        MeleeWeapon = null;
+    }
+    #region Attacks
+    public void DashAttack()
+    {
+        if (!_isAllowedToAttack) return;
+
+        if (MeleeWeapon != null && MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().IsTeleportWeapon())
+        {
+            if (_attackMoveCoroutine != null)
+                StopCoroutine(_attackMoveCoroutine);
+            _attackMoveCoroutine = StartCoroutine(AttackTeleportCoroutine(true));
+        }
+        else
+        {
+            if (_attackMoveCoroutine != null)
+                StopCoroutine(_attackMoveCoroutine);
+            _attackMoveCoroutine = StartCoroutine(AttackTeleportCoroutine(false));
+        }
+    }
     public void Attack()
     {
         if (!_isAllowedToAttack) return;
 
-        string attackName = GetAttackName();
+        if (MeleeWeapon != null)
+        {
+            if (_attackMoveCoroutine != null)
+                StopCoroutine(_attackMoveCoroutine);
+            _attackMoveCoroutine = StartCoroutine(AttackWithWeaponNormal());
+        }
+        else
+        {
+            if (_attackMoveCoroutine != null)
+                StopCoroutine(_attackMoveCoroutine);
+            _attackMoveCoroutine = StartCoroutine(AttackWithBladesNormal());
+        }
+    }
+    private IEnumerator AttackWithBladesNormal()
+    {
+        PlayerMovement._instance.AttackMoveNormal(PlayerStateController._instance._rb);
+
+        yield return new WaitWhile(() => PlayerMovement._instance._isOnAttackOrAttackDeflectedMove);
+
+        string attackName = GetAttackNameBladeNormal();
 
         PlayerMovement._instance._Stamina -= PlayerMovement._instance._attackStaminaUse;
         _isAllowedToAttack = false;
         PlayerCombat._instance._IsAttacking = true;
 
-        CameraController._instance.GetComponentInChildren<Animator>().CrossFade("Camera" + attackName, 0.15f);
+        //CameraController._instance.GetComponentInChildren<Animator>().CrossFade("Camera" + attackName, 0.15f);
 
         GameManager._instance.PlayerAttackHandle();
         GameObject aimAssistedEnemy = GameManager._instance.CheckForAimAssist();
         if (aimAssistedEnemy != null)
         {
             PlayerMovement._instance.AimAssistToEnemy(aimAssistedEnemy);
-            //Vector3 temp = CameraController._instance.transform.eulerAngles;
-            //CameraController._instance.transform.LookAt(aimAssistedEnemy.transform.position);
-            //CameraController._instance.transform.eulerAngles = new Vector3(temp.x, CameraController._instance.transform.eulerAngles.y, temp.z);
         }
 
         float localAttackWaitTime = _attackWaitTime;
         if (_lastDeflectedTime + 1.75f > Time.time || _isImmune)
-            localAttackWaitTime /= 1.3f;
+            localAttackWaitTime /= 2f;
         GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; _isAllowedToAttack = true; }, localAttackWaitTime);
 
         PlayerStateController._instance.ChangeAnimation(attackName);
@@ -340,33 +539,147 @@ public class PlayerCombat : MonoBehaviour, IKillable
         SoundManager._instance.PlaySound(SoundManager._instance.BladeSlide, transform.position, 0.12f, false, UnityEngine.Random.Range(0.65f, 0.75f));
 
 
-        /*GameManager._instance.CallForAction(() =>
+        if (_attackColliderWarning.gameObject.activeSelf)
+            _attackColliderWarning.gameObject.SetActive(false);
+        _attackColliderWarning.gameObject.SetActive(true);
+
+        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackColliderWarning.gameObject.SetActive(false); }, _attackTime * 0.37f);
+
+        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(true); CameraController.ShakeCamera(3f, 2.5f, 0.2f, 0.4f); }, _attackTime * 0.32f);
+
+        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(false); }, _attackTime * 0.37f);
+
+        GameManager._instance.CallForAction(() => { if (IsDead) return; PlayerCombat._instance._IsAttacking = false; }, _attackTime * 0.9f);
+    }
+    private IEnumerator AttackWithWeaponNormal()
+    {
+        PlayerMovement._instance.AttackMoveNormal(PlayerStateController._instance._rb);
+
+        yield return new WaitWhile(() => PlayerMovement._instance._isOnAttackOrAttackDeflectedMove);
+
+        string attackName = GetAttackNameWeapon(false);
+
+        PlayerMovement._instance._Stamina -= PlayerMovement._instance._attackStaminaUse;
+        _isAllowedToAttack = false;
+        PlayerCombat._instance._IsAttacking = true;
+
+        //CameraController._instance.GetComponentInChildren<Animator>().CrossFade("Camera" + attackName, 0.15f);
+
+        GameManager._instance.PlayerAttackHandle();
+        GameObject aimAssistedEnemy = GameManager._instance.CheckForAimAssist();
+        if (aimAssistedEnemy != null)
         {
-            if (_attackColliderWarning.gameObject.activeSelf)
-                _attackColliderWarning.gameObject.SetActive(false);
-            _attackColliderWarning.gameObject.SetActive(true);
-        }, _attackTime * 5f / 9f);*/
+            PlayerMovement._instance.AimAssistToEnemy(aimAssistedEnemy);
+        }
+
+        float localAttackWaitTime = _attackWaitTime;
+        if (_lastDeflectedTime + 1.75f > Time.time || _isImmune)
+            localAttackWaitTime /= 2f;
+        GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; _isAllowedToAttack = true; }, localAttackWaitTime);
+
+        PlayerStateController._instance.ChangeAnimation(attackName);
+        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.075f, false, UnityEngine.Random.Range(1f, 1.1f)), 0.2f);
 
         if (_attackColliderWarning.gameObject.activeSelf)
             _attackColliderWarning.gameObject.SetActive(false);
         _attackColliderWarning.gameObject.SetActive(true);
 
-        /*if (!PlayerMovement._instance.IsTouchingAnyWall() && !PlayerMovement._instance.IsTouchingAnyProp())
+        CameraController.ShakeCamera(4f, 3f, 0.2f, 0.5f); 
+
+        GameManager._instance.CallForAction(() => { if (IsDead) return; PlayerCombat._instance._IsAttacking = false; _attackColliderWarning.gameObject.SetActive(false); }, _attackTime * 0.9f);
+    }
+    private IEnumerator AttackTeleportCoroutine(bool isWeapon)
+    {
+        if (_illusion != null) Destroy(_illusion);
+
+        GameManager._instance.SlowTime();
+        PlayerMovement._instance._Stamina -= PlayerMovement._instance._attackStaminaUse * 2.5f;
+        float teleportDistance = 0f;
+        _illusion = GameObject.Instantiate(GameManager._instance.TeleportIllusion, transform.position, Quaternion.identity);
+        float rayDistance = 4f;
+        while (InputHandler.GetButton("MiddleMouse"))
         {
-            GameManager._instance.CustomPassForHands.enabled = false;
-            if (_customPassOpenCoroutine != null)
-                StopCoroutine(_customPassOpenCoroutine);
-            _customPassOpenCoroutine = StartCoroutine(CustomPassOpenCoroutine(_attackTime));
-        }*/
-       
+            rayDistance += Time.unscaledDeltaTime * 4f;
+            rayDistance = Mathf.Clamp(rayDistance, 4f, 14f);
+            Physics.Raycast(transform.position, Camera.main.transform.forward, out RaycastHit hit, rayDistance);
+            if (hit.collider != null)
+                teleportDistance = (hit.point - transform.position).magnitude;
+            else
+                teleportDistance = rayDistance;
+            _illusion.transform.position = transform.position + Camera.main.transform.forward * teleportDistance;
+            _illusion.transform.LookAt(Camera.main.transform);
+            yield return null;
+        }
+        Destroy(_illusion);
+        GameManager._instance.TimeStopEndSignal = true;
+        if (isWeapon)
+            AttackWithWeaponTeleport(teleportDistance);
+        else
+            AttackWithBladesTeleport(teleportDistance);
+    }
+    private void AttackWithBladesTeleport(float teleportDistance)
+    {
+        PlayerMovement._instance.AttackMoveTeleport(PlayerStateController._instance._rb, teleportDistance);
+
+        string attackName = GetAttackNameBladeTeleport();
+
+        _isAllowedToAttack = false;
+        PlayerCombat._instance._IsAttacking = true;
+
+        GameManager._instance.PlayerAttackHandle();
+
+        float localAttackWaitTime = _attackWaitTime;
+        if (_lastDeflectedTime + 1.75f > Time.time || _isImmune)
+            localAttackWaitTime /= 2f;
+        GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; _isAllowedToAttack = true; }, localAttackWaitTime);
+
+        PlayerStateController._instance.ChangeAnimation(attackName);
+        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.075f, false, UnityEngine.Random.Range(1f, 1.1f)), 0.2f);
+        SoundManager._instance.PlaySound(SoundManager._instance.BladeSlide, transform.position, 0.12f, false, UnityEngine.Random.Range(0.65f, 0.75f));
+
+
+        if (_attackColliderWarning.gameObject.activeSelf)
+            _attackColliderWarning.gameObject.SetActive(false);
+        _attackColliderWarning.gameObject.SetActive(true);
+
         GameManager._instance.CallForAction(() => { if (IsDead) return; _attackColliderWarning.gameObject.SetActive(false); }, _attackTime * 0.37f);
 
-        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(true); CameraController.ShakeCamera(2.5f, 2f, 0.2f, 0.4f); GameManager._instance.BlurVolume.enabled = true; }, _attackTime * 0.32f);
+        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(true); CameraController.ShakeCamera(2.5f, 2f, 0.2f, 0.4f);  }, _attackTime * 0.32f);
 
-        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(false); GameManager._instance.BlurVolume.enabled = false; }, _attackTime * 0.37f);
+        GameManager._instance.CallForAction(() => { if (IsDead) return; _attackCollider.gameObject.SetActive(false);  }, _attackTime * 0.37f);
 
         GameManager._instance.CallForAction(() => { if (IsDead) return; PlayerCombat._instance._IsAttacking = false; }, _attackTime * 0.9f);
     }
+    private void AttackWithWeaponTeleport(float teleportDistance)
+    {
+        PlayerMovement._instance.AttackMoveTeleport(PlayerStateController._instance._rb, teleportDistance);
+
+        string attackName = GetAttackNameWeapon(true);
+
+        _isAllowedToAttack = false;
+        PlayerCombat._instance._IsAttacking = true;
+
+        GameManager._instance.PlayerAttackHandle();
+
+        float localAttackWaitTime = _attackWaitTime;
+        if (_lastDeflectedTime + 1.75f > Time.time || _isImmune)
+            localAttackWaitTime /= 2f;
+        GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; _isAllowedToAttack = true; }, localAttackWaitTime);
+
+        PlayerStateController._instance.ChangeAnimation(attackName);
+        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.075f, false, UnityEngine.Random.Range(1f, 1.1f)), 0.2f);
+
+        if (_attackColliderWarning.gameObject.activeSelf)
+            _attackColliderWarning.gameObject.SetActive(false);
+        _attackColliderWarning.gameObject.SetActive(true);
+
+        CameraController.ShakeCamera(4f, 3f, 0.2f, 0.5f);
+
+        GameManager._instance.CallForAction(() => { if (IsDead) return; PlayerCombat._instance._IsAttacking = false; _attackColliderWarning.gameObject.SetActive(false); }, _attackTime * 0.9f);
+    }
+
+
+    #endregion
     private IEnumerator CustomPassOpenCoroutine(float time)
     {
         yield return new WaitForSeconds(time);
@@ -497,7 +810,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
 
         GameManager._instance.CallForAction(() => { _IsStunned = false; }, time);
         PlayerStateController._instance.ChangeAnimation("Stun");
-        SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.1f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.2f));
     }
     public void HitBreakable(GameObject breakable)
@@ -532,7 +845,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
 
         return "AttackDeflected" + UnityEngine.Random.Range(1, 3).ToString();
     }
-    public string GetAttackName()
+    public string GetAttackNameBladeNormal()
     {
         SelectAttackType();
         if (_attackType == AttackType.Both)
@@ -550,6 +863,26 @@ public class PlayerCombat : MonoBehaviour, IKillable
                 return "RightAttack" + random.ToString();
         }
     }
+    public string GetAttackNameBladeTeleport()
+    {
+        SelectAttackType();
+        if (_attackType == AttackType.Both)
+        {
+            return "Attack3";
+        }
+        else
+        {
+            if (_attackType == AttackType.Left)
+                return "LeftAttack3";
+            else
+                return "RightAttack3";
+        }
+    }
+    public string GetAttackNameWeapon(bool isTeleport)
+    {
+        return "";
+    }
+    
     public string GetThrowName()
     {
         bool isLeft = false;
@@ -576,7 +909,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
         }
     }
     
-    public void Die(Vector3 dir, float killersVelocityMagnitude)
+    public void Die(Vector3 dir, float killersVelocityMagnitude, IKillObject killer)
     {
         if (GameManager._instance.isPlayerDead) return;
 
@@ -610,10 +943,16 @@ public class PlayerCombat : MonoBehaviour, IKillable
     }
     public void OpenAttackCollider()
     {
+        if (MeleeWeapon == null) return;
 
+        GameObject attackCollider = MeleeWeapon.transform.Find("AttackCollider").gameObject;
+        attackCollider.SetActive(true); CameraController.ShakeCamera(2.5f, 2f, 0.2f, 0.4f); 
     }
     public void CloseAttackCollider()
     {
+        if (MeleeWeapon == null) return;
 
+        GameObject attackCollider = MeleeWeapon.transform.Find("AttackCollider").gameObject;
+        attackCollider.gameObject.SetActive(false); 
     }
 }

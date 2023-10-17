@@ -33,7 +33,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
     public bool IsDead => _enemyStateController._isDead;
     public bool IsBlockingGetter => _IsBlocking;
     public bool IsDodgingGetter => _IsDodging;
-    public GameObject AttackCollider => _attackCollider.gameObject;
+    public GameObject AttackCollider { get { if (_attackCollider == null) return null; return _attackCollider.gameObject; } }
     public int InterruptAttackCounterGetter => _interruptAttackCounter;
     public float _CollisionVelocity => _collisionVelocity;
 
@@ -113,10 +113,15 @@ public class EnemyCombat : MonoBehaviour, IKillable
     private float _crashStunCheckValue;
     private float _collisionVelocity;
 
+    private Dictionary<string, string> _rbOfJoint;
+    private Dictionary<string, float> _massOfRb;
     private void Awake()
     {
         _enemyStateController = GetComponent<EnemyStateController>();
         _collider = GetComponent<CapsuleCollider>();
+
+        _rbOfJoint = new Dictionary<string, string>();
+        _massOfRb = new Dictionary<string, float>();
 
         _IsAllowedToAttack = true;
         _IsAllowedToThrow = true;
@@ -263,12 +268,20 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 _enemyStateController._enemyMovement._runSpeed = 8f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.BowPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
-                _weaponObject.transform.localPosition = new Vector3(-0.007174938f, -0.01599412f, -0.02786018f);
-                _weaponObject.transform.localEulerAngles = new Vector3(77.399f, -213.311f, -14.257f);
                 _enemyStateController._enemyAI.SetValuesForAI(50f, 0.6f, 1f, 0.2f, 0f);
                 _IsRanged = true;
                 transform.Find("RangedWeapon").gameObject.SetActive(true);
                 _rangedWeapon = GetComponentInChildren<RangedWeapon>();
+                if (_enemyStateController.EnemyNumber == 3)
+                {
+                    _weaponObject.transform.localPosition = new Vector3(-0.001922454f, -0.03527873f, -0.03264877f);
+                    _weaponObject.transform.localEulerAngles = new Vector3(81.258f, 190.303f, 84.48f);
+                }
+                else
+                {
+                    _weaponObject.transform.localPosition = new Vector3(-0.007174938f, -0.01599412f, -0.02786018f);
+                    _weaponObject.transform.localEulerAngles = new Vector3(77.399f, -213.311f, -14.257f);
+                }
                 break;
             case WeaponTypeEnum.Crossbow:
                 _attackRange = 12f;
@@ -276,25 +289,41 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 _enemyStateController._enemyMovement._runSpeed = 7.5f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.CrossbowPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
-                _weaponObject.transform.localPosition = new Vector3(0.155f, 0.075f, -0.093f);
-                _weaponObject.transform.localEulerAngles = new Vector3(2.278f, -60.697f, -34.288f);
                 _enemyStateController._enemyAI.SetValuesForAI(60f, 0.3f, 1f, 0.2f, 0f);
                 _IsRanged = true;
                 transform.Find("RangedWeapon").gameObject.SetActive(true);
                 _rangedWeapon = GetComponentInChildren<RangedWeapon>();
+                if (_enemyStateController.EnemyNumber == 3)
+                {
+                    _weaponObject.transform.localPosition = new Vector3(0.034f, 0.009f, 0.23f);
+                    _weaponObject.transform.localEulerAngles = new Vector3(-3.926f, -176.243f, 8.143f);
+                }
+                else
+                {
+                    _weaponObject.transform.localPosition = new Vector3(0.155f, 0.075f, -0.093f);
+                    _weaponObject.transform.localEulerAngles = new Vector3(2.278f, -60.697f, -34.288f);
+                }
                 break;
             case WeaponTypeEnum.Gun:
-                _attackRange = 7f;
+                _attackRange = 10f;
                 _enemyStateController._enemyMovement._moveSpeed = 6f * _enemyTypeSpeedMultiplier;
                 _enemyStateController._enemyMovement._runSpeed = 14f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.GunPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
-                _weaponObject.transform.localPosition = new Vector3(0.085f, 0.02f, -0.022f);
-                _weaponObject.transform.localEulerAngles = new Vector3(82.834f, -74.831f, 86.947f);
                 _enemyStateController._enemyAI.SetValuesForAI(70f, 0.4f, 1f, 0.2f, 0f);
                 _IsRanged = true;
                 transform.Find("RangedWeapon").gameObject.SetActive(true);
                 _rangedWeapon = GetComponentInChildren<RangedWeapon>();
+                if (_enemyStateController.EnemyNumber == 3)
+                {
+                    _weaponObject.transform.localPosition = new Vector3(0.019f, -0.007f, 0.101f);
+                    _weaponObject.transform.localEulerAngles = new Vector3(88.114f, -205.657f, 51.895f);
+                }
+                else
+                {
+                    _weaponObject.transform.localPosition = new Vector3(0.085f, 0.02f, -0.022f);
+                    _weaponObject.transform.localEulerAngles = new Vector3(82.834f, -74.831f, 86.947f);
+                }
                 break;
             case WeaponTypeEnum.Katana:
                 _attackRange = 9f;
@@ -672,6 +701,11 @@ public class EnemyCombat : MonoBehaviour, IKillable
     }
     public IEnumerator AttackPatternCoroutine(List<string> patternNumbers)
     {
+        while (_enemyStateController._agent.velocity.magnitude > 7.5f) 
+        {
+            _enemyStateController._agent.speed = 0f;
+            yield return null;
+        }
         _lastAttackNumberForPattern = -1;
         int c = 0;
         float lastTimeAttacked = Time.time;
@@ -687,11 +721,11 @@ public class EnemyCombat : MonoBehaviour, IKillable
             }
             if (c == 0)
             {
-                GameManager._instance.CallForAction(() => _enemyStateController._enemyMovement.MoveAfterAttack(true), 0.05f);
+                GameManager._instance.CallForAction(() => _enemyStateController._enemyMovement.MoveAfterAttack(true), 0.225f);
             }
             else
             {
-                GameManager._instance.CallForAction(() => _enemyStateController._enemyMovement.MoveAfterAttack(false), 0.05f);
+                GameManager._instance.CallForAction(() => _enemyStateController._enemyMovement.MoveAfterAttack(false), 0.225f);
             }
 
             if (_lastAttackNumberForPattern == -1)
@@ -849,7 +883,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
             yield return null;
 
         float startTime = Time.time;
-        while(startTime + 0.55f > Time.time)
+        while(startTime + 0.4f > Time.time)
         {
             RangedAttackLookToPlayer();
             yield return null;
@@ -909,7 +943,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
     {
         _rangedWarning.SetActive(true);
 
-        float aimTime = UnityEngine.Random.Range(0.7f, 2.2f);
+        float aimTime = UnityEngine.Random.Range(0.45f, 1.55f);
         float startTime = Time.time;
         while (startTime + aimTime > Time.time)
         {
@@ -1029,7 +1063,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
         SoundManager._instance.PlaySound(SoundManager._instance.Throw, transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
     }
 
-    public void Die(Vector3 dir, float killersVelocityMagnitude)
+    public void Die(Vector3 dir, float killersVelocityMagnitude, IKillObject killer)
     {
         if (IsDead) return;
 
@@ -1042,10 +1076,6 @@ public class EnemyCombat : MonoBehaviour, IKillable
 
         _enemyStateController._isDead = true;
 
-        if (!GameManager._instance._isInBossLevel && !GameManager._instance.isPlayerDead)
-        {
-            GameManager._instance.EnemyDied();
-        }
         GameManager._instance.allEnemies.Remove(gameObject);
 
         //_enemyStateController._animator.SetTrigger("Death");
@@ -1077,10 +1107,23 @@ public class EnemyCombat : MonoBehaviour, IKillable
         GetComponent<Rigidbody>().velocity = Vector3.zero;
         ActivateRagdoll(dir, killersVelocityMagnitude, currentVelocity);
 
-        if (!GameManager._instance.isPlayerDead)
+        if (!GameManager._instance._isInBossLevel && !GameManager._instance.isPlayerDead)
         {
-            GameManager._instance.SlowTime(0.6f);
-            //GameManager._instance.ActivateWarningUI();
+            bool isKilledByPlayer = false;
+            if (killer != null && killer.Owner != null && killer.Owner.CompareTag("Player"))
+                isKilledByPlayer = true;
+            MakeDeathSoundForEnemies();
+            GameManager._instance.EnemyDied(isKilledByPlayer);
+        }
+    }
+    private void MakeDeathSoundForEnemies()
+    {
+        foreach (var item in GameManager._instance.allEnemies)
+        {
+            if (item.GetComponent<EnemyAI>() != null && (item.transform.position - transform.position).magnitude < 22.5f && MathF.Abs(item.transform.position.y - transform.position.y) < 2.5f)
+            {
+                item.GetComponent<EnemyAI>().HearArtificialSound(transform.position);
+            }
         }
     }
     private void ArrangeRagdoll()
@@ -1097,8 +1140,16 @@ public class EnemyCombat : MonoBehaviour, IKillable
             collider.GetComponent<Rigidbody>().isKinematic = true;
             collider.GetComponent<Rigidbody>().interpolation = RigidbodyInterpolation.Interpolate;
             collider.GetComponent<Rigidbody>().collisionDetectionMode = CollisionDetectionMode.Continuous;
+
+            if (collider.gameObject.name != "CC_Base_Pelvis")
+                _rbOfJoint.Add(collider.name, collider.gameObject.GetComponent<CharacterJoint>().connectedBody.name);
+            _massOfRb.Add(collider.name, collider.gameObject.GetComponent<Rigidbody>().mass);
+
             collider.gameObject.tag = "HitBox";
             collider.gameObject.layer = LayerMask.NameToLayer("TriggerHitBox");
+
+            Destroy(collider.gameObject.GetComponent<Joint>());
+            Destroy(collider.gameObject.GetComponent<Rigidbody>());
         }
     }
     private void ActivateRagdoll(Vector3 dir, float killersVelocityMagnitude, Vector3 currentVelocity)
@@ -1131,6 +1182,11 @@ public class EnemyCombat : MonoBehaviour, IKillable
 
         foreach (var collider in _ragdollColliders)
         {
+            if (collider.gameObject.layer == LayerMask.NameToLayer("Ignore Raycast")) continue;
+
+            collider.gameObject.AddComponent<Rigidbody>();
+            collider.gameObject.GetComponent<Rigidbody>().mass = _massOfRb[collider.name];
+
             if (collider.GetComponent<PlaySoundOnCollision>() == null)
             {
                 Debug.LogWarning(collider.name + " object does not have a playsoundoncollision component");
@@ -1138,8 +1194,43 @@ public class EnemyCombat : MonoBehaviour, IKillable
             }
             collider.GetComponent<PlaySoundOnCollision>()._isEnabled = true;
             collider.isTrigger = false;
-            collider.GetComponent<Rigidbody>().velocity = currentVelocity;
+            collider.GetComponent<Rigidbody>().interpolation = RigidbodyInterpolation.Interpolate;
+            collider.GetComponent<Rigidbody>().collisionDetectionMode = CollisionDetectionMode.Continuous;
             collider.GetComponent<Rigidbody>().isKinematic = false;
+            collider.GetComponent<Rigidbody>().useGravity = true;
+            collider.GetComponent<Rigidbody>().velocity = currentVelocity;
+        }
+        foreach (var collider in _ragdollColliders)
+        {
+            if (collider.gameObject.layer == LayerMask.NameToLayer("Ignore Raycast")) continue;
+
+            if (_rbOfJoint.ContainsKey(collider.name) && collider.gameObject.name != "CC_Base_Pelvis")
+            {
+                collider.gameObject.AddComponent<CharacterJoint>();
+                string nameOfRb = _rbOfJoint[collider.name];
+                foreach (var collider2 in _ragdollColliders)
+                {
+                    if (collider2.name == nameOfRb)
+                        collider.GetComponent<CharacterJoint>().connectedBody = collider2.GetComponent<Rigidbody>();
+                }
+                if (collider.name == "CC_Base_Head")
+                {
+                    collider.GetComponent<CharacterJoint>().swingAxis = Vector3.zero;
+                    collider.GetComponent<CharacterJoint>().axis = new Vector3(1f, 0f, 0f);
+                    var s = new SoftJointLimit();
+                    s.limit = -10f;
+                    collider.GetComponent<CharacterJoint>().lowTwistLimit = s;
+                    s.limit = 15f;
+                    collider.GetComponent<CharacterJoint>().highTwistLimit = s;
+                    s.limit = 10f;
+                    collider.GetComponent<CharacterJoint>().swing1Limit = s;
+                    s.limit = 0f;
+                    collider.GetComponent<CharacterJoint>().swing2Limit = s;
+                }
+                else
+                    collider.GetComponent<CharacterJoint>().swingAxis /= 2f;
+
+            }
 
             Vector3 tempDir = dir;
             tempDir += new Vector3(UnityEngine.Random.Range(-0.6f, 0.6f), UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.6f, 0.6f));
@@ -1148,6 +1239,12 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 collider.GetComponent<Rigidbody>().AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 4f + tempDir * forceMultiplier + Vector3.up * forceUpMultiplier) * 6f);
             else
                 collider.GetComponent<Rigidbody>().AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 4f + tempDir * forceMultiplier + Vector3.up * forceUpMultiplier) * 2.5f);
+
+            collider.gameObject.layer = LayerMask.NameToLayer("Default");
+
+            GameManager._instance.CallForAction(() => Destroy(collider.GetComponent<Collider>()), 10f);
+            GameManager._instance.CallForAction(() => Destroy(collider.GetComponent<Joint>()), 10f);
+            GameManager._instance.CallForAction(() => Destroy(collider.GetComponent<Rigidbody>()), 10f);
         }
 
         //Destroy(_enemyStateController._rb);

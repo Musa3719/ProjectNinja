@@ -87,8 +87,8 @@ public class EnemyMovement : MonoBehaviour
             if (_isOnNavMeshCounter > 0.5f)
             {
                 Debug.LogError("Warped");
-                _enemyStateController._agent.FindClosestEdge(out NavMeshHit hit);
-                _enemyStateController._agent.Warp(hit.position);
+                //_enemyStateController._agent.FindClosestEdge(out NavMeshHit hit);
+                //_enemyStateController._agent.Warp(hit.position);
             }
         }
     }
@@ -167,7 +167,7 @@ public class EnemyMovement : MonoBehaviour
         _enemyStateController._animator.SetTrigger("MoveAfterAttack");
         GameManager._instance.CallForAction(() => { if (_enemyStateController._enemyCombat.IsDead) return; _navMeshAgent.enabled = true; _rb.isKinematic = true; }, 0.65f);
 
-        float firstMultiplier = isFirstAttack ? 0.6f : 1f;
+        float firstMultiplier = isFirstAttack ? 0.6f : 0.85f;
         float subtranctByDistance = (6.5f - (GameManager._instance.PlayerRb.position - transform.position).magnitude);
         if (subtranctByDistance < 0) subtranctByDistance = subtranctByDistance / 3f;
         else subtranctByDistance = 0f;
@@ -175,7 +175,7 @@ public class EnemyMovement : MonoBehaviour
 
         //if (subtranctByDistance < 0f) distanceMultiplier /= 1.6f;
 
-        Vector3 targetVel = direction * 20f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 1.5f, 6.25f) / 4.85f;
+        Vector3 targetVel = direction * 20f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 1.5f, 5f) / 4.85f;
         if (_moveAfterAttackCoroutine != null)
             StopCoroutine(_moveAfterAttackCoroutine);
         _moveAfterAttackCoroutine = StartCoroutine(MoveAfterAttackCoroutine(targetVel));
@@ -184,17 +184,18 @@ public class EnemyMovement : MonoBehaviour
     {
         float startTime = Time.time;
         float firstMoveTime = 0.1f;
-        float secondMoveTime = 0.15f;
+        float secondMoveTime = 0.1f;
 
-        _rb.velocity = targetVel;
+        _rb.velocity = targetVel / 1.6f;
         while (Time.time < startTime + firstMoveTime)
         {
-            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 10f);
+            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 20f);
             _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 5f);
             ArrangeMoveAfterAttackGrounded();
             yield return null;
         }
         //_rb.velocity = targetVel;
+        yield return new WaitForSeconds(0.05f);
         float newTime = Time.time;
         while (Time.time < newTime + secondMoveTime)
         {
@@ -297,7 +298,7 @@ public class EnemyMovement : MonoBehaviour
         if (!_navMeshAgent.enabled) return;
 
         _navMeshAgent.speed = _moveSpeed * 1.5f;
-        _navMeshAgent.acceleration = 5f;
+        _navMeshAgent.acceleration = 2.5f;
 
         //float lerpSpeed = 2.5f;
         float rotationLerpSpeed = 4.5f;
@@ -318,13 +319,13 @@ public class EnemyMovement : MonoBehaviour
     {
         if (!_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh || _enemyStateController._isOnOffMeshLinkPath) return;
 
-        _navMeshAgent.acceleration = 5f;
+        _navMeshAgent.acceleration = 2.5f;
 
         if (speed != null)
         {
             _navMeshAgent.speed = speed.Value;
         }
-        else if ((position - transform.position).magnitude > 6f)
+        else if ((position - transform.position).magnitude > 8.5f)
         {
             _navMeshAgent.speed = _runSpeed;
         }

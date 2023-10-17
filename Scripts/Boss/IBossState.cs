@@ -35,7 +35,7 @@ namespace BossStates
         {
             _bossStateController._bossAI._idleTimer -= Time.deltaTime;
 
-            if (startTime + 3.75f < Time.time || _bossStateController._bossAI.CheckForExitIdle() || (_targetPos - rb.transform.position).magnitude < 0.5f)
+            if (startTime + 2.25f < Time.time || _bossStateController._bossAI.CheckForExitIdle() || (_targetPos - rb.transform.position).magnitude < 0.5f)
             {
                 _bossStateController.EnterState(new Chase());
             }
@@ -228,7 +228,8 @@ namespace BossStates
             _bossStateController.DisableHeadAim();
             _playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
 
-            _bossStateController._bossAI.SpecialActionMovement(_bossStateController._rb, 15f);
+            if (_bossStateController._bossAI._BossNumber == 1)
+                _bossStateController._bossAI.SpecialActionMovementBoss1(_bossStateController._rb, 15f);
         }
         public void Exit(Rigidbody rb, IBossState newState)
         {

@@ -158,13 +158,14 @@ public class Boss1Special : BossSpecial
     {
         _controller._rb.useGravity = true;
         Vector3 dir = (GameManager._instance.PlayerRb.transform.position - _controller.transform.position).normalized;
-        _controller._rb.velocity = Vector3.up * 12.5f + 50f * dir;
-
+        float distance = (GameManager._instance.PlayerRb.transform.position - _controller.transform.position).magnitude;
+        float speedMul = distance < 9f ? 0.3f : (distance < 18f ? 0.65f : 1f);
+        _controller._rb.velocity = Vector3.up * speedMul * 12f + 50f * speedMul * dir;
         Vector3 velWithoutY;
 
         float time = 0f;
         float isGroundedCounter = 0f;
-        while ((GameManager._instance.PlayerRb.transform.position - _controller.transform.position).magnitude > (_controller._rb.velocity.magnitude > 32f ? 6.5f : 4f)) 
+        while ((GameManager._instance.PlayerRb.transform.position - _controller.transform.position).magnitude > (_controller._rb.velocity.magnitude > 32f ? 6.5f : 4f))
         {
             time += Time.deltaTime;
 
@@ -172,13 +173,11 @@ public class Boss1Special : BossSpecial
             else isGroundedCounter = 0f;
 
             if (time > 3f || _controller._bossCombat.IsDead || (time > 0.75f && _controller._rb.velocity.magnitude < 0.5f) || isGroundedCounter > 0.8f)
-            {
-                _controller.EnterState(new BossStates.Chase());
-                yield break;
-            }
+                break;
+
             velWithoutY = _controller._rb.velocity;
             velWithoutY.y = 0f;
-            dir = (GameManager._instance.PlayerRb.transform.position - _controller.transform.position).normalized;
+            dir = (GameManager._instance.PlayerRb.transform.position - _controller.transform.position - Vector3.up * 6f + _controller.transform.forward * 1.5f).normalized;
             Vector3 forwardToPlayerDirection = new Vector3(dir.x, 0f, dir.z);
             _controller.transform.forward = Vector3.Lerp(_controller.transform.forward, forwardToPlayerDirection, Time.deltaTime * 4f);
             velWithoutY = Vector3.Lerp(velWithoutY, velWithoutY.magnitude * dir, Time.deltaTime * 1.5f);
@@ -216,6 +215,7 @@ public class Boss1Special : BossSpecial
         _controller._rb.useGravity = true;
         _controller._rb.isKinematic = true;
         _controller._agent.enabled = true;
+
         _controller.EnterState(new BossStates.Chase());
     }
 

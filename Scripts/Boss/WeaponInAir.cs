@@ -34,7 +34,7 @@ public class WeaponInAir : MonoBehaviour
         hitSmoke.transform.localScale *= 10f;
         Destroy(hitSmoke, 5f);
         transform.Find("AttackCollider").gameObject.SetActive(false);
-        yield return new WaitForSeconds(0.01f);
+        yield return new WaitForSeconds(0.007f);
         _rb.isKinematic = true;
     }
 

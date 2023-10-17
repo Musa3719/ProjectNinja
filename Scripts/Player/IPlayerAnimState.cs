@@ -285,6 +285,33 @@ namespace PlayerAnimations
             }
         }
     }
+    public class Wait : IPlayerAnimState
+    {
+        public void Enter(Rigidbody rb, IPlayerAnimState oldState)
+        {
+
+        }
+
+        public void Exit(Rigidbody rb, IPlayerAnimState newState)
+        {
+
+        }
+
+        public void DoState(Rigidbody rb)
+        {
+            
+        }
+
+        public void DoStateFixedUpdate(Rigidbody rb)
+        {
+
+        }
+
+        public void DoStateLateUpdate(Rigidbody rb)
+        {
+
+        }
+    }
     public class Hook : IPlayerAnimState
     {
         public void Enter(Rigidbody rb, IPlayerAnimState oldState)
@@ -343,8 +370,8 @@ namespace PlayerAnimations
         {
             if (PlayerMovement._instance._touchingGroundColliders.Count != 0 && PlayerMovement._instance._touchingGroundColliders[PlayerMovement._instance._touchingGroundColliders.Count - 1].GetComponent<PlaneSound>() != null)
             {
-                SoundManager._instance.PlayPlaneOrWallSound(PlayerMovement._instance._touchingGroundColliders[PlayerMovement._instance._touchingGroundColliders.Count - 1].GetComponent<PlaneSound>().PlaneSoundType, 1f, 0.5f, 2f);
-                SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.ArmorWalkSounds), PlayerMovement._instance.transform.position, 0.07f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                SoundManager._instance.PlayPlaneOrWallSound(PlayerMovement._instance._touchingGroundColliders[PlayerMovement._instance._touchingGroundColliders.Count - 1].GetComponent<PlaneSound>().PlaneSoundType, 1f, 0.6f);
+                SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.ArmorWalkSounds), PlayerMovement._instance.transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
             }
 
             if (PlayerMovement._instance._lastTimeFastLanded + 0.5f < Time.time)

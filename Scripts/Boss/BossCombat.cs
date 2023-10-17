@@ -239,19 +239,20 @@ public class BossCombat : MonoBehaviour, IKillable
     {
         Destroy(_weaponObject.GetComponent<WeaponInAir>());
         Destroy(_weaponObject.GetComponent<Rigidbody>());
+        float startTime = Time.time;
         while ((_weaponObject.transform.position - _weaponHolderTransform.position).magnitude > 2f)
         {
             if (_bossStateController._isDead) yield break;
-
-            _weaponObject.transform.position = Vector3.Lerp(_weaponObject.transform.position, _weaponHolderTransform.position, Time.deltaTime * 6f);
-            _weaponObject.transform.eulerAngles += Vector3.one * Time.deltaTime * 600f;
+            float lerpSpeed = startTime + 0.4f > Time.time ? 2f : 4.5f;
+            _weaponObject.transform.position = Vector3.Lerp(_weaponObject.transform.position, _weaponHolderTransform.position, Time.deltaTime * lerpSpeed);
+            _weaponObject.transform.eulerAngles += Vector3.one * Time.deltaTime * 250f;
             yield return null;
         }
 
         _weaponObject.transform.position = _weaponHolderTransform.position;
         _weaponObject.transform.SetParent(_weaponHolderTransform);
 
-        float startTime = Time.time;
+        startTime = Time.time;
         while (startTime + 0.2f > Time.time)
         {
             if (_bossStateController._isDead) yield break;
@@ -532,11 +533,11 @@ public class BossCombat : MonoBehaviour, IKillable
             }
             if (c == 0)
             {
-                GameManager._instance.CallForAction(() => _bossStateController._bossMovement.MoveAfterAttack(true), 0.05f);
+                GameManager._instance.CallForAction(() => _bossStateController._bossMovement.MoveAfterAttack(true), 0.225f);
             }
             else
             {
-                GameManager._instance.CallForAction(() => _bossStateController._bossMovement.MoveAfterAttack(false), 0.05f);
+                GameManager._instance.CallForAction(() => _bossStateController._bossMovement.MoveAfterAttack(false), 0.225f);
             }
 
             if (_lastAttackNumberForPattern == -1)
@@ -836,7 +837,7 @@ public class BossCombat : MonoBehaviour, IKillable
         _bossStateController._bossCombat.StopAllCoroutines();
         _bossStateController._bossAI.StopAllCoroutines();
     }
-    public void Die(Vector3 dir, float killersVelocityMagnitude)
+    public void Die(Vector3 dir, float killersVelocityMagnitude, IKillObject killer)
     {
         if ((_bossStateController._bossState is BossStates.RetreatBoss1) || (_bossStateController._bossState is BossStates.SpecialAction))
         {
@@ -976,6 +977,8 @@ public class BossCombat : MonoBehaviour, IKillable
             //tempDir = tempDir.normalized; commented for power variety
             if (collider.gameObject.name == "CC_Base_Hip")
                 collider.GetComponent<Rigidbody>().AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 4.5f + tempDir * forceMultiplier + Vector3.up * forceUpMultiplier) * 7.5f);
+
+            collider.gameObject.layer = LayerMask.NameToLayer("Default");
         }
 
         //Destroy(_bossStateController._rb);
@@ -998,5 +1001,8 @@ public class BossCombat : MonoBehaviour, IKillable
         rBlade.transform.localEulerAngles = rBladeNewRot;
         lBlade.transform.localPosition = lBladeNewPos;
         lBlade.transform.localEulerAngles = lBladeNewRot;
+
+        lBlade.GetComponent<RotateBladeHumanoid>().DisableHaveWeapon();
+        rBlade.GetComponent<RotateBladeHumanoid>().DisableHaveWeapon();
     }
 }

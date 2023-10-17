@@ -68,8 +68,6 @@ public class EnemyStateController : MonoBehaviour
 
     private Coroutine _dissolveCoroutine;
 
-    
-    
     private void Awake()
     {
         _rb = GetComponent<Rigidbody>();
@@ -114,6 +112,7 @@ public class EnemyStateController : MonoBehaviour
         List<MeshRenderer> renderers = new List<MeshRenderer>();
         foreach (var weapon in weapons)
         {
+            if (weapon.GetComponentInChildren<MeshRenderer>() == null) continue;
             renderers.Add(weapon.GetComponent<MeshRenderer>());
             renderers[renderers.Count - 1].shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderers[renderers.Count - 1].material = weapon.GetComponent<PlaySoundOnCollision>()._dissolveMaterial;
@@ -157,8 +156,9 @@ public class EnemyStateController : MonoBehaviour
 
         foreach (var weapon in weapons)
         {
-            weapon.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
-            weapon.GetComponent<MeshRenderer>().material = weapon.GetComponent<PlaySoundOnCollision>()._normalMaterial;
+            if (weapon.GetComponentInChildren<MeshRenderer>() == null) continue;
+            weapon.GetComponentInChildren<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            weapon.GetComponentInChildren<MeshRenderer>().material = weapon.GetComponent<PlaySoundOnCollision>()._normalMaterial;
         }
     }
     private void ArrangeIsInSmoke()
@@ -438,7 +438,7 @@ public class EnemyStateController : MonoBehaviour
             if (collision.collider.CompareTag("Player") && GameManager._instance.PlayerLastSpeed > 13.5f && !GameManager._instance.isPlayerAttacking)
             {
                 ChangeAnimation("Stun");
-                SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.1f, false, UnityEngine.Random.Range(0.93f, 1.07f));
                 if (_pushCoroutine != null)
                     StopCoroutine(_pushCoroutine);
                 _pushCoroutine = StartCoroutine(PushCoroutine());
@@ -489,52 +489,36 @@ public class EnemyStateController : MonoBehaviour
     public bool CheckForPlayerInSeen()
     {
         bool isSeeingPlayer = false;
-        bool isPlayerInSphere = false;
-        Transform playerTransform = null;
 
-        Collider[] hits = Physics.OverlapSphere(_rb.transform.position, 30f);
-
-        foreach (var hit in hits)
+        float localCheckDistance;
+        if (_isInSmoke)
+            localCheckDistance = _checkDistanceWhileInSmoke;
+        else
         {
-            if (hit != null && hit.gameObject.CompareTag("Player"))
+            localCheckDistance = _checkDistance;
+            if (GameManager._instance.IsPlayerInSmoke)
             {
-                isPlayerInSphere = true;
-                playerTransform = hit.transform;
+                return false;
             }
         }
 
-        if (isPlayerInSphere)
+        RaycastHit hit;
+        Physics.Raycast(_rb.transform.position, (GameManager._instance.PlayerRb.transform.position - _rb.transform.position).normalized, out hit, localCheckDistance, GameManager._instance.LayerMaskForVisible);
+
+        if (hit.collider != null && hit.collider.gameObject.CompareTag("Player"))
         {
-            float localCheckDistance;
-            if (_isInSmoke)
-                localCheckDistance = _checkDistanceWhileInSmoke;
-            else
-            {
-                localCheckDistance = _checkDistance;
-                if (GameManager._instance.IsPlayerInSmoke)
-                {
-                    return false;
-                }
-            }
+            Vector3 firstAngle = (GameManager._instance.PlayerRb.transform.position - _rb.transform.position).normalized;
 
-            RaycastHit hit;
-            Physics.Raycast(_rb.transform.position, (playerTransform.position - _rb.transform.position).normalized, out hit, localCheckDistance, GameManager._instance.LayerMaskForVisible);
+            Vector3 secondAngle = _rb.transform.forward;
 
-            if (hit.collider != null && hit.collider.gameObject.CompareTag("Player"))
-            {
-                Vector3 firstAngle = (playerTransform.position - _rb.transform.position).normalized;
+            //Debug.Log(Vector3.Angle(firstAngle, secondAngle));
 
-                Vector3 secondAngle = _rb.transform.forward;
+            bool isInAngle = Vector3.Angle(firstAngle, secondAngle) <= _seeAngleHalf ? true : false;
 
-                //Debug.Log(Vector3.Angle(firstAngle, secondAngle));
+            //Debug.Log(isInAngle);
 
-                bool isInAngle = Vector3.Angle(firstAngle, secondAngle) <= _seeAngleHalf ? true : false;
-
-                //Debug.Log(isInAngle);
-
-                if(isInAngle || (playerTransform.position - _rb.transform.position).magnitude < 4f)
-                    isSeeingPlayer = true;
-            }
+            if (isInAngle || (GameManager._instance.PlayerRb.transform.position - _rb.transform.position).magnitude < 4f)
+                isSeeingPlayer = true;
         }
 
 

@@ -12,6 +12,7 @@ public class SphereTrap : MonoBehaviour, ITrap, IKillObject
     private bool _checkForActivate;
     public bool _CheckForActivate { get { return _checkForActivate; } set { _checkForActivate = value; } }
 
+    public GameObject Owner => gameObject;
 
     void Update()
     {
@@ -26,16 +27,16 @@ public class SphereTrap : MonoBehaviour, ITrap, IKillObject
         _Activated = true;
     }
 
-    public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude)
+    public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude, IKillObject killer)
     {
-        killable.Die(dir, killersVelocityMagnitude);
+        killable.Die(dir, killersVelocityMagnitude, killer);
     }
    
     private void OnTriggerEnter(Collider other)
     {
         if ((_Activated || _isStatic) && other != null && other.CompareTag("HitBox"))
         {
-            Kill(GameManager._instance.GetHitBoxIKillable(other), GetComponent<Rigidbody>().velocity.normalized, GetComponent<Rigidbody>().velocity.magnitude);
+            Kill(GameManager._instance.GetHitBoxIKillable(other), GetComponent<Rigidbody>().velocity.normalized, GetComponent<Rigidbody>().velocity.magnitude, this);
         }
     }
 }

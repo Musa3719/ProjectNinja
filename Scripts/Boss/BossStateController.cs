@@ -62,6 +62,7 @@ public class BossStateController : MonoBehaviour
     public List<GameObject> TouchingGrounds { get; private set; }
     public List<GameObject> TouchingRoofs { get; private set; }
     public List<GameObject> TouchingWalls { get; private set; }
+    public List<GameObject> TouchingProps { get; private set; }
 
     public GameObject EyeObject;
 
@@ -70,6 +71,7 @@ public class BossStateController : MonoBehaviour
         TouchingGrounds = new List<GameObject>();
         TouchingRoofs = new List<GameObject>();
         TouchingWalls = new List<GameObject>();
+        TouchingProps = new List<GameObject>();
         _rb = GetComponent<Rigidbody>();
         _agent = GetComponent<NavMeshAgent>();
         _bossMovement = GetComponent<BossMovement>();
@@ -392,10 +394,14 @@ public class BossStateController : MonoBehaviour
             {
                 TouchingWalls.Add(collision.collider.gameObject);
             }
+            if (!TouchingProps.Contains(collision.collider.gameObject) && GameManager._instance.IsProp(collision.collider))
+            {
+                TouchingProps.Add(collision.collider.gameObject);
+            }
             if (collision.collider.CompareTag("Player") && GameManager._instance.PlayerLastSpeed > 13.5f && !GameManager._instance.isPlayerAttacking)
             {
                 ChangeAnimation("Stun");
-                SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+                SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.1f, false, UnityEngine.Random.Range(0.93f, 1.07f));
                 if (_pushCoroutine != null)
                     StopCoroutine(_pushCoroutine);
                 _pushCoroutine = StartCoroutine(PushCoroutine());
@@ -438,7 +444,10 @@ public class BossStateController : MonoBehaviour
             {
                 TouchingWalls.Remove(collision.collider.gameObject);
             }
-
+            if (TouchingProps.Contains(collision.collider.gameObject) && GameManager._instance.IsProp(collision.collider))
+            {
+                TouchingProps.Remove(collision.collider.gameObject);
+            }
         }
     }
     private void OnTriggerEnter(Collider other)

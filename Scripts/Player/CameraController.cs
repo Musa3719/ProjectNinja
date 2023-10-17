@@ -31,6 +31,9 @@ public class CameraController : MonoBehaviour
     private float _headRotateValue;
     private bool _isRunningForCamera;
 
+    private float _xAngleRangeLow;
+    private float _xAngleRangeHigh;
+
     void Awake()
     {
         _instance = this;
@@ -42,12 +45,14 @@ public class CameraController : MonoBehaviour
         _playerForwardBefore = Vector3.forward;
         _playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
         _verticalCameraModifier = 0.85f;
-        _velocityForwardLerpSpeed = 30f;
+        _velocityForwardLerpSpeed = 23f;
         transform.position = _playerTransform.position + _cameraOffset;
 
         transform.localEulerAngles = _playerTransform.eulerAngles;
         _headRotateValue = 0.1f;
         _isHeadRotateValueIncreasing = true;
+        _xAngleRangeLow = 60f;
+        _xAngleRangeHigh = 295f;
     }
     
 
@@ -160,10 +165,19 @@ public class CameraController : MonoBehaviour
         _playerTransform.eulerAngles = new Vector3(_playerTransform.eulerAngles.x, _playerTransform.eulerAngles.y + yOffset, _playerTransform.eulerAngles.z);
 
         transform.localEulerAngles = _playerTransform.localEulerAngles + new Vector3(transform.localEulerAngles.x + xOffset, 0f, 0f);
-        if (transform.eulerAngles.x > 60f && transform.eulerAngles.x < 295f)
+
+        if (GameManager._instance.PlayerRb.velocity.magnitude > 10f)
         {
-            float newX = Mathf.Abs(transform.localEulerAngles.x - 60f) < Mathf.Abs(transform.localEulerAngles.x - 295f) ? 60f : 295f;
-            transform.localEulerAngles = new Vector3(newX, transform.localEulerAngles.y, transform.localEulerAngles.z);
+            _xAngleRangeHigh = 340f;
+        }
+        else
+        {
+            _xAngleRangeHigh = 295f;
+        }
+        if (transform.eulerAngles.x > _xAngleRangeLow && transform.eulerAngles.x < _xAngleRangeHigh)
+        {
+            float newX = Mathf.Abs(transform.localEulerAngles.x - _xAngleRangeLow) < Mathf.Abs(transform.localEulerAngles.x - _xAngleRangeHigh) ? _xAngleRangeLow : _xAngleRangeHigh;
+            transform.localEulerAngles = new Vector3(Mathf.Lerp(transform.localEulerAngles.x, newX, Time.deltaTime * 5f), transform.localEulerAngles.y, transform.localEulerAngles.z);
         }
 
         if(isVelocityToForward && PlayerMovement._instance._isAllowedToVelocityForward)
@@ -240,9 +254,6 @@ public class CameraController : MonoBehaviour
     private void VelocityToForward()
     {
         Vector3 targetVelocity = Quaternion.FromToRotation(_playerForwardBefore, _playerTransform.forward) * PlayerStateController._instance._rb.velocity;
-        if (targetVelocity == PlayerStateController._instance._rb.velocity || (!PlayerMovement._instance.IsGrounded() && PlayerStateController._instance._playerState is PlayerStates.Movement))
-            PlayerStateController._instance._rb.velocity = Vector3.Lerp(PlayerStateController._instance._rb.velocity, targetVelocity, Time.deltaTime * 44f);
-        else
-            PlayerStateController._instance._rb.velocity = Vector3.Lerp(PlayerStateController._instance._rb.velocity, targetVelocity, Time.deltaTime * _velocityForwardLerpSpeed);
+        PlayerStateController._instance._rb.velocity = Vector3.Lerp(PlayerStateController._instance._rb.velocity, targetVelocity, Time.deltaTime * _velocityForwardLerpSpeed);
     }
 }

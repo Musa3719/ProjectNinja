@@ -98,7 +98,7 @@ public class BossAI : MonoBehaviour
         _controller.ChangeAnimation("Jump");
         SoundManager._instance.PlaySound(SoundManager._instance.Jump, transform.position, 0.1f, false, UnityEngine.Random.Range(0.93f, 1.07f));
     }
-    public void SpecialActionMovement(Rigidbody rb, float speed)
+    public void SpecialActionMovementBoss1(Rigidbody rb, float speed)
     {
         if (_specialActionMovementCoroutine != null)
             StopCoroutine(_specialActionMovementCoroutine);
@@ -108,7 +108,6 @@ public class BossAI : MonoBehaviour
     {
         Coroutine velocityLerperCoroutine = null;
         
-        yield return new WaitForSeconds(0.35f);
         Vector3[] array = GetSpecialActionWallToWallDirection(rb);
         Vector3 toWallDirection = array[0];
         Vector3 wallNormal = array[1];
@@ -125,7 +124,7 @@ public class BossAI : MonoBehaviour
 
         float waitTime = Random.Range(0.4f, 0.8f);
         float timeCounter = 0f;
-        while (timeCounter < waitTime && (wallHitPosition - transform.position).magnitude / speed > 1.1f && !_controller._bossMovement.IsTouchingAnyWalls() && !_controller._bossMovement.IsTouchingGround() && !_controller._bossMovement.IsTouchingRoof())
+        while (timeCounter < waitTime && (wallHitPosition - transform.position).magnitude / speed > 1.1f && !_controller._bossMovement.IsTouchingAnyProp() && !_controller._bossMovement.IsTouchingAnyWall() && !_controller._bossMovement.IsTouchingGround() && !_controller._bossMovement.IsTouchingRoof())
         {
             timeCounter += Time.deltaTime;
             Vector3 forwardToPlayerDirection = (GameManager._instance.PlayerRb.transform.position - rb.transform.position).normalized;
@@ -141,7 +140,7 @@ public class BossAI : MonoBehaviour
         }
 
         float c = 0f;
-        while (!_controller._bossMovement.IsTouchingAnyWalls() && !_controller._bossMovement.IsTouchingGround() && !_controller._bossMovement.IsTouchingRoof())
+        while (!_controller._bossMovement.IsTouchingAnyWall() && !_controller._bossMovement.IsTouchingAnyProp() && !_controller._bossMovement.IsTouchingGround() && !_controller._bossMovement.IsTouchingRoof())
         {
             c += Time.deltaTime;
             if (c > 5f || rb.velocity.magnitude < 0.5f)
@@ -163,8 +162,17 @@ public class BossAI : MonoBehaviour
 
         _controller.ChangeAnimation("OnWall", 0.3f);
 
-        if (_controller._bossMovement.IsTouchingAnyWalls() && _controller.TouchingWalls[_controller.TouchingWalls.Count - 1].GetComponent<Collider>().isTrigger)//do it for normal walls, not for props
+        SoundManager._instance.PlaySound(SoundManager._instance.WeaponStickGround, transform.position, 0.4f, false, UnityEngine.Random.Range(0.8f, 0.85f));
+        GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, transform.position + Vector3.up * 0.75f, Quaternion.identity);
+        hitSmoke.GetComponentInChildren<Animator>().speed = 0.7f;
+        Color color = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
+        hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(color.r, color.g, color.b, 10f / 255f);
+        hitSmoke.transform.localScale *= 10f;
+        Destroy(hitSmoke, 5f);
+
+        if (_controller._bossMovement.IsTouchingAnyWall() || _controller._bossMovement.IsTouchingAnyProp() || _controller._bossMovement.IsTouchingRoof())//do it for normal walls, not for props
         {
+            if (_controller._bossMovement.IsTouchingAnyProp()) wallNormal = (GameManager._instance.PlayerRb.transform.position - transform.position).normalized;
             timeCounter = 0f;
             while (timeCounter < 0.2f)
             {
@@ -206,6 +214,13 @@ public class BossAI : MonoBehaviour
             StopCoroutine(velocityLerperCoroutine);
         velocityLerperCoroutine = StartCoroutine(VelocityLerper(rb, Vector3.zero, 0.3f));
         _controller.ChangeAnimation("HitGround");
+        SoundManager._instance.PlaySound(SoundManager._instance.WeaponStickGround, transform.position, 0.45f, false, UnityEngine.Random.Range(0.8f, 0.85f));
+        hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, transform.position + Vector3.up * 0.75f, Quaternion.identity);
+        hitSmoke.GetComponentInChildren<Animator>().speed = 0.7f;
+        color = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
+        hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(color.r, color.g, color.b, 10f / 255f);
+        hitSmoke.transform.localScale *= 10f;
+        Destroy(hitSmoke, 5f);
 
         yield return new WaitForSeconds(0.15f);
 
@@ -281,7 +296,7 @@ public class BossAI : MonoBehaviour
         {
             Debug.LogError("Every WallToWall ray didn't hit a wall...");
         }
-        if (_controller._bossMovement.IsTouchingAnyWalls())
+        if (_controller._bossMovement.IsTouchingAnyWall())
         {
             wallNormal = _controller.TouchingWalls[_controller.TouchingWalls.Count - 1].transform.right;
         }

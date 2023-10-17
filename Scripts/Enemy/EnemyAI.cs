@@ -261,7 +261,7 @@ public class EnemyAI : MonoBehaviour
             if (_controller._enemyCombat._lastAttackDeflectedTime + 1.25f > Time.time)
                 chanceMultiplier *= 0.5f;
             else if (IsAttackFast())
-                chanceMultiplier *= 0.25f;
+                chanceMultiplier *= 0.33f;
             else
                 chanceMultiplier += (1000f - _DodgeOrBlockEfficiencyValue * 0.85f * chanceMultiplier * 1000) / 3f;
             if (_lastStanceAnimCounter < 0.5f)

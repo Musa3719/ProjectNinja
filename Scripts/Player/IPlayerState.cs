@@ -16,7 +16,7 @@ namespace PlayerStates
         public bool _isCrouching { get; set; }
         public void Enter(Rigidbody rb, IPlayerState oldState)
         {
-            GameManager._instance.MidScreenDot.color = GameManager._instance.MidScreenDotMovementColor;
+            //GameManager._instance.MidScreenDot.color = GameManager._instance.MidScreenDotMovementColor;
             GameManager._instance.IsPlayerOnWall = false;
         }
         public void Exit(Rigidbody rb, IPlayerState newState)
@@ -43,6 +43,8 @@ namespace PlayerStates
 
             PlayerStateController.CheckForBlock();
 
+            PlayerStateController.CheckForWeaponChange();
+
             //PlayerStateController._instance.CheckForTeleport();
             //PlayerStateController._instance.CheckForInvertedMirror();
 
@@ -59,25 +61,16 @@ namespace PlayerStates
             {
                 PlayerStateController._instance.EnterState(new OnWall());
             }
-            else if (PlayerStateController.CheckForUpHookTrigger())
-            {
-                PlayerStateController._instance._hookBuffer = false;
-                PlayerMovement._instance.ThrowUpHook(rb);
-            }
             else if (PlayerStateController.CheckForAttack())
             {
                 PlayerStateController._instance.StopCoroutine(PlayerStateController._instance._attackCoroutine);
                 PlayerStateController._instance._attackBuffer = false;
 
-                PlayerMovement._instance.AttackMove(PlayerStateController._instance._rb);
+                PlayerCombat._instance.Attack();
             }
-            else if (PlayerStateController.CheckForForwardLeap())
+            else if (PlayerStateController.CheckForDashAttack())
             {
-                PlayerStateController._instance.StopCoroutine(PlayerStateController._instance._forwardLeapCoroutine);
-                PlayerStateController._instance._forwardLeapBuffer = false;
-
-                PlayerCombat._instance.ForwardLeap();
-                PlayerMovement._instance.ForwardLeap(rb);
+                PlayerCombat._instance.DashAttack();
             }
             else if (PlayerStateController.CheckForThrow())
             {
@@ -216,7 +209,7 @@ namespace PlayerStates
             }
             _firstLerpTime = 0f;
             PlayerCombat._instance._IsBlocking = false;
-            GameManager._instance.MidScreenDot.color = GameManager._instance.MidScreenDotOnWallColor;
+            //GameManager._instance.MidScreenDot.color = GameManager._instance.MidScreenDotOnWallColor;
 
             PlayerStateController._instance.BladeSpinSoundObject = SoundManager._instance.PlaySound(SoundManager._instance.BladeSpin, PlayerStateController._instance.transform.position, 0.225f, true, 1.3f);
 
@@ -239,6 +232,8 @@ namespace PlayerStates
             PlayerStateController.CheckForDisableCrouch();
 
             PlayerStateController.CheckForBlock();
+
+            PlayerStateController.CheckForWeaponChange();
 
             //PlayerStateController._instance.CheckForTeleport();
             //PlayerStateController._instance.CheckForInvertedMirror();
@@ -263,17 +258,16 @@ namespace PlayerStates
             {
                 PlayerStateController._instance.EnterState(new Movement());
             }
-            else if (PlayerStateController.CheckForUpHookTrigger())
-            {
-                PlayerStateController._instance._hookBuffer = false;
-                PlayerMovement._instance.ThrowUpHook(rb);
-            }
             else if (PlayerStateController.CheckForAttack())
             {
                 PlayerStateController._instance.StopCoroutine(PlayerStateController._instance._attackCoroutine);
                 PlayerStateController._instance._attackBuffer = false;
 
                 PlayerCombat._instance.Attack();
+            }
+            else if (PlayerStateController.CheckForDashAttack())
+            {
+                PlayerCombat._instance.DashAttack();
             }
             else if (PlayerStateController.CheckForThrow())
             {

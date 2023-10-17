@@ -94,8 +94,8 @@ public class BossMovement : MonoBehaviour
             if (_isOnNavMeshCounter > 0.5f)
             {
                 Debug.LogError("Warped");
-                _bossStateController._agent.FindClosestEdge(out NavMeshHit hit);
-                _bossStateController._agent.Warp(hit.position);
+                //_bossStateController._agent.FindClosestEdge(out NavMeshHit hit);
+                //_bossStateController._agent.Warp(hit.position);
             }
         }
     }
@@ -192,7 +192,7 @@ public class BossMovement : MonoBehaviour
         _bossStateController._animator.SetTrigger("MoveAfterAttack");
         GameManager._instance.CallForAction(() => { if (_bossStateController._bossCombat.IsDead) return; _navMeshAgent.enabled = true; _rb.isKinematic = true; }, 0.65f);
 
-        float firstMultiplier = isFirstAttack ? 0.65f : 1f;
+        float firstMultiplier = isFirstAttack ? 0.6f : 0.85f;
         float subtranctByDistance = (6.5f - (GameManager._instance.PlayerRb.position - transform.position).magnitude);
         if (subtranctByDistance < 0) subtranctByDistance = subtranctByDistance / 3f;
         else subtranctByDistance = 0f;
@@ -200,7 +200,7 @@ public class BossMovement : MonoBehaviour
 
         //if (subtranctByDistance < 0f) distanceMultiplier /= 1.6f;
 
-        Vector3 targetVel = direction * 18f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 1.5f, 8.5f) / 3.35f;
+        Vector3 targetVel = direction * 18f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 1.5f, 6.5f) / 3.35f;
         if (_moveAfterAttackCoroutine != null)
             StopCoroutine(_moveAfterAttackCoroutine);
         _moveAfterAttackCoroutine = StartCoroutine(MoveAfterAttackCoroutine(targetVel));
@@ -208,26 +208,29 @@ public class BossMovement : MonoBehaviour
     private IEnumerator MoveAfterAttackCoroutine(Vector3 targetVel)
     {
         float startTime = Time.time;
-        float firstMoveTime = 0.15f;
-        float secondMoveTime = 0.2f;
+        float firstMoveTime = 0.1f;
+        float secondMoveTime = 0.1f;
 
+        _rb.velocity = targetVel / 1.6f;
         while (Time.time < startTime + firstMoveTime)
         {
             if (_bossStateController._bossCombat._IsAttackInterrupted) yield break;
 
-            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 10f);
-            _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 6f);
+            _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 20f);
+            _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 5f);
             ArrangeMoveAfterAttackGrounded();
             yield return null;
         }
         //_rb.velocity = targetVel;
+        yield return new WaitForSeconds(0.05f);
         float newTime = Time.time;
+
         while (Time.time < newTime + secondMoveTime)
         {
             if (_bossStateController._bossCombat._IsAttackInterrupted) yield break;
 
             _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, Time.deltaTime * 8f);
-            _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 8f);
+            _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(targetVel.normalized.x, 0f, targetVel.normalized.z), Time.deltaTime * 5f);
             ArrangeMoveAfterAttackGrounded();
             yield return null;
         }
@@ -372,7 +375,7 @@ public class BossMovement : MonoBehaviour
             _retreatCoroutine = StartCoroutine(RetreatGroundCoroutine());
         }else if*/
 
-        if (Random.Range(0, 4) == 0 && (GameManager._instance.PlayerRb.transform.position - transform.position).magnitude > 13f)
+        /*if (Random.Range(0, 4) == 0 && (GameManager._instance.PlayerRb.transform.position - transform.position).magnitude > 13f)
         {
             if (_retreatCoroutine != null)
                 StopCoroutine(_retreatCoroutine);
@@ -380,10 +383,11 @@ public class BossMovement : MonoBehaviour
         }
         else
         {
-            if (_retreatCoroutine != null)
-                StopCoroutine(_retreatCoroutine);
-            _retreatCoroutine = StartCoroutine(RetreatCoroutine());
-        }
+            
+        }*/
+        if (_retreatCoroutine != null)
+            StopCoroutine(_retreatCoroutine);
+        _retreatCoroutine = StartCoroutine(RetreatCoroutine());
     }
     private bool IsBackWallNotNear()
     {
@@ -427,7 +431,7 @@ public class BossMovement : MonoBehaviour
 
         float groundActionTime = 0f;
         float startTime = Time.time;
-        while (!IsTouchingAnyWalls())
+        while (!IsTouchingAnyWall())
         {
             if (startTime + 1.75f < Time.time || _rb.velocity.magnitude < 0.5f)
             {
@@ -472,15 +476,26 @@ public class BossMovement : MonoBehaviour
 
         yield return new WaitForSeconds(0.4f);
 
+        SoundManager._instance.PlaySound(SoundManager._instance.WeaponStickGround, transform.position, 0.25f, false, UnityEngine.Random.Range(0.8f, 0.85f));
+        GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, transform.position + Vector3.up * 0.5f, Quaternion.identity);
+        hitSmoke.GetComponentInChildren<Animator>().speed = 0.7f;
+        Color color = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
+        hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(color.r, color.g, color.b, 10f / 255f);
+        hitSmoke.transform.localScale *= 6f;
+        Destroy(hitSmoke, 5f);
+
         Vector3 retreatDir = (Vector3.up * 0.65f - transform.forward * Random.Range(0.8f, 1.2f));
         _rb.velocity = retreatDir * 22f;
         float yStartVelocity = _rb.velocity.y;
 
         float startTime = Time.time;
-        while (!IsTouchingAnyWalls())
+        while (!IsTouchingAnyWall() && !IsTouchingAnyProp())
         {
-            if (startTime + 3.5f < Time.time || _rb.velocity.magnitude < 0.5f)
+            if (startTime + 3.5f < Time.time || (startTime + 0.5f < Time.time && _rb.velocity.magnitude < 0.5f))
             {
+                _rb.useGravity = true;
+                _rb.isKinematic = true;
+                _bossStateController._agent.enabled = true;
                 _bossStateController.EnterState(new BossStates.Chase());
                 yield break;
             }
@@ -492,15 +507,25 @@ public class BossMovement : MonoBehaviour
         }
 
         _bossStateController.ChangeAnimation("OnWall");
-        //hit Wall particles
+
+        SoundManager._instance.PlaySound(SoundManager._instance.WeaponStickGround, transform.position, 0.35f, false, UnityEngine.Random.Range(0.8f, 0.85f));
+        hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, transform.position + Vector3.up * 0.75f, Quaternion.identity);
+        hitSmoke.GetComponentInChildren<Animator>().speed = 0.7f;
+        color = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
+        hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(color.r, color.g, color.b, 10f / 255f);
+        hitSmoke.transform.localScale *= 10f;
+        Destroy(hitSmoke, 5f);
+
         float time = 0f;
         while (time <0.25f)
         {
             time += Time.deltaTime;
             _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, Time.deltaTime * 4f);
-            transform.forward = Vector3.Lerp(transform.forward, _bossStateController.TouchingWalls[0].transform.right, Time.deltaTime * 4f);
+            if (_bossStateController.TouchingWalls.Count > 0)
+                transform.forward = Vector3.Lerp(transform.forward, _bossStateController.TouchingWalls[0].transform.right, Time.deltaTime * 4f);
         }
-        transform.forward = _bossStateController.TouchingWalls[0].transform.right;
+        if (_bossStateController.TouchingWalls.Count > 0)
+            transform.forward = _bossStateController.TouchingWalls[0].transform.right;
         _rb.velocity = Vector3.zero;
 
         _isRetreatToSpecialAction = true;
@@ -516,7 +541,7 @@ public class BossMovement : MonoBehaviour
             _rb.velocity -= Vector3.up * Time.deltaTime * 8f;
         }
     }
-    public bool IsTouchingAnyWalls()
+    public bool IsTouchingAnyWall()
     {
         return _bossStateController.TouchingWalls.Count > 0;
     }
@@ -528,6 +553,10 @@ public class BossMovement : MonoBehaviour
     {
         return _bossStateController.TouchingRoofs.Count > 0;
     }
+    public bool IsTouchingAnyProp()
+    {
+        return _bossStateController.TouchingProps.Count > 0;
+    }
     public void ToGroundAfterRetreat()
     {
         if (ToGroundCoroutineHolder != null)
@@ -536,9 +565,16 @@ public class BossMovement : MonoBehaviour
     }
     private IEnumerator ToGroundCoroutine()
     {
-        if(!IsTouchingGround())
+        if (!IsGrounded())
+        {
+            if (_navMeshAgent.enabled)
+            {
+                _navMeshAgent.enabled = false;
+                _rb.isKinematic = false;
+            }
             _rb.useGravity = true;
-        while (!IsTouchingGround())
+        }
+        while (!IsGrounded())
         {
             _rb.velocity -= Vector3.up * Time.deltaTime * 10f;
             yield return null;
@@ -548,6 +584,7 @@ public class BossMovement : MonoBehaviour
         if (_bossStateController._isDead) yield break;
 
         _bossStateController._agent.enabled = true;
+
         _rb.useGravity = true;
         _rb.isKinematic = true;
     }
@@ -561,7 +598,7 @@ public class BossMovement : MonoBehaviour
     {
         if (!_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh || _bossStateController._isOnOffMeshLinkPath) return;
 
-        _navMeshAgent.acceleration = 5f;
+        _navMeshAgent.acceleration = 2.5f;
 
         if (speed != null)
         {
