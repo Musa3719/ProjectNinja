@@ -109,8 +109,8 @@ public class ExplosiveL1 : MonoBehaviour, IKillObject
     }
     public void Explode()
     {
-        SoundManager._instance.PlaySound(SoundManager._instance.BombExplode, transform.position, 0.3f, false, UnityEngine.Random.Range(1.25f, 1.5f));
-        GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.ExplosionVFX), transform.position, Quaternion.identity);
+        SoundManager._instance.PlaySound(SoundManager._instance.BombExplode, transform.position, 0.3f, false, UnityEngine.Random.Range(1f, 1.2f));
+        GameObject VFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.ExplosionVFX), transform.position, Quaternion.identity);
 
         float bombRange = 4f;
         Collider[] sphereCastColliders = Physics.OverlapSphere(transform.position, bombRange);
@@ -124,6 +124,13 @@ public class ExplosiveL1 : MonoBehaviour, IKillObject
                 collider.GetComponentInChildren<Rigidbody>().AddForce((collider.transform.position - transform.position).normalized * 150f, ForceMode.Impulse);
 
             Physics.Raycast(transform.position, direction, out hit, bombRange, GameManager._instance.LayerMaskForVisible);
+
+            if (hit.collider != null && hit.collider.gameObject.CompareTag("Wolf"))
+            {
+                hit.collider.GetComponent<Wolf>().Die((collider.transform.position - transform.position).normalized, 10f, this);
+                continue;
+            }
+
             if (hit.collider == null || (!hit.collider.CompareTag("Player") && !hit.collider.CompareTag("BreakableObject") && !hit.collider.CompareTag("Boss") && !hit.collider.CompareTag("Enemy") && !hit.collider.CompareTag("ExplosiveL1") && !hit.collider.CompareTag("HitBox"))) continue;
 
             if (hit.collider.CompareTag("BreakableObject"))
@@ -147,7 +154,7 @@ public class ExplosiveL1 : MonoBehaviour, IKillObject
             if (colliderKillable != null && !Killables.Contains(colliderKillable))
             {
                 Killables.Add(colliderKillable);
-                Kill(colliderKillable, (collider.transform.position - transform.position).normalized, _rb.velocity.magnitude, this);
+                Kill(colliderKillable, (collider.transform.position - transform.position).normalized, 15f, this);
             }
         }
         SoundManager.ProjectileTriggeredSoundArtificial?.Invoke(transform.position, 12.5f);
@@ -161,29 +168,36 @@ public class ExplosiveL1 : MonoBehaviour, IKillObject
         }
 
         Destroy(explodingSound);
+        Destroy(VFX);
         Destroy(transform.parent.gameObject);
     }
     public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude, IKillObject killer)
     {
-        killable.Die(dir, _rb.velocity.magnitude, killer);
+        killable.Die(dir, _rb.velocity.magnitude, killer, false);
     }
     public void DestroyWithoutExploding(Transform other)
     {
         if (_explodeCoroutine != null)
             StopCoroutine(_explodeCoroutine);
 
-        SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, transform.position, 0.3f, false, Random.Range(0.7f, 0.9f));
+        SoundManager.ProjectileTriggeredSoundArtificial?.Invoke(transform.position, 6f);
+
+        GameObject VFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.SparksVFX), transform.position, Quaternion.identity);
+        SoundManager._instance.PlaySound(SoundManager._instance.BombExplode, transform.position, 0.1f, false, UnityEngine.Random.Range(2f, 2.5f));
+        SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, transform.position, 0.3f, false, Random.Range(0.75f, 0.85f));
         GameObject broken = Instantiate(PrefabHolder._instance.L1ExplosiveBroken, transform.position, transform.rotation);
         foreach (Transform item in broken.transform)
         {
             Rigidbody tempRB = item.GetComponent<Rigidbody>();
-            tempRB.AddForce(new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)) * 5f);
-            tempRB.AddForce((broken.transform.position - other.position).normalized * 15f);
-            GameManager._instance.CallForAction(() => { tempRB.isKinematic = true; tempRB.GetComponent<Collider>().enabled = false; }, 20f);
+            tempRB.velocity = _rb.velocity;
+            tempRB.AddForce(new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)) * 2.5f);
+            tempRB.AddForce((broken.transform.position - other.position).normalized * 6f);
+            GameManager._instance.CallForAction(() => { Destroy(tempRB.GetComponent<Collider>()); Destroy(tempRB); }, 3f);
         }
 
         if (explodingSound != null)
             Destroy(explodingSound);
+        GameManager._instance.CallForAction(() => Destroy(VFX), 4f);
         Destroy(transform.parent.gameObject);
     }
 }

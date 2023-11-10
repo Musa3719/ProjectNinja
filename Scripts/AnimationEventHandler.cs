@@ -4,13 +4,21 @@ using UnityEngine;
 
 public class AnimationEventHandler : MonoBehaviour
 {
+    [SerializeField]
+    private bool _isPlayer;
     public void OpenAttackCollider()
     {
-        GetParent().GetComponent<IKillable>().OpenAttackCollider();
+        if(_isPlayer)
+            GameManager._instance.PlayerRb.GetComponent<IKillable>().OpenAttackCollider();
+        else
+            GetParent().GetComponent<IKillable>().OpenAttackCollider();
     }
     public void CloseAttackCollider()
     {
-        GetParent().GetComponent<IKillable>().CloseAttackCollider();
+        if (_isPlayer)
+            GameManager._instance.PlayerRb.GetComponent<IKillable>().CloseAttackCollider();
+        else
+            GetParent().GetComponent<IKillable>().CloseAttackCollider();
     }
 
     private Transform GetParent()
@@ -19,5 +27,9 @@ public class AnimationEventHandler : MonoBehaviour
         while (parent.parent != null)
             parent = parent.parent;
         return parent;
+    }
+    public void MeleeAttackFinished()
+    {
+        GetParent().GetComponent<IKillable>().MeleeAttackFinished();
     }
 }

@@ -4,15 +4,21 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-
+using TMPro;
 public enum Language
 {
     EN,
-    TR
+    TR,
+    SC,
+    JP
 }
 public class Localization : MonoBehaviour
 {
     public static Localization _instance;
+
+    public TMP_FontAsset CJKFont;
+    public TMP_FontAsset TutorialFont;
+
     public Language _ActiveLanguage { get; private set; }
 
     public List<string> Newspapers;
@@ -56,6 +62,37 @@ public class Localization : MonoBehaviour
         ArrangeUI();
 
         _LanguageChangedEvent?.Invoke();
+
+        if (GameManager._instance != null)
+            ArrangeTutorialFonts();
+
+        if (SceneController._instance.SceneBuildIndex == 0)
+        {
+            if (_ActiveLanguage == Language.SC || _ActiveLanguage == Language.JP)
+                Options._instance.JoystickUI.transform.Find("ControllerImage").Find("PressedButton").GetComponent<TextMeshProUGUI>().font = CJKFont;
+            else
+                Options._instance.JoystickUI.transform.Find("ControllerImage").Find("PressedButton").GetComponent<TextMeshProUGUI>().font = Options._instance.QualityUI.GetComponentInChildren<TextMeshProUGUI>().font;
+
+            Options._instance.JoystickUI.transform.Find("ControllerImage").Find("PressedButton").GetComponent<TextMeshProUGUI>().text = "";
+        }
+    }
+    private void ArrangeTutorialFonts()
+    {
+        switch (Localization._instance._ActiveLanguage)
+        {
+            case Language.EN:
+            case Language.TR:
+                GameManager._instance.TutorialTextUI.transform.Find("Text").GetComponent<TextMeshProUGUI>().font = TutorialFont;
+                GameManager._instance.TutorialTextUI.transform.Find("Text (1)").GetComponent<TextMeshProUGUI>().font = TutorialFont;
+                break;
+            case Language.SC:
+            case Language.JP:
+                GameManager._instance.TutorialTextUI.transform.Find("Text").GetComponent<TextMeshProUGUI>().font = CJKFont;
+                GameManager._instance.TutorialTextUI.transform.Find("Text (1)").GetComponent<TextMeshProUGUI>().font = CJKFont;
+                break;
+            default:
+                break;
+        }
     }
     private void ArrangeList(string lastDirectory, List<string> list)
     {

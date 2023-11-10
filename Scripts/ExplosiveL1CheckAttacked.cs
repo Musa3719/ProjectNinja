@@ -8,7 +8,11 @@ public class ExplosiveL1CheckAttacked : MonoBehaviour
     {
         if (other.name == "AttackCollider" || other.GetComponentInChildren<Projectile>() != null)
         {
-            GetComponentInChildren<ExplosiveL1>().DestroyWithoutExploding(other.transform);
+            DestroyWithoutExploding(other.transform);
         }
+    }
+    public void DestroyWithoutExploding(Transform other)
+    {
+        GetComponentInChildren<ExplosiveL1>().DestroyWithoutExploding(other);
     }
 }

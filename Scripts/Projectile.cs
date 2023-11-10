@@ -75,7 +75,7 @@ public class Projectile : MonoBehaviour, IKillObject
     public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude, IKillObject killer)
     {
         SoundManager._instance.PlaySound(SoundManager._instance.Stab, transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-        killable.Die(dir / 2f, killersVelocityMagnitude / 2f, killer);
+        killable.Die(dir / 2f, killersVelocityMagnitude / 2f, killer, false);
     }
 
     private void OnTriggerEnter(Collider other)
@@ -85,7 +85,11 @@ public class Projectile : MonoBehaviour, IKillObject
             other.GetComponent<BreakableObject>().BrakeObject((transform.position - other.transform.position).normalized);
         }
         
-        if (other.isTrigger && !other.CompareTag("HitBox")) return;
+        if (other.isTrigger && !other.CompareTag("HitBox"))
+        {
+            if ((other.transform.parent == null || !other.transform.parent.CompareTag("Wolf")))
+                return;
+        }
         
         if (isTrap && (other.CompareTag("Wall") || IsProp(other)) && startTime + 0.1f > Time.time) return;
         
@@ -120,6 +124,12 @@ public class Projectile : MonoBehaviour, IKillObject
     {
         if (IgnoreCollisionCheck(IgnoreCollisionCollider, other)) return;
         if (other == null || other.CompareTag("ProjectileTrap") || other.CompareTag("Enemy") || other.CompareTag("Boss")) return;
+        
+        if (other.transform.parent != null && other.transform.parent.CompareTag("Wolf"))
+        {
+            other.transform.parent.GetComponent<Wolf>().Die(rb.velocity.normalized, rb.velocity.magnitude / 3f, this);
+            return;
+        }
 
         if (other.CompareTag("HitBox"))
         {
@@ -148,7 +158,10 @@ public class Projectile : MonoBehaviour, IKillObject
                 {
                     if (IsInAngle(other))
                     {
-                        otherKillable.DeflectWithBlock(other.transform.forward, IgnoreCollisionCollider.GetComponent<IKillable>(), true);
+                        if (IgnoreCollisionCollider == null)
+                            otherKillable.DeflectWithBlock(other.transform.forward, null, true);
+                        else
+                            otherKillable.DeflectWithBlock(other.transform.forward, IgnoreCollisionCollider.GetComponent<IKillable>(), true);
                     }
                     else
                     {
@@ -227,6 +240,11 @@ public class Projectile : MonoBehaviour, IKillObject
             {
                 hit.collider.GetComponentInChildren<ExplosiveL1>().Explode();
             }
+            if (hit.collider != null && hit.collider.gameObject.CompareTag("Wolf"))
+            {
+                hit.collider.GetComponent<Wolf>().Die((collider.transform.position - position).normalized, 10f, this);
+                continue;
+            }
 
             if (hit.collider == null || (!hit.collider.CompareTag("Player") && !hit.collider.CompareTag("Boss") && !hit.collider.CompareTag("Enemy") && !hit.collider.CompareTag("HitBox"))) continue;
 
@@ -241,7 +259,7 @@ public class Projectile : MonoBehaviour, IKillObject
             if (colliderKillable != null && !Killables.Contains(colliderKillable))
             {
                 Killables.Add(colliderKillable);
-                colliderKillable.Die((collider.transform.position - position).normalized, rb.velocity.magnitude, this);
+                colliderKillable.Die((collider.transform.position - position).normalized, 18f, this, true);
             }
         }
         SoundManager.ProjectileTriggeredSoundArtificial?.Invoke(position, 50f);
@@ -285,85 +303,6 @@ public class Projectile : MonoBehaviour, IKillObject
         SoundManager._instance.PlaySound(SoundManager._instance.SmokeExplode, transform.position, 0.3f, false, UnityEngine.Random.Range(1.25f, 1.5f));
         Destroy(gameObject);
     }
-    public void WhenTriggeredForShuriken(Collider other, Vector3 position)
-    {
-        if (IgnoreCollisionCheck(IgnoreCollisionCollider, other)) return;
-        if (other == null || other.CompareTag("ProjectileTrap") || other.CompareTag("Enemy") || other.CompareTag("Boss")) return;
-
-        if (other.CompareTag("HitBox"))
-        {
-            IKillable otherKillable = GameManager._instance.GetHitBoxIKillable(other);
-
-            if (otherKillable != null && !Killables.Contains(otherKillable))
-            {
-                Killables.Add(otherKillable);
-
-                bool isTargetDodging = otherKillable.IsDodgingGetter;
-                bool isTargetBlocking = otherKillable.IsBlockingGetter;
-
-                if (!isTargetBlocking && !isTargetDodging)
-                {
-                    if (!otherKillable.Object.CompareTag("Boss"))
-                        Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f, this);
-                }
-                else if (isTargetDodging)
-                {
-                    if (otherKillable.Object.CompareTag("Enemy"))
-                    {
-                        Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f, this);
-                    }
-                }
-                else if (isTargetBlocking)
-                {
-                    if (IsInAngle(other))
-                    {
-                        otherKillable.DeflectWithBlock(other.transform.forward, IgnoreCollisionCollider.GetComponent<IKillable>(), true);
-                    }
-                    else
-                    {
-                        if (!otherKillable.Object.CompareTag("Boss"))
-                            Kill(otherKillable, rb.velocity.normalized, rb.velocity.magnitude / 3f, this);
-                    }
-                }
-            }
-        }
-        else if (other.CompareTag("Wall"))
-        {
-            SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, transform.position, 0.25f, false, UnityEngine.Random.Range(0.6f, 0.7f));
-            GameObject decal = Instantiate(GameManager._instance.HoleDecal, transform.position - rb.velocity * 0.02f, Quaternion.identity);
-            decal.transform.forward = -rb.velocity.normalized;
-            decal.transform.localEulerAngles = new Vector3(decal.transform.localEulerAngles.x, decal.transform.localEulerAngles.y, UnityEngine.Random.Range(0f, 360f));
-            GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, transform.position, Quaternion.identity);
-            hitSmoke.transform.localScale *= 3f;
-            Color temp = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
-            hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(temp.r, temp.g, temp.b, 6.5f / 255f);
-            Destroy(hitSmoke, 5f);
-
-            if (rb.velocity.magnitude < 21f)
-                decal.transform.position += rb.velocity * 0.04f;
-        }
-        else if (other.CompareTag("Door"))
-        {
-            Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.175f, false, UnityEngine.Random.Range(0.55f, 0.65f)), 2f);
-            GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, transform.position, Quaternion.identity);
-            hitSmoke.transform.localScale *= 3f;
-            Color temp = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
-            hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(temp.r, temp.g, temp.b, 6.5f / 255f);
-            Destroy(hitSmoke, 5f);
-        }
-        else if (IsProp(other))
-        {
-            SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, transform.position, 0.25f, false, UnityEngine.Random.Range(0.6f, 0.7f));
-            GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, transform.position, Quaternion.identity);
-            hitSmoke.transform.localScale *= 3f;
-            Color temp = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
-            hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(temp.r, temp.g, temp.b, 6.5f / 255f);
-            Destroy(hitSmoke, 5f);
-        }
-
-        SoundManager.ProjectileTriggeredSoundArtificial?.Invoke(other.transform.position, 15f);
-        ProjectileHit();
-    }
     public void WhenTriggeredForGlass(Collider other, Vector3 position)
     {
         if (IgnoreCollisionCheck(IgnoreCollisionCollider, other)) return;
@@ -397,7 +336,7 @@ public class Projectile : MonoBehaviour, IKillObject
         foreach (Transform shard in brokenGlass.transform)
         {
             Rigidbody rb = shard.GetComponent<Rigidbody>();
-            rb.velocity = new Vector3(UnityEngine.Random.Range(-0.5f, 0.5f), UnityEngine.Random.Range(-0.5f, 0.5f), UnityEngine.Random.Range(-0.5f, 0.5f)) * 0.25f;
+            rb.velocity = new Vector3(UnityEngine.Random.Range(-0.5f, 0.5f), UnityEngine.Random.Range(-0.5f, 0.5f), UnityEngine.Random.Range(-0.5f, 0.5f)) * 0.7f + this.rb.velocity * 0.7f;
             GameManager._instance.CallForAction(() => { rb.isKinematic = true; rb.GetComponent<Collider>().enabled = false; }, 5f);
         }
         Destroy(gameObject);
@@ -462,7 +401,6 @@ public class Projectile : MonoBehaviour, IKillObject
     private bool IgnoreCollisionCheck(Collider Ignored, Collider collisionCollider)
     {
         if (Ignored == null) return false;
-
         Transform collisionTransform = collisionCollider.transform;
         while (collisionTransform.parent != null)
         {

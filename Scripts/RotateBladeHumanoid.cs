@@ -25,7 +25,7 @@ public class RotateBladeHumanoid : MonoBehaviour
         if (GameManager._instance.isGameStopped) { transform.localEulerAngles = _lastAngle; return; }
 
         _lastSpeed = _speed;
-        _speed = Mathf.Clamp(_rb.velocity.magnitude, 1f, 200f) * 60f;
+        _speed = 1600f;
         if (_killable.AttackCollider != null && _killable.AttackCollider.activeInHierarchy) _speed *= 8f;
         else if (_rb.velocity.magnitude > 3f) _speed *= 2f;
         else if (_rb.velocity.magnitude > 7f) _speed *= 3f;

@@ -13,9 +13,8 @@ public class RotateBlade : MonoBehaviour
         if (GameManager._instance.isGameStopped) { transform.localEulerAngles = new Vector3(transform.localEulerAngles.x, transform.localEulerAngles.y, _lastZAngle); return; }
 
         _lastSpeed = _speed;
-        _speed = Mathf.Clamp(GameManager._instance.PlayerRb.velocity.magnitude, 0.25f, 200f) * 70f;
+        _speed = Mathf.Clamp(GameManager._instance.PlayerRb.velocity.magnitude, 0.25f, 200f) * 250f;
         if (GameManager._instance.PlayerRb.velocity.magnitude > GameManager._instance.PlayerRunningSpeed + 1f) _speed *= 4f;
-        if (GameManager._instance.isPlayerAttacking) _speed *= 30f;
 
         Vector2 tempDir = new Vector2(GameManager._instance.PlayerRb.transform.forward.x, GameManager._instance.PlayerRb.transform.forward.z);
         Vector2 tempVel = new Vector2(GameManager._instance.PlayerRb.velocity.x, GameManager._instance.PlayerRb.velocity.z);
@@ -24,6 +23,12 @@ public class RotateBlade : MonoBehaviour
         else if (angle > 75f) { float sAngle = Vector2.SignedAngle(tempVel, tempDir); _speed = sAngle > 0f ? _speed : -_speed; }
 
         float lerpSpeed = 3f;
+        if (GameManager._instance.isPlayerAttacking)
+        {
+            _speed *= 30f;
+            lerpSpeed = 7f;
+        }
+
         if (GameManager._instance.PlayerRb.velocity.magnitude < 3f) lerpSpeed /= 1.25f;
         _speed = Mathf.Lerp(_lastSpeed, _speed, Time.deltaTime * lerpSpeed);
         transform.localEulerAngles = new Vector3(transform.localEulerAngles.x, transform.localEulerAngles.y, _lastZAngle + Time.deltaTime * _speed);

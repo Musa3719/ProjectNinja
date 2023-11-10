@@ -8,7 +8,7 @@ public class Fire : MonoBehaviour, IKillObject
 
     public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude, IKillObject killer)
     {
-        killable.Die(dir, killersVelocityMagnitude, killer);
+        killable.Die(dir, killersVelocityMagnitude, killer, true);
     }
 
     private void OnTriggerEnter(Collider other)

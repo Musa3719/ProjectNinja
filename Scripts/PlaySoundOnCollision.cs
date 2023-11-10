@@ -9,12 +9,15 @@ public class PlaySoundOnCollision : MonoBehaviour
     public AudioClip _soundClip;
     public bool _isEnabled;
     public bool _isDoor;
+    public float pitch;
     private GameObject _doorSoundObj;
     private float _doorSoundCounter;
     private bool _isInDoorCoroutine;
 
     private Rigidbody _rb;
     private float _collisionSpeed;
+    private float _lastTimeSoundPlayed;
+
     private void Awake()
     {
         _rb = GetComponent<Rigidbody>();
@@ -62,19 +65,24 @@ public class PlaySoundOnCollision : MonoBehaviour
         if (collision.collider == null) return;
 
         float volume = 0.1f;
-        float pitch = Random.Range(0.85f, 1.15f);
+        if (pitch == 0f)
+            pitch = Random.Range(0.85f, 1.15f);
 
         if (_isDoor)
         {
             if (_doorSoundObj == null)
                 _doorSoundObj = SoundManager._instance.PlaySound(SoundManager._instance.DoorSound, transform.position, 0.055f, true, 1f);
 
-            pitch = Random.Range(0.8f, 1f);
             volume = 0.14f;
             _soundClip = SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.DoorHitSounds);
         }
+        if (GetComponent<MeleeWeapon>() != null)
+            volume += _rb.velocity.magnitude / 100f;
 
-        if (_isEnabled && _soundClip != null && (_collisionSpeed > 2f || _isDoor || collision.collider.CompareTag("Player") || collision.collider.CompareTag("Enemy") || collision.collider.CompareTag("Boss")))
-            SoundManager._instance.PlaySound(_soundClip, transform.position, volume, false, pitch);
+        if (_isEnabled && _lastTimeSoundPlayed + 0.15f < Time.time && _soundClip != null && (_collisionSpeed > 2f || _isDoor || collision.collider.CompareTag("Player") || collision.collider.CompareTag("Enemy") || collision.collider.CompareTag("Boss")))
+        {
+            SoundManager._instance.PlaySound(_soundClip, transform.position, volume, false, pitch + Random.Range(-0.05f, 0.05f));
+            _lastTimeSoundPlayed = Time.time;
+        }
     }
 }

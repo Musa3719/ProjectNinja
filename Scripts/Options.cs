@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.UI;
 
 public class Options : MonoBehaviour
@@ -13,8 +15,14 @@ public class Options : MonoBehaviour
 
     public float FOV { get; private set; }
     public int Quality { get; private set; }
+    public int ControllerForTutorial { get; private set; }
 
+    public GameObject QualityUI;
+    public GameObject TutorialButtonsUI;
+    public GameObject JoystickUI;
+    public GameObject JoystickNeed;
 
+    private Coroutine _graphicsBackToNormalCoroutine;
 
     public Slider SoundSlider;
     public Slider MusicSlider;
@@ -32,13 +40,19 @@ public class Options : MonoBehaviour
         SoundSlider.value = SoundVolume;
         MusicSlider.value = MusicVolume;
         FovSlider.value = FOV;
-        Quality = QualitySettings.GetQualityLevel();
+        Quality = PlayerPrefs.GetInt("Quality", 2);
+        ControllerForTutorial = PlayerPrefs.GetInt("TutorialNames", 0);
+        ArrangeTutorailButtonNamesUI();
+        SetQuality(Quality);
+
     }
 
     private void Start()
     {
         SensitivitySlider.value = PlayerPrefs.GetFloat("Sensitivity", 0.3f);
         MouseSensitivity = SensitivitySlider.value * MaxSensitivity;
+        Options._instance.ArrangeQualityUI();
+        CheckGraphicsToLow();
     }
     public void SoundVolumeChanged(float newValue)
     {
@@ -51,6 +65,8 @@ public class Options : MonoBehaviour
         MusicVolume = newValue;
         PlayerPrefs.SetFloat("Music", newValue);
         ArrangeActiveMusicVolumes(newValue);
+        if (SoundManager._instance != null)
+            SoundManager._instance.ContinueMusic();
     }
     public void MouseSensitivityVolumeChanged(float newValue)
     {
@@ -75,14 +91,123 @@ public class Options : MonoBehaviour
 
         if (oldQuality == 2 && number != 2 && GameObject.Find("Level") != null)
         {
-            GameManager._instance.GraphicsBackToNormal();
+            GraphicsBackToNormal();
         }
         else if (oldQuality != 2 && number == 2 && GameObject.Find("Level") != null)
         {
-            GameManager._instance.ArrangeGraphicsToLow();
+            CheckGraphicsToLow();
+        }
+        ArrangeQualityUI();
+    }
+    public void ArrangeQualityUI()
+    {
+        QualityUI.transform.Find("Low").transform.Find("ActiveImage").gameObject.SetActive(false);
+        QualityUI.transform.Find("Medium").transform.Find("ActiveImage").gameObject.SetActive(false);
+        QualityUI.transform.Find("High").transform.Find("ActiveImage").gameObject.SetActive(false);
+
+        switch (Quality)
+        {
+            case 0:
+                QualityUI.transform.Find("High").transform.Find("ActiveImage").gameObject.SetActive(true);
+                break;
+            case 1:
+                QualityUI.transform.Find("Medium").transform.Find("ActiveImage").gameObject.SetActive(true);
+                break;
+            case 2:
+                QualityUI.transform.Find("Low").transform.Find("ActiveImage").gameObject.SetActive(true);
+                break;
+            default:
+                break;
         }
     }
+    public void SetTutorailButtonNames(int number)
+    {
+        if (PlayerPrefs.GetInt("TutorialNames") != number)
+        {
+            PlayerPrefs.SetInt("TutorialNames", number);
+            ControllerForTutorial = number;
+            ArrangeTutorailButtonNamesUI();
+        }
+        
+    }
+    public void ArrangeTutorailButtonNamesUI()
+    {
+        if (SceneController._instance.SceneBuildIndex != 0) return;
 
+        TutorialButtonsUI.transform.Find("Keyboard").transform.Find("ActiveImage").gameObject.SetActive(false);
+        TutorialButtonsUI.transform.Find("Gamepad").transform.Find("ActiveImage").gameObject.SetActive(false);
+
+        switch (ControllerForTutorial)
+        {
+            case 0:
+                TutorialButtonsUI.transform.Find("Keyboard").transform.Find("ActiveImage").gameObject.SetActive(true);
+                break;
+            case 1:
+                TutorialButtonsUI.transform.Find("Gamepad").transform.Find("ActiveImage").gameObject.SetActive(true);
+                break;
+            default:
+                break;
+        }
+    }
+    public void OpenJoystickArrangementNeedText()
+    {
+        JoystickNeed.SetActive(true);
+        Invoke("JoystickNeedClose", 7f);
+    }
+    private void JoystickNeedClose()
+    {
+        JoystickNeed.SetActive(false);
+    }
+    public void CheckGraphicsToLow()
+    {
+        if (PlayerPrefs.GetInt("Quality") == 2 && GameObject.Find("Level") != null)
+        {
+            if (_graphicsBackToNormalCoroutine != null)
+                StopCoroutine(_graphicsBackToNormalCoroutine);
+
+
+            //GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(false);
+            //GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(true);
+
+            Transform lights = GameObject.Find("Level").transform.Find("Lights");
+            foreach (Transform light in lights)
+            {
+                if (light.name == "Sky and Fog Volume")
+                {
+                    if (GameManager._instance != null)
+                        light.GetComponent<Volume>().profile = GameManager._instance.LowSettingsVolume;
+                }
+                else if (light.Find("Lights") != null)
+                {
+                    light.GetComponentInChildren<HDAdditionalLightData>().affectsVolumetric = false;
+                }
+
+            }
+        }
+    }
+    public void GraphicsBackToNormal()
+    {
+        GameManager._instance.CoroutineCall(ref _graphicsBackToNormalCoroutine, GraphicsBackToNormalCoroutine(), this);
+    }
+    private IEnumerator GraphicsBackToNormalCoroutine()
+    {
+        Transform lights = GameObject.Find("Level").transform.Find("Lights");
+        foreach (Transform light in lights)
+        {
+            if (light.name == "Sky and Fog Volume")
+            {
+                if (GameManager._instance != null)
+                    light.GetComponent<Volume>().profile = GameManager._instance.NormalSettingsVolume;
+            }
+            else if (light.Find("Lights") != null)
+            {
+                light.GetComponentInChildren<HDAdditionalLightData>().affectsVolumetric = true;
+            }
+            yield return null;
+        }
+        //GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(false);
+        //GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(true);
+    }
     private void ArrangeActiveSoundVolumes(float newValue)
     {
         if (SoundManager._instance != null && SoundManager._instance.SoundObjectsParent != null)

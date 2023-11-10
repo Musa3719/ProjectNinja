@@ -29,7 +29,7 @@ public class Knife : IThrowableItem
         if (Count <= 0) return true;
 
         Vector3 pos = rb.transform.position;
-        if (!isPlayer) pos += Vector3.up * 0.5f;
+        if (!isPlayer) pos += Vector3.up * 0.5f + rb.transform.right * 0.25f;
         Count--;
         GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
@@ -39,6 +39,7 @@ public class Knife : IThrowableItem
         }
         else
             throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 22f;
+       
         throwable.transform.forward = throwable.GetComponentInChildren<Rigidbody>().velocity.normalized;
         throwable.GetComponentInChildren<Rigidbody>().angularVelocity = throwable.transform.right * 15f;
         throwable.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = IgnoredCollider;
@@ -62,7 +63,7 @@ public class Bomb : IThrowableItem
         if (Count <= 0) return true;
 
         Vector3 pos = rb.transform.position;
-        if (!isPlayer) pos += Vector3.up * 0.5f;
+        if (!isPlayer) pos += Vector3.up * 0.5f + rb.transform.right * 0.25f;
         Count--;
         GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
@@ -71,7 +72,10 @@ public class Bomb : IThrowableItem
             throwable.transform.position = GameManager._instance.IsLeftThrowing ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
         }
         else
+        {
             throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 11f;
+            throwable.transform.localScale *= 0.7f;
+        }
         throwable.transform.forward = throwable.GetComponentInChildren<Rigidbody>().velocity.normalized;
         throwable.GetComponentInChildren<Rigidbody>().angularVelocity = new Vector3(1f, 1f, 1f);
         throwable.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = IgnoredCollider;
@@ -103,6 +107,7 @@ public class Smoke : IThrowableItem
         }
         else
             throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 30f / 3.5f;
+
         throwable.transform.forward = throwable.GetComponentInChildren<Rigidbody>().velocity.normalized;
         throwable.GetComponentInChildren<Rigidbody>().angularVelocity = new Vector3(1f, 1f, 1f);
         throwable.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = IgnoredCollider;
@@ -126,7 +131,7 @@ public class Shuriken : IThrowableItem
         if (Count <= 0) return true;
 
         Vector3 pos = rb.transform.position;
-        if (!isPlayer) pos += Vector3.up * 0.5f;
+        if (!isPlayer) pos += Vector3.up * 0.5f + rb.transform.right * 0.25f;
         Count--;
         GameObject throwable = GameObject.Instantiate(PrefabGetter, pos, Quaternion.identity);
         if (isPlayer)
@@ -135,11 +140,14 @@ public class Shuriken : IThrowableItem
             throwable.transform.position = GameManager._instance.IsLeftThrowing ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
         }
         else
+        {
             throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 22f;
+            throwable.transform.localScale *= 0.7f;
+        }
         throwable.transform.forward = throwable.GetComponentInChildren<Rigidbody>().velocity.normalized;
         throwable.GetComponentInChildren<Rigidbody>().angularVelocity = throwable.transform.up * 7f;
         throwable.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = IgnoredCollider;
-        throwable.GetComponentInChildren<Projectile>().WhenTriggered = throwable.GetComponentInChildren<Projectile>().WhenTriggeredForShuriken;
+        throwable.GetComponentInChildren<Projectile>().WhenTriggered = throwable.GetComponentInChildren<Projectile>().WhenTriggeredForKnife;
 
         if (Count <= 0) return true;
         return false;
@@ -169,6 +177,7 @@ public class Glass : IThrowableItem
         }
         else
             throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 30f / 2f;
+
         throwable.transform.forward = throwable.GetComponentInChildren<Rigidbody>().velocity.normalized;
         throwable.GetComponentInChildren<Rigidbody>().angularVelocity = new Vector3(1f, 1f, 1f);
         throwable.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = IgnoredCollider;
@@ -201,6 +210,7 @@ public class Stone : IThrowableItem
         }
         else
             throwable.GetComponentInChildren<Rigidbody>().velocity = rb.transform.forward * 30f / 2f;
+
         throwable.transform.forward = throwable.GetComponentInChildren<Rigidbody>().velocity.normalized;
         throwable.GetComponentInChildren<Rigidbody>().angularVelocity = new Vector3(1f, 1f, 1f);
         throwable.GetComponentInChildren<Projectile>().IgnoreCollisionCollider = IgnoredCollider;

@@ -26,29 +26,34 @@ public class MeleeWeaponThrowed : MonoBehaviour
     {
         _rb = GetComponent<Rigidbody>();
         transform.Find("AttackColliderWarning").gameObject.SetActive(true);
-        transform.Find("AttackColliderWarning").transform.localScale *= 2f;
+        transform.Find("AttackColliderWarning").transform.localScale *= 5f;
+    }
+    private void Update()
+    {
+        if (_rb.velocity.magnitude < 1f && !_isHitBefore)
+        {
+            StartCoroutine(WeaponHitCoroutine());
+            _isHitBefore = true;
+        }
     }
     private void OnCollisionEnter(Collision collision)
     {
-        if (GetParentCollider(collision.collider) != null && GetParentCollider(collision.collider) == IgnoreCollisionCollider) return;
-
+        if (collision.collider == null || GetParentCollider(collision.collider) == null || GetParentCollider(collision.collider) == IgnoreCollisionCollider) return;
         if ((collision.collider.isTrigger && collision.collider.CompareTag("HitBox")) || !collision.collider.isTrigger)
         {
+            if (transform.Find("AttackCollider").gameObject.activeInHierarchy && (collision.collider.CompareTag("HitBox") || collision.collider.CompareTag("Enemy")) && GetParentCollider(collision.collider).GetComponent<IKillable>() != null)
+                TryToKill(collision.collider);
+            if (transform.Find("AttackCollider").gameObject.activeInHierarchy && collision.collider.CompareTag("ExplosiveL1"))
+                collision.collider.GetComponent<ExplosiveL1CheckAttacked>().DestroyWithoutExploding(transform);
             if (!_isHitBefore)
                 StartCoroutine(WeaponHitCoroutine());
             _isHitBefore = true;
-
-            if (transform.Find("AttackCollider").gameObject.activeInHierarchy && collision.collider.isTrigger && collision.collider.CompareTag("HitBox") && GetParentCollider(collision.collider).GetComponent<IKillable>() != null)
-            {
-                TryToKill(collision.collider);
-            }
         }
     }
     private IEnumerator WeaponHitCoroutine()
     {
-        SoundManager._instance.PlaySound(SoundManager._instance.Blocks[0], transform.position, 0.14f, false, UnityEngine.Random.Range(0.5f, 0.6f));
         transform.Find("AttackCollider").gameObject.SetActive(false);
-        transform.Find("AttackColliderWarning").transform.localScale /= 2f;
+        transform.Find("AttackColliderWarning").transform.localScale /= 5f;
         transform.Find("AttackColliderWarning").gameObject.SetActive(false);
         yield return new WaitForSeconds(4f);
         _rb.isKinematic = true;
@@ -65,14 +70,13 @@ public class MeleeWeaponThrowed : MonoBehaviour
             bool isTargetBlocking = otherKillable.IsBlockingGetter;
             if (!isTargetBlocking && !isTargetDodging)
             {
-                Kill(otherKillable, (otherKillable.Object.transform.position - GetParent(transform).position).normalized, GetParent(transform).GetComponent<Rigidbody>().velocity.magnitude, transform.Find("AttackCollider").GetComponent<MeleeWeapon>());
+                Kill(otherKillable, _rb.velocity.normalized, GetParent(transform).GetComponent<Rigidbody>().velocity.magnitude, transform.Find("AttackCollider").GetComponent<MeleeWeapon>());
             }
         }
     }
     private void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude, IKillObject killer)
     {
-        if (transform.Find("AttackCollider").GetComponent<MeleeWeapon>().IsHardHitWeapon) SoundManager._instance.PlaySound(SoundManager._instance.HardHit, transform.position, 0.25f, false, Random.Range(0.9f, 1f));
-        killable.Die(dir, killersVelocityMagnitude, killer);
+        killable.Die(dir, killersVelocityMagnitude, killer, GetComponent<MeleeWeaponForPlayer>().IsHardHit());
     }
     private Collider GetParentCollider(Collider collider)
     {

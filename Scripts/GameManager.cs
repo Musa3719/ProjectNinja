@@ -9,6 +9,7 @@ using System;
 using UnityEngine.Animations.Rigging;
 using UnityEngine.AI;
 using UnityEngine.Rendering.HighDefinition;
+using UnityEngine.Video;
 
 public class GameManager : MonoBehaviour
 {
@@ -20,6 +21,7 @@ public class GameManager : MonoBehaviour
     public static GameManager _instance;
     [HideInInspector]
     public GameObject MainCamera;
+    private GameObject _defaultCamera;
 
     public Transform PlayerFootPos;
     public Transform PlayerRightHandHolder;
@@ -29,9 +31,7 @@ public class GameManager : MonoBehaviour
     private Coroutine _slowTimeCoroutine;
     private Coroutine _effectPlayerByDarkCoroutine;
     private Coroutine _playerAttackHandleCoroutine;
-    private Coroutine _disableWarningUICoroutine;
     private Coroutine _tutorialTextCoroutine;
-    private Coroutine _graphicsBackToNormalCoroutine;
     private Coroutine _openInvincibleScreen;
 
     public bool isGameStopped { get; set; }
@@ -40,10 +40,7 @@ public class GameManager : MonoBehaviour
     public bool isPlayerAttacking { get; private set; }
 
     public bool IsPlayerOnWall;
-
-    public const int TeleportActivatedLevelIndex = 17;
-    public const int IceActivatedLevelIndex = 9;
-    //public const int InvertedMirrorActivatedLevelIndex = 17;
+    public bool IsPlayerHasMeleeWeapon;
     public bool _isInBossLevel { get; private set; }
 
     public const int Boss1LevelIndex = 8;
@@ -58,18 +55,8 @@ public class GameManager : MonoBehaviour
     public bool isTeleportSkillOpen { get; private set; }
     public bool isIceSkillOpen { get; private set; }
     public bool isInvertedMirrorSkillOpen { get; private set; }
-
-    public Color _AvailableColor;
-    public Color _NotAvailableColor;
-    public Color _InUseColor;
-    public Color _InUseWaitingColor;
-
     public float InvertedMirrorFunctionalTime { get; private set; }
     public float TeleportAvailableTimeAfterHologram { get; private set; }
-
-    public GameObject TeleportSkillUIGetter => TeleportSkill;
-    public GameObject IceSkillUIGetter => IceSkill;
-    public GameObject InvertedMirrorSkillUIGetter => InvertedMirrorSkill;
     public GameObject CutsceneCamerasGetter => CutsceneCameras;
 
 
@@ -79,16 +66,12 @@ public class GameManager : MonoBehaviour
     public LayerMask MirrorRayLayer;
     public LayerMask WallLayer;
 
-
     public Color MidScreenDotMovementColor;
     public Color MidScreenDotOnWallColor;
-
     public Color ThrowableColor;
 
     [SerializeField]
     public GameObject TeleportIllusion;
-    [SerializeField]
-    public GameObject CanDoWallMovementUI;
     [SerializeField]
     public GameObject TutorialTextUI;
     [SerializeField]
@@ -102,18 +85,13 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     private GameObject WarningUIParent;
     public Image MidScreenDot;
+    public GameObject BossTextUI;
     public Volume BlurVolume { get; private set; }
     private Volume ChromaticVolume;
-    [SerializeField]
-    private GameObject TeleportSkill;
-    [SerializeField]
-    private GameObject IceSkill;
-    [SerializeField]
-    private GameObject InvertedMirrorSkill;
     public GameObject NewspaperUI;
-    public GameObject PaintingUI;
     public GameObject MaxSpeedCounterUI;
     private GameObject CutsceneCameras;
+    public GameObject MainCutsceneCamera { get; private set; }
     [SerializeField]
     private GameObject DeathScreen;
     [SerializeField]
@@ -134,8 +112,6 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     private TextMeshProUGUI SpeedText;
     [SerializeField]
-    private TextMeshProUGUI StateText;
-    [SerializeField]
     private TextMeshProUGUI FrameRate;
     [SerializeField]
     private Image CurrentThrowable;
@@ -153,24 +129,25 @@ public class GameManager : MonoBehaviour
     private Color _originalStaminaColor;
     public List<GameObject> Projectiles { get; private set; }
     public List<Cloth> Cloths { get; private set; }
+    private List<Cloth> _tempListForCloths;
 
     [HideInInspector]
     public Rigidbody PlayerRb;
+    [HideInInspector]
     public float PlayerLastSpeed;
     public Transform PlayerRightHandTransform;
     public Transform PlayerLeftHandTransform;
     public bool IsLeftThrowing { get; set; }
     public float PlayerRunningSpeed { get; set; }
 
-    public Painting lookingToPainting { get; set; }
-
     public GameObject ArrowPrefab;
     public GameObject BulletPrefab;
-    public GameObject TeleportSpotPrefab;
-    public GameObject InvertedMirrorPrefab;
     public GameObject SmokePrefab;
 
     private List<HDAdditionalLightData> MixedLights;
+
+    [SerializeField]
+    private List<VideoClip> VideosForTutorial;
 
     [SerializeField]
     private RuntimeAnimatorController Enemy_1_Animator;
@@ -199,21 +176,6 @@ public class GameManager : MonoBehaviour
     public List<GameObject> enemiesNearPlayer { get; private set; }
     public List<GameObject> tempListForNearPlayers { get; private set; }
 
-    public Dictionary<string, string> AttackNameToPrepareName;
-
-    public Dictionary<string, string> AttackNameToPrepareNameBoss;
-
-    public Dictionary<string, float> Enemy1AttackNameToHitOpenTime;
-    public Dictionary<string, float> Enemy2AttackNameToHitOpenTime;
-    public Dictionary<string, float> Enemy3AttackNameToHitOpenTime;
-    public Dictionary<string, float> Enemy4AttackNameToHitOpenTime;
-    public Dictionary<string, float> Enemy5AttackNameToHitOpenTime;
-    public Dictionary<string, float> KatanaAttackNameToHitOpenTime;
-
-    public Dictionary<string, float> NameToHitOpenTimeBoss1;
-    public Dictionary<string, float> NameToHitOpenTimeBoss2;
-    public Dictionary<string, float> NameToHitOpenTimeBoss3;
-
     public Dictionary<string, float> Enemy1AnimNameToSpeed;
     public Dictionary<string, float> Enemy2AnimNameToSpeed;
     public Dictionary<string, float> Enemy3AnimNameToSpeed;
@@ -225,13 +187,13 @@ public class GameManager : MonoBehaviour
     public Dictionary<string, float> Boss2AnimNameToSpeed;
     public Dictionary<string, float> Boss3AnimNameToSpeed;
 
-
     public List<GameObject> BloodDecalPrefabs;
     public GameObject HoleDecal;
     public GameObject DeathVFX;
     public GameObject HitSmokeVFX;
     public GameObject CombatSmokeVFX;
     public GameObject GunFireVFX;
+    public GameObject BleedingVFX;
     public List<GameObject> BloodVFX;
     public List<GameObject> ExplosionVFX;
     public List<GameObject> SparksVFX;
@@ -248,17 +210,19 @@ public class GameManager : MonoBehaviour
     private GameObject ToNextSceneObject;
     public float BossArenaGroundYPosition;
 
-    public float BladeSpeed;
+    [HideInInspector] public float BladeSpeed;
 
-    public float RunSpeedAdditionActiveTime;
+    [HideInInspector] public float RunSpeedAdditionActiveTime;
 
-    public bool TimeStopEndSignal;
+    [HideInInspector] public bool TimeStopEndSignal;
 
     public bool IsPlayerInSmoke { get; set; }
     public bool IsFollowPlayerTriggered { get; set; }
 
     public GameObject BossPhaseCounterBetweenScenes { get; private set; }
     public GameObject LevelNumberObject { get; private set; }
+
+    private GameObject _bossEnterSound;
 
     private NextSceneHandler _nextSceneHandler;
     private int _lastTutorialTextNumber;
@@ -271,6 +235,8 @@ public class GameManager : MonoBehaviour
     public event Action _enemyDiedEvent;
 
     [HideInInspector]public CustomPassVolume CustomPassForHands;
+
+    private GameObject[] _enemies;
     public T GetRandomFromList<T>(List<T> list)
     {
         return list[UnityEngine.Random.Range(0, list.Count)];
@@ -288,32 +254,114 @@ public class GameManager : MonoBehaviour
             list[n] = value;
         }
     }
+    /// <param name="speed">1/second</param>
+    public float LimitLerpFloat(float startValue, float endValue, float speed)
+    {
+        return Mathf.Lerp(startValue, endValue, Time.deltaTime * speed * 7f * (endValue - startValue));
+    }
+    /// <param name="speed">1/second</param>
+    public Vector2 LimitLerpVector2(Vector2 startValue, Vector2 endValue, float speed)
+    {
+        return Vector2.Lerp(startValue, endValue, Time.deltaTime * speed * 7f / (endValue - startValue).magnitude);
+    }
+    /// <param name="speed">1/second</param>
+    public Vector3 LimitLerpVector3(Vector3 startValue, Vector3 endValue, float speed)
+    {
+        return Vector3.Lerp(startValue, endValue, Time.deltaTime * speed * 7f / (endValue - startValue).magnitude);
+    }
+
+    /// <param name="speed">1/second</param>
+    public float LinearLerpFloat(float startValue, float endValue, float speed)
+    {
+        float startTime = Time.time;
+        float endTime = startTime + 1 / speed;
+        return Mathf.Lerp(startValue, endValue, (Time.time - startTime) / (endTime - startTime));
+    }
+    /// <param name="speed">1/second</param>
+    public Vector2 LinearLerpVector2(Vector2 startValue, Vector2 endValue, float speed)
+    {
+        float startTime = Time.time;
+        float endTime = startTime + 1 / speed;
+        return Vector2.Lerp(startValue, endValue, (Time.time - startTime) / (endTime - startTime));
+    }
+    /// <param name="speed">1/second</param>
+    public Vector3 LinearLerpVector3(Vector3 startValue, Vector3 endValue, float speed)
+    {
+        float startTime = Time.time;
+        float endTime = startTime + 1 / speed;
+        return Vector3.Lerp(startValue, endValue, (Time.time - startTime) / (endTime - startTime));
+    }
+    public bool RandomPercentageChance(float percentage)
+    {
+        return percentage >= UnityEngine.Random.Range(1f, 100f);
+    }
+    public void CoroutineCall(ref Coroutine coroutine, IEnumerator method, MonoBehaviour script)
+    {
+        if (coroutine != null)
+            script.StopCoroutine(coroutine);
+        coroutine = script.StartCoroutine(method);
+    }
+    public void CallForAction(Action action, float time)
+    {
+        StartCoroutine(CallForActionCoroutine(action, time));
+    }
+    private IEnumerator CallForActionCoroutine(Action action, float time)
+    {
+        yield return new WaitForSeconds(time);
+        action?.Invoke();
+    }
+    public Transform GetParent(Transform tr)
+    {
+        Transform parentTransform = tr.transform;
+        while (parentTransform.parent != null)
+        {
+            parentTransform = parentTransform.parent;
+        }
+        return parentTransform;
+    }
+    public IKillable GetHitBoxIKillable(Collider other)
+    {
+        Transform parentSearch = other.transform;
+        while (parentSearch.parent != null)
+        {
+            parentSearch = parentSearch.parent;
+        }
+
+        if (parentSearch.GetComponent<IKillable>() != null)
+            return parentSearch.GetComponent<IKillable>();
+        return null;
+    }
+    public GameObject GetHitBoxIKillableObject(Collider other)
+    {
+        Transform parentSearch = other.transform;
+        while (parentSearch.parent != null)
+        {
+            parentSearch = parentSearch.parent;
+        }
+
+        return parentSearch.gameObject;
+    }
     private void Awake()
     {
         //Application.targetFrameRate = 10;
         _instance = this;
+        _tempListForCloths = new List<Cloth>();
         CutsceneCameras = GameObject.FindGameObjectWithTag("CutsceneCameras");
+        MainCutsceneCamera = CutsceneCameras.transform.Find("CutsceneMainCam").gameObject;
         CutsceneCameras.SetActive(false);
         BlurVolume = GameObject.FindGameObjectWithTag("Volume").transform.Find("Blur").GetComponent<Volume>();
         ChromaticVolume = GameObject.FindGameObjectWithTag("Volume").transform.Find("Chromatic").GetComponent<Volume>();
         BlurVolume.enabled = false;
-        ArrangeGraphicsToLow();
-        
         GameObject[] carpets = GameObject.FindGameObjectsWithTag("Carpet");
         foreach (var item in carpets)
         {
             item.GetComponent<MeshRenderer>().material = CarpetLowSetting;
         }
 
-        _AvailableColor = new Color(77f / 255f, 156f / 255f, 70f / 255f, 1f);
-        _NotAvailableColor = new Color(114f / 255f, 44f / 255f, 44f / 255f, 1f);
-        _InUseColor = new Color(47f / 255f, 144f / 255f, 188f / 255f, 1f);
-        _InUseWaitingColor = new Color(181f / 255f, 181f / 255f, 58f / 255f, 1f);
-
         MidScreenDotMovementColor = new Color(195f / 255f, 195f / 255f, 195f / 255f, 0.8f);
         MidScreenDotOnWallColor = new Color(255f / 255f, 0f / 255f, 217f / 255f, 204f/255f);
 
-        ThrowableColor = new Color(219f / 255f, 219f / 255f, 219f / 255f, 219f / 255f);
+        ThrowableColor = new Color(0.78f, 0.7f, 0.1f, 219f / 255f);
 
         Projectiles = new List<GameObject>();
         Cloths = new List<Cloth>();
@@ -330,7 +378,8 @@ public class GameManager : MonoBehaviour
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
         Application.targetFrameRate = 60;
-        MainCamera = Camera.main.gameObject;
+        _defaultCamera = Camera.main.gameObject;
+        MainCamera = _defaultCamera;
         PlayerRb = GameObject.FindGameObjectWithTag("Player").GetComponent<Rigidbody>();
         enemiesNearPlayer = new List<GameObject>();
         tempListForNearPlayers = new List<GameObject>();
@@ -345,8 +394,6 @@ public class GameManager : MonoBehaviour
 
         ToNextSceneObject = GameObject.FindGameObjectWithTag("DoorHandler");
         _nextSceneHandler = ToNextSceneObject.GetComponent<NextSceneHandler>();
-
-        CheckForSkillsOpen();
 
         SetMixedLights();
         StartCoroutine(RenderShadowsByTimeCoroutine());
@@ -389,14 +436,13 @@ public class GameManager : MonoBehaviour
                     PassCutsceneButton.SetActive(true);
                 }
             }
+            else if (TutorialTextUI.activeInHierarchy)
+            {
+                CloseTutorialVideo();
+            }
             else if (_nextSceneHandler._isInInteract)
             {
                 //nothing
-            }
-            else if (lookingToPainting != null)
-            {
-                //lookingToPainting.ClosePainting();
-                lookingToPainting = null;
             }
             else
             {
@@ -412,11 +458,12 @@ public class GameManager : MonoBehaviour
         }
 
         ClothRender();
+        CheckForVolumetrics();
     }
     private void ClothRender()
     {
         _clothTimer += Time.deltaTime;
-        if (_clothTimer < 0.5f) return;
+        if (_clothTimer < 1.25f) return;
         _clothTimer = 0f;
 
         SortCloths();
@@ -424,10 +471,10 @@ public class GameManager : MonoBehaviour
         switch (Options._instance.Quality)
         {
             case 0:
-                numberOfCloths = 3;
+                numberOfCloths = 1;
                 break;
             case 1:
-                numberOfCloths = 2;
+                numberOfCloths = 1;
                 break;
             case 2:
                 numberOfCloths = 1;
@@ -452,11 +499,14 @@ public class GameManager : MonoBehaviour
     }
     private void SortCloths()
     {
-        List<Cloth> tempList = new List<Cloth>();
+        foreach (Cloth cloth in Cloths)
+            if (cloth == null) Cloths.Remove(cloth);
+
+        _tempListForCloths.Clear();
         int count = Cloths.Count;
         for (int i = 0; i < count; i++)
         {
-            float minLenght = 1000f;
+            float minLenght = 100f;
             Cloth tempCloth = null;
             foreach (Cloth cloth in Cloths)
             {
@@ -467,10 +517,13 @@ public class GameManager : MonoBehaviour
                     minLenght = distance;
                 }
             }
-            tempList.Add(tempCloth);
-            Cloths.Remove(tempCloth);
+            if (tempCloth != null)
+            {
+                _tempListForCloths.Add(tempCloth);
+                Cloths.Remove(tempCloth);
+            }
         }
-        Cloths = tempList;
+        Cloths = _tempListForCloths;
     }
     public bool IsProp(Collider other)
     {
@@ -492,6 +545,7 @@ public class GameManager : MonoBehaviour
             yield return null;
         }
     }
+   
     private void CheckForRenderShadows()
     {
         float distanceMultiplier = Options._instance.Quality == 2 ? 0.5f : 1f;
@@ -500,14 +554,14 @@ public class GameManager : MonoBehaviour
             bool isGoingToRender = false;
             if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 10f * distanceMultiplier && Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.03f)
                 isGoingToRender = true;
-            else if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 15f * distanceMultiplier && Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.07f)
+            else if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 15f * distanceMultiplier && Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.08f)
                 isGoingToRender = true;
-            else if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 20f * distanceMultiplier && Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.12f)
+            else if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 20f * distanceMultiplier && Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.15f)
                 isGoingToRender = true;
-            else if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 30f * distanceMultiplier && Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.2f)
+            else if ((light.transform.position - GameManager._instance.PlayerRb.transform.position).magnitude < 30f * distanceMultiplier && Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.25f)
                 isGoingToRender = true;
-            else if (Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 0.5f)
-                isGoingToRender = true;
+            else if (Time.realtimeSinceStartup - light.GetComponent<FloatHolder>().Value >= 2f)
+                isGoingToRender = false;
 
             if (isGoingToRender)
             {
@@ -548,65 +602,16 @@ public class GameManager : MonoBehaviour
         if (MixedLights != null) return;
 
         MixedLights = new List<HDAdditionalLightData>();
-        Transform lights = GameObject.Find("Level").transform.Find("Lights");
-        foreach (Transform light in lights)
+        Light[] lights = GameObject.Find("Level").transform.Find("Lights").GetComponentsInChildren<Light>();
+        foreach (Light light in lights)
         {
-            if (light.name != "Sky and Fog Volume" && light.Find("Lights") != null && light.Find("Lights").GetComponentInChildren<Light>() != null && light.Find("Lights").Find("Mixed") != null)
+            if (light.GetComponent<HDAdditionalLightData>() != null && light.GetComponent<FloatHolder>() != null)
             {
-                MixedLights.Add(light.Find("Lights").GetComponentInChildren<HDAdditionalLightData>());
+                MixedLights.Add(light.GetComponent<HDAdditionalLightData>());
             }
         }
     }
-    public void ArrangeGraphicsToLow()
-    {
-        if (PlayerPrefs.GetInt("Quality") == 2 && GameObject.Find("Level") != null)
-        {
-            if (_graphicsBackToNormalCoroutine != null)
-                StopCoroutine(_graphicsBackToNormalCoroutine);
-
-            
-            //GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(false);
-            //GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(true);
-
-            Transform lights = GameObject.Find("Level").transform.Find("Lights");
-            foreach (Transform light in lights)
-            {
-                if (light.name == "Sky and Fog Volume")
-                {
-                    light.GetComponent<Volume>().profile = LowSettingsVolume;
-                }
-                else if (light.Find("Lights") != null)
-                {
-                    light.GetComponentInChildren<HDAdditionalLightData>().affectsVolumetric = false;
-                }
-
-            }
-        }
-    }
-    public void GraphicsBackToNormal()
-    {
-        if (_graphicsBackToNormalCoroutine != null)
-            StopCoroutine(_graphicsBackToNormalCoroutine);
-        _graphicsBackToNormalCoroutine = StartCoroutine(GraphicsBackToNormalCoroutine());
-    }
-    private IEnumerator GraphicsBackToNormalCoroutine()
-    {
-        Transform lights = GameObject.Find("Level").transform.Find("Lights");
-        foreach (Transform light in lights)
-        {
-            if (light.name == "Sky and Fog Volume")
-            {
-                light.GetComponent<Volume>().profile = NormalSettingsVolume;
-            }
-            else if (light.Find("Lights") != null)
-            {
-                light.GetComponentInChildren<HDAdditionalLightData>().affectsVolumetric = true;
-            }
-            yield return null;
-        }
-        //GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(false);
-        //GameObject.Find("Level").transform.Find("ReflectionProbs").gameObject.SetActive(true);
-    }
+    
     public void PlayerGainStamina(float additionStamina)
     {
         _staminaGainEvent?.Invoke(additionStamina);
@@ -618,23 +623,6 @@ public class GameManager : MonoBehaviour
     }
     private void ArrangeDicts()
     {
-        AttackNameToPrepareName = new Dictionary<string, string> { ["Attack1"] = "Empty", ["Attack2"] = "ReadyFor2", ["Attack3"] = "ReadyFor3", ["Attack4"] = "ReadyFor4", ["Attack5"] = "ReadyFor5", ["Attack6"] = "ReadyFor6" };
-
-        AttackNameToPrepareNameBoss = new Dictionary<string, string>
-        {
-            ["Attack1"] = "Empty",
-            ["Attack2"] = "ReadyFor2",
-            ["Attack3"] = "ReadyFor3",
-            ["Attack4"] = "Empty",
-            ["Attack5"] = "ReadyFor5",
-            ["Attack6"] = "ReadyFor6"
-        ,
-            ["Attack7"] = "Empty",
-            ["Attack8"] = "ReadyFor8",
-            ["Attack9"] = "ReadyFor9",
-            ["Attack10"] = "Empty"
-        };
-
         Enemy1AnimNameToSpeed = new Dictionary<string, float> { ["Attack1"] = 0.6f, ["Attack2"] = 1.1f, ["Attack3"] = 1.2f, ["Attack4"] = 0.85f, ["Attack5"] = 1f, ["Attack6"] = 0.85f };
         Enemy2AnimNameToSpeed = new Dictionary<string, float> { ["Attack1"] = 0.6f, ["Attack2"] = 1.1f, ["Attack3"] = 1.2f, ["Attack4"] = 0.85f, ["Attack5"] = 1f, ["Attack6"] = 0.85f };
         Enemy3AnimNameToSpeed = new Dictionary<string, float> { ["Attack1"] = 0.6f, ["Attack2"] = 1.1f, ["Attack3"] = 1.2f, ["Attack4"] = 0.85f, ["Attack5"] = 1f, ["Attack6"] = 0.85f };
@@ -646,17 +634,6 @@ public class GameManager : MonoBehaviour
         Boss2AnimNameToSpeed = new Dictionary<string, float> { ["JumpAttack"] = 1f, ["Attack1"] = 1f, ["Attack2"] = 1f, ["Attack3"] = 1f, ["Attack4"] = 0.85f, ["Attack5"] = 0.8f, ["Attack6"] = 1.15f, ["Attack7"] = 1.2f, ["Attack8"] = 1f, ["Attack9"] = 1f, ["Attack10"] = 1.15f };
         Boss3AnimNameToSpeed = new Dictionary<string, float> { ["JumpAttack"] = 1f, ["Attack1"] = 1f, ["Attack2"] = 1f, ["Attack3"] = 1f, ["Attack4"] = 0.85f, ["Attack5"] = 0.8f, ["Attack6"] = 1.15f, ["Attack7"] = 1.2f, ["Attack8"] = 1f, ["Attack9"] = 1f, ["Attack10"] = 1.15f };
 
-
-        Enemy1AttackNameToHitOpenTime = new Dictionary<string, float> { ["Attack1"] = GetAttackAnimationOpenTime("Attack1", Enemy_1_Animator), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", Enemy_1_Animator), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", Enemy_1_Animator), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", Enemy_1_Animator), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", Enemy_1_Animator), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", Enemy_1_Animator) };
-        Enemy2AttackNameToHitOpenTime = new Dictionary<string, float> { ["Attack1"] = GetAttackAnimationOpenTime("Attack1", Enemy_2_Animator), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", Enemy_2_Animator), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", Enemy_2_Animator), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", Enemy_2_Animator), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", Enemy_2_Animator), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", Enemy_2_Animator) };
-        Enemy3AttackNameToHitOpenTime = new Dictionary<string, float> { ["Attack1"] = GetAttackAnimationOpenTime("Attack1", Enemy_3_Animator), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", Enemy_3_Animator), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", Enemy_3_Animator), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", Enemy_3_Animator), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", Enemy_3_Animator), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", Enemy_3_Animator) };
-        Enemy4AttackNameToHitOpenTime = new Dictionary<string, float> { ["Attack1"] = GetAttackAnimationOpenTime("Attack1", Enemy_4_Animator), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", Enemy_4_Animator), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", Enemy_4_Animator), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", Enemy_4_Animator), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", Enemy_4_Animator), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", Enemy_4_Animator) };
-        Enemy5AttackNameToHitOpenTime = new Dictionary<string, float> { ["Attack1"] = GetAttackAnimationOpenTime("Attack1", Enemy_5_Animator), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", Enemy_5_Animator), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", Enemy_5_Animator), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", Enemy_5_Animator), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", Enemy_5_Animator), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", Enemy_5_Animator) };
-        KatanaAttackNameToHitOpenTime = new Dictionary<string, float> { ["Attack1"] = GetAttackAnimationOpenTime("Attack1", KatanaAnimator), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", KatanaAnimator), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", KatanaAnimator), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", KatanaAnimator), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", KatanaAnimator), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", KatanaAnimator) };
-
-        NameToHitOpenTimeBoss1 = new Dictionary<string, float> { ["JumpAttack"] = GetAttackAnimationOpenTime("JumpAttack", Boss1Animator, 0.45f), ["Attack1"] = GetAttackAnimationOpenTime("Attack1", Boss1Animator, 0.45f), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", Boss1Animator, 0.45f), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", Boss1Animator, 0.45f), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", Boss1Animator, 0.45f), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", Boss1Animator, 0.45f), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", Boss1Animator, 0.45f), ["Attack7"] = GetAttackAnimationOpenTime("Attack7", Boss1Animator, 0.45f), ["Attack8"] = GetAttackAnimationOpenTime("Attack8", Boss1Animator, 0.45f), ["Attack9"] = GetAttackAnimationOpenTime("Attack9", Boss1Animator, 0.45f), ["Attack10"] = GetAttackAnimationOpenTime("Attack10", Boss1Animator, 0.45f) };
-        NameToHitOpenTimeBoss2 = new Dictionary<string, float> { ["JumpAttack"] = GetAttackAnimationOpenTime("JumpAttack", Boss2Animator, 0.45f), ["Attack1"] = GetAttackAnimationOpenTime("Attack1", Boss2Animator, 0.45f), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", Boss2Animator, 0.45f), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", Boss2Animator, 0.45f), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", Boss2Animator, 0.45f), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", Boss2Animator, 0.45f), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", Boss2Animator, 0.45f), ["Attack7"] = GetAttackAnimationOpenTime("Attack7", Boss2Animator, 0.45f), ["Attack8"] = GetAttackAnimationOpenTime("Attack8", Boss2Animator, 0.45f), ["Attack9"] = GetAttackAnimationOpenTime("Attack9", Boss2Animator, 0.45f), ["Attack10"] = GetAttackAnimationOpenTime("Attack10", Boss2Animator, 0.45f) };
-        NameToHitOpenTimeBoss3 = new Dictionary<string, float> { ["JumpAttack"] = GetAttackAnimationOpenTime("JumpAttack", Boss3Animator, 0.45f), ["Attack1"] = GetAttackAnimationOpenTime("Attack1", Boss3Animator, 0.45f), ["Attack2"] = GetAttackAnimationOpenTime("Attack2", Boss3Animator, 0.45f), ["Attack3"] = GetAttackAnimationOpenTime("Attack3", Boss3Animator, 0.45f), ["Attack4"] = GetAttackAnimationOpenTime("Attack4", Boss3Animator, 0.45f), ["Attack5"] = GetAttackAnimationOpenTime("Attack5", Boss3Animator, 0.45f), ["Attack6"] = GetAttackAnimationOpenTime("Attack6", Boss3Animator, 0.45f), ["Attack7"] = GetAttackAnimationOpenTime("Attack7", Boss3Animator, 0.45f), ["Attack8"] = GetAttackAnimationOpenTime("Attack8", Boss3Animator, 0.45f), ["Attack9"] = GetAttackAnimationOpenTime("Attack9", Boss3Animator, 0.45f), ["Attack10"] = GetAttackAnimationOpenTime("Attack10", Boss3Animator, 0.45f) };
     }
 
     /// <returns>attack anim time multiplied by 0.5 by default</returns>
@@ -714,13 +691,13 @@ public class GameManager : MonoBehaviour
     }
     public void StopAllHumanoids()
     {
-        GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
+        _enemies = GameObject.FindGameObjectsWithTag("Enemy");
         GameObject boss = GameObject.FindGameObjectWithTag("Boss");
 
         PlayerRb.GetComponent<Rigidbody>().velocity = Vector3.zero;
         if (boss != null)
             boss.GetComponent<Rigidbody>().velocity = Vector3.zero;
-        foreach (var enemy in enemies)
+        foreach (var enemy in _enemies)
         {
             enemy.GetComponent<Rigidbody>().velocity = Vector3.zero;
         }
@@ -765,171 +742,69 @@ public class GameManager : MonoBehaviour
         else
             _isInBossLevel = false;
     }
-
-    public void CallForAction(Action action, float time)
+    public void TriggerTutorialVideo(string text, int number)
     {
-        StartCoroutine(CallForActionCoroutine(action, time));
-    }
-    private IEnumerator CallForActionCoroutine(Action action, float time)
-    {
-        yield return new WaitForSeconds(time);
-        action?.Invoke();
-    }
-
-    public void ActivateWarningUI()
-    {
-        foreach (var enemy in GameManager._instance.allEnemies)
-        {
-            GameObject warning = Instantiate(WarningUIPrefab, WarningUIParent.transform);
-            warning.GetComponent<WarningPositionUI>().TargetTransform = enemy.transform;
-            warning.GetComponent<Image>().color = Color.red;
-        }
-        foreach (var projectile in Projectiles)
-        {
-            StartCoroutine(CheckForOneProjectileWarning(projectile));
-        }
-    }
-    private IEnumerator CheckForOneProjectileWarning(GameObject projectile)
-    {
-        float firstDistance = (projectile.transform.position - PlayerRb.transform.position).magnitude;
-        yield return new WaitForSeconds(0.05f);
-        if (projectile == null) yield break;
-        float secondDistance = (projectile.transform.position - PlayerRb.transform.position).magnitude;
-
-        if (firstDistance < secondDistance)
-        {
-            GameObject warning = Instantiate(WarningUIPrefab, WarningUIParent.transform);
-            warning.GetComponent<WarningPositionUI>().TargetTransform = projectile.transform;
-            warning.GetComponent<Image>().color = Color.blue;
-        }
-    }
-    public void DisableWarningUI()
-    {
-        if (WarningUIParent.transform.childCount == 0) return;
-
-        if (_disableWarningUICoroutine != null)
-            StopCoroutine(_disableWarningUICoroutine);
-        _disableWarningUICoroutine = StartCoroutine(DisableWarningUICoroutine());
-    }
-    private IEnumerator DisableWarningUICoroutine()
-    {
-        yield return new WaitForSeconds(0.5f);
-
-        foreach (Transform item in WarningUIParent.transform)
-        {
-            item.GetComponent<WarningPositionUI>().IsAllowedToSetColor = false;
-        }
-
-        float startTime = Time.time;
-        while (Time.time < startTime + 1f)
-        {
-            foreach (Transform item in WarningUIParent.transform)
-            {
-                Color color = item.GetComponent<Image>().color;
-                item.GetComponent<Image>().color = new Color(color.r, color.g, color.b, color.a - Time.deltaTime * 1.5f);
-            }
-            yield return null;
-        }
-
-        while (WarningUIParent.transform.childCount > 0)
-        {
-            Destroy(WarningUIParent.transform.GetChild(0).gameObject);
-            yield return null;
-        }
-    }
-    public void SIGNALOpenLockAndFightSound()
-    {
-        SoundManager._instance.PlaySound(SoundManager._instance.DoorKeyUsed, MainCamera.transform.position, 0.5f, false, 1f);
-        CallForAction(() => { if (!isOnCutscene) return; SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), MainCamera.transform.position, 0.12f, false, 0.8f);}, 1f);
-        CallForAction(() => { if (!isOnCutscene) return; SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), MainCamera.transform.position, 0.12f, false, 0.8f);}, 2.5f);
-        CallForAction(() => { if (!isOnCutscene) return; SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), MainCamera.transform.position, 0.12f, false, 0.8f);}, 3.2f);
-        CallForAction(() => { if (!isOnCutscene) return; SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), MainCamera.transform.position, 0.12f, false, 1.1f);}, 4.5f);
-    }
-    public void SIGNALBoss1Enter()
-    {
-        GameObject boss = GameObject.FindGameObjectWithTag("Boss");
-        boss.transform.position = new Vector3(-15.284f, 3.925f, 45.679f);
-        boss.transform.Find("Model").Find("Armature").Find("RL_BoneRoot").Find("CC_Base_Hip").Find("CC_Base_Waist").Find("CC_Base_Spine01").Find("CC_Base_Spine02").Find("CC_Base_NeckTwist01").Find("CC_Base_NeckTwist02").Find("CC_Base_Head").Find("EyeObj").gameObject.SetActive(false);
-        boss.transform.Find("Model").GetComponent<Animator>().Play("Cutscene");
-        boss.GetComponent<NavMeshAgent>().enabled = false;
-        boss.transform.Find("Model").Find("AnimationRigging").GetComponent<Rig>().weight = 0f;
-    }
-    public void SIGNALBoss1EyesOpen()
-    {
-        GameObject.FindGameObjectWithTag("Boss").transform.Find("Model").Find("Armature").Find("RL_BoneRoot").Find("CC_Base_Hip").Find("CC_Base_Waist").Find("CC_Base_Spine01").Find("CC_Base_Spine02").Find("CC_Base_NeckTwist01").Find("CC_Base_NeckTwist02").Find("CC_Base_Head").Find("EyeObj").gameObject.SetActive(true);
-    }
-    public void SIGNALBoss1End()
-    {
-        GameObject boss = GameObject.FindGameObjectWithTag("Boss");
-        boss.transform.Find("Model").Find("Armature").Find("RL_BoneRoot").Find("CC_Base_Hip").position = new Vector3(-0.0003641245f, 0.03000933f, 0.9237275f);
-        boss.transform.position = new Vector3(-11.726f, 3.411f, 45.679f);
-
-        boss.GetComponent<NavMeshAgent>().enabled = true;
-        boss.transform.Find("Model").Find("AnimationRigging").GetComponent<Rig>().weight = 1f;
-    }
-    public void TriggerTutorialText(string text, int number)
-    {
-        string newText = "";
-        int newLineCounter = 1;
-        for (int i = 0; i < text.Length; i++)
-        {
-            if (i > 75 * newLineCounter && text[i] == ' ')
-            {
-                newLineCounter++;
-                newText += "\n";
-            }
-            else
-                newText += text[i];
-        }
-
         if (_lastTutorialTextNumber == number) return;
 
         _lastTutorialTextNumber = number;
         TutorialTextUI.SetActive(true);
         SoundManager._instance.PlaySound(SoundManager._instance.TutorialText, MainCamera.transform.position, 0.12f, false, 0.8f);
-        TutorialTextUI.GetComponent<TextMeshProUGUI>().text = newText;
-        TextMeshProUGUI childText = TutorialTextUI.transform.Find("Text").GetComponent<TextMeshProUGUI>();
-        childText.text = newText;
+        TutorialTextUI.transform.Find("Text").GetComponent<TextMeshProUGUI>().text = text;
+        OpenTutorialUI();
 
-        var color = childText.color;
-        childText.color = new Color(color.r, color.g, color.b, 0f);
-        color = TutorialTextUI.GetComponentInChildren<Image>().color;
-        TutorialTextUI.GetComponentInChildren<Image>().color = new Color(color.r, color.g, color.b, 0f);
+        if (number == 2 || number == 5 || number == 7 || number == 14)
+        {
+            TutorialTextUI.transform.Find("VideoDual_Left").gameObject.SetActive(true);
+            TutorialTextUI.transform.Find("VideoDual_Left").GetComponent<VideoPlayer>().clip = VideosForTutorial[number - 1];
+            TutorialTextUI.transform.Find("VideoDual_Left").GetComponent<VideoPlayer>().SetDirectAudioVolume(0, Options._instance.SoundVolume);
+            TutorialTextUI.transform.Find("VideoDual_Left").GetComponent<VideoPlayer>().Play();
 
-        if (_tutorialTextCoroutine != null)
-            StopCoroutine(_tutorialTextCoroutine);
-        _tutorialTextCoroutine = StartCoroutine(TutorialTextCoroutine(1f, childText));
+            TutorialTextUI.transform.Find("VideoDual_Right").gameObject.SetActive(true);
+            TutorialTextUI.transform.Find("VideoDual_Right").GetComponent<VideoPlayer>().clip = VideosForTutorial[number];
+            TutorialTextUI.transform.Find("VideoDual_Right").GetComponent<VideoPlayer>().SetDirectAudioVolume(0, Options._instance.SoundVolume);
+            TutorialTextUI.transform.Find("VideoDual_Right").GetComponent<VideoPlayer>().Play();
+        }
+        else
+        {
+            TutorialTextUI.transform.Find("VideoSingle").gameObject.SetActive(true);
+            TutorialTextUI.transform.Find("VideoSingle").GetComponent<VideoPlayer>().clip = VideosForTutorial[number - 1];
+            TutorialTextUI.transform.Find("VideoSingle").GetComponent<VideoPlayer>().SetDirectAudioVolume(0, Options._instance.SoundVolume);
+            TutorialTextUI.transform.Find("VideoSingle").GetComponent<VideoPlayer>().Play();
+        }
+        
+        Time.timeScale = 0f;
+        SoundManager._instance.PauseMusic();
+        SoundManager._instance.PauseAllSound();
+        isGameStopped = true;
     }
+    public void OpenTutorialUI()
+    {
+        CoroutineCall(ref _tutorialTextCoroutine, TutorialTextCoroutine(1f, TutorialTextUI.transform.Find("Text").GetComponent<TextMeshProUGUI>()), this);
+    }
+
     private IEnumerator TutorialTextCoroutine(float targetTransparency, TextMeshProUGUI childText)
     {
-        float startTime = Time.time;
-        while (startTime + 2f > Time.time)
+        float startTime = Time.realtimeSinceStartup;
+        while (startTime + 2f > Time.realtimeSinceStartup)
         {
             var color = childText.color;
-            childText.color = Color.Lerp(color, new Color(color.r, color.g, color.b, targetTransparency), Time.deltaTime * 5f);
-            color = TutorialTextUI.GetComponentInChildren<Image>().color;
-            TutorialTextUI.GetComponentInChildren<Image>().color = Color.Lerp(color, new Color(color.r, color.g, color.b, targetTransparency * 0.85f), Time.deltaTime * 5f);
+            childText.color = Color.Lerp(color, new Color(color.r, color.g, color.b, targetTransparency), Time.unscaledDeltaTime * 5f);
             yield return null;
         }
 
         if (targetTransparency == 0f) TutorialTextUI.SetActive(false);
     }
-    public void CloseTutorialUI()
-    {
-        if (_tutorialTextCoroutine != null)
-            StopCoroutine(_tutorialTextCoroutine);
-        _tutorialTextCoroutine = StartCoroutine(TutorialTextCoroutine(0f, TutorialTextUI.transform.Find("Text").GetComponent<TextMeshProUGUI>()));
-    }
+    
     
 
     public void EnemyDied(bool isKilledByPlayer)
     {
         if (isPlayerDead) return;
 
-        GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
+        _enemies = GameObject.FindGameObjectsWithTag("Enemy");
 
         int numberOfEnemies = 0;
-        foreach (var enemy in enemies)
+        foreach (var enemy in _enemies)
         {
             if (enemy.GetComponent<IKillable>()!=null && !enemy.GetComponent<IKillable>().IsDead)
                 numberOfEnemies++;
@@ -943,9 +818,7 @@ public class GameManager : MonoBehaviour
         if (isKilledByPlayer)
         {
             _enemyDiedEvent?.Invoke();
-            if (_openInvincibleScreen != null)
-                StopCoroutine(_openInvincibleScreen);
-            _openInvincibleScreen = StartCoroutine(OpenInvincibleScreen());
+            CoroutineCall(ref _openInvincibleScreen, OpenInvincibleScreen(), this);
             GameManager._instance.SlowTime(0.6f);
         }
         
@@ -977,56 +850,9 @@ public class GameManager : MonoBehaviour
         InvincibleScreen.SetActive(false);
 
     }
-
-    public IKillable GetHitBoxIKillable(Collider other)
-    {
-        Transform parentSearch = other.transform;
-        while (parentSearch.parent != null)
-        {
-            parentSearch = parentSearch.parent;
-        }
-
-        if (parentSearch.GetComponent<IKillable>() != null)
-            return parentSearch.GetComponent<IKillable>();
-        return null;
-    }
-    public GameObject GetHitBoxIKillableObject(Collider other)
-    {
-        Transform parentSearch = other.transform;
-        while (parentSearch.parent != null)
-        {
-            parentSearch = parentSearch.parent;
-        }
-
-        return parentSearch.gameObject;
-    }
-    private void CheckForSkillsOpen()
-    {
-        return;
-        if (SceneManager.GetActiveScene().buildIndex >= TeleportActivatedLevelIndex)
-        {
-            isTeleportSkillOpen = true;
-            TeleportSkill.SetActive(true);
-            TeleportSkill.GetComponent<Image>().color = _AvailableColor;
-        }
-        /*if (SceneManager.GetActiveScene().buildIndex >= InvertedMirrorActivatedLevelIndex)
-        {
-            isInvertedMirrorSkillOpen = true;
-            InvertedMirrorSkill.SetActive(true);
-            InvertedMirrorSkill.GetComponent<Image>().color = _AvailableColor;
-        }*/
-        if (SceneManager.GetActiveScene().buildIndex >= IceActivatedLevelIndex)
-        {
-            isIceSkillOpen = true;
-            IceSkill.SetActive(true);
-            IceSkill.GetComponent<Image>().color = _AvailableColor;
-        }
-    }
     public void PlayerAttackHandle()
     {
-        if (_playerAttackHandleCoroutine != null)
-            StopCoroutine(_playerAttackHandleCoroutine);
-        _playerAttackHandleCoroutine = StartCoroutine(PlayerAttackHandleCoroutine());
+        CoroutineCall(ref _playerAttackHandleCoroutine, PlayerAttackHandleCoroutine(), this);
     }
     private IEnumerator PlayerAttackHandleCoroutine()
     {
@@ -1038,9 +864,7 @@ public class GameManager : MonoBehaviour
     public void EffectPlayerByDark()
     {
         SoundManager._instance.PlaySound(SoundManager._instance.Darken, PlayerRb.transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-        if (_effectPlayerByDarkCoroutine != null)
-            StopCoroutine(_effectPlayerByDarkCoroutine);
-        _effectPlayerByDarkCoroutine = StartCoroutine(EffectPlayerByDarkCoroutine());
+        CoroutineCall(ref _effectPlayerByDarkCoroutine, EffectPlayerByDarkCoroutine(), this);
     }
     private IEnumerator EffectPlayerByDarkCoroutine()
     {
@@ -1100,35 +924,29 @@ public class GameManager : MonoBehaviour
     }
     public GameObject CheckForAimAssist()
     {
-        GameObject nearestEnemy = GetNearestAliveEnemy();
-        if (nearestEnemy == null) return null;
+        float allowedDistance = 5f + Math.Clamp(PlayerRb.velocity.magnitude, 0f, 15f) / 4f;
 
-        bool isInAngle = Vector3.Angle(PlayerRb.transform.forward, nearestEnemy.transform.position - PlayerRb.transform.position) < 33f;
-        if ((nearestEnemy.transform.position - PlayerRb.transform.position).magnitude < 5f + Math.Clamp(PlayerRb.velocity.magnitude, 0f, 15f) / 4f && isInAngle)
-        {
-            return nearestEnemy;
-        }
-        return null;
-    }
-    private GameObject GetNearestAliveEnemy()
-    {
-        if (enemiesNearPlayer == null || enemiesNearPlayer.Count == 0) return null;
-
-        GameObject nearestEnemy = null;
+        int number = 0;
+        GameObject assistedEnemy = null;
         foreach (GameObject enemy in enemiesNearPlayer)
         {
-            if (nearestEnemy == null) nearestEnemy = enemy;
-
-            if ((enemy.transform.position - PlayerRb.transform.position).magnitude < ((nearestEnemy.transform.position - PlayerRb.transform.position).magnitude))
+            float angle = Vector3.Angle(PlayerRb.transform.forward, enemy.transform.position - PlayerRb.transform.position);
+            bool isInAngle = angle < 40f;
+            Vector3 dir = (enemy.transform.position - PlayerRb.transform.position).normalized;
+            Physics.Raycast(PlayerRb.transform.position + dir / 2f, dir, out RaycastHit hit, allowedDistance, GameManager._instance.LayerMaskForVisible);
+            if (hit.collider != null && GetParent(hit.collider.transform) == enemy.transform && isInAngle)
             {
-                nearestEnemy = enemy;
+                assistedEnemy = enemy;
+                number++;
             }
         }
-        return nearestEnemy;
+        if (number == 1) return assistedEnemy;
+        return null;
     }
-    public void ArrangeUI(float stamina, float maxStamina, string playerState, bool isHookAvailable, IThrowableItem CurrentThrowable, IThrowableItem NextThrowable, IThrowableItem BeforeThrowable)
+    
+    public void ArrangeUI(float stamina, float maxStamina, bool isHookAvailable, IThrowableItem CurrentThrowable, IThrowableItem NextThrowable, IThrowableItem BeforeThrowable)
     {
-        if(stamina < 11f)//11 for block
+        if(stamina < 8f)
         {
             StaminaBar.color = Color.red;
         }
@@ -1139,7 +957,6 @@ public class GameManager : MonoBehaviour
 
         StaminaBar.fillAmount = Mathf.Lerp(StaminaBar.fillAmount, stamina / maxStamina, Time.deltaTime * 7.5f);
         SpeedText.text = PlayerRb.velocity.magnitude.ToString("n0") + " m/s";
-        StateText.text = playerState;
         FrameRate.text = GetAvarageFrameRate().ToString();
 
         ArrangeThrowableUI(this.CurrentThrowable, CurrentThrowable);
@@ -1173,7 +990,7 @@ public class GameManager : MonoBehaviour
                     break;
                 case Bomb b:
                     objectsImage.sprite = PrefabHolder._instance.BombImage;
-                    objectsImage.color = ThrowableColor;
+                    objectsImage.color = Color.red;
                     break;
                 case Smoke s:
                     objectsImage.sprite = PrefabHolder._instance.SmokeImage;
@@ -1215,8 +1032,10 @@ public class GameManager : MonoBehaviour
     {
         if (isOnCutscene) return;
 
-        MainCamera.SetActive(false);
+
+        _defaultCamera.SetActive(false);
         CutsceneCameras.SetActive(true);
+        MainCamera = CutsceneCameras;
 
         PlayerHands.SetActive(false);
 
@@ -1234,14 +1053,14 @@ public class GameManager : MonoBehaviour
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
 
-        CutsceneCameras.GetComponent<CutsceneController>().PlayCutscene(cutsceneName);
+        CutsceneController._instance.PlayCutscene(cutsceneName);
     }
     public void ExitCutscene()
     {
         if (SceneManager.GetActiveScene().buildIndex == Boss1LevelIndex)
         {
-            SIGNALBoss1EyesOpen();
-            SIGNALBoss1End();
+            CutsceneController._instance.SIGNALBoss1EyesOpen();
+            CutsceneController._instance.SIGNALBoss1End();
         }
         else if (SceneManager.GetActiveScene().buildIndex == Boss2LevelIndex)
         {
@@ -1255,8 +1074,9 @@ public class GameManager : MonoBehaviour
         Instantiate(WaitingScreenPrefab, InGameScreen.transform.parent);
         PlayerHands.SetActive(true);
 
-        MainCamera.SetActive(true);
+        _defaultCamera.SetActive(true);
         CutsceneCameras.SetActive(false);
+        MainCamera = _defaultCamera;
 
         CloseStopScreen();
         isOnCutscene = false;
@@ -1310,6 +1130,29 @@ public class GameManager : MonoBehaviour
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
     }
+    public void CloseTutorialVideo()
+    {
+        if (TutorialTextUI.transform.Find("VideoDual_Right").gameObject.activeSelf)
+        {
+            TutorialTextUI.transform.Find("VideoDual_Right").gameObject.SetActive(false);
+            TutorialTextUI.transform.Find("VideoDual_Left").gameObject.SetActive(false);
+
+            TutorialTextUI.transform.Find("VideoDual_Right").GetComponent<VideoPlayer>().Stop();
+            TutorialTextUI.transform.Find("VideoDual_Left").GetComponent<VideoPlayer>().Stop();
+
+            TutorialTextUI.transform.Find("VideoDual_Right").GetComponent<VideoPlayer>().clip = null;
+            TutorialTextUI.transform.Find("VideoDual_Left").GetComponent<VideoPlayer>().clip = null;
+        }
+        else
+        {
+            TutorialTextUI.transform.Find("VideoSingle").gameObject.SetActive(false);
+            TutorialTextUI.transform.Find("VideoSingle").GetComponent<VideoPlayer>().Stop();
+            TutorialTextUI.transform.Find("VideoSingle").GetComponent<VideoPlayer>().clip = null;
+        }
+
+        TutorialTextUI.SetActive(false);
+        CloseStopScreen();
+    }
     public void OpenOptions()
     {
         StopScreen.transform.Find("Options").gameObject.SetActive(false);
@@ -1318,8 +1161,7 @@ public class GameManager : MonoBehaviour
     public void Die()
     {
         if (isPlayerDead) return;
-        AsyncOperation loader = SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().buildIndex, LoadSceneMode.Single);
-        loader.allowSceneActivation = false;
+       
         isPlayerDead = true;
         StopScreen.SetActive(false);
         StopScreen.transform.Find("Options").gameObject.SetActive(true);
@@ -1330,9 +1172,9 @@ public class GameManager : MonoBehaviour
 
         InGameScreen.SetActive(false);
         DeathScreen.SetActive(true);
-        StartCoroutine(DieTimeScaleArrange(loader));
+        StartCoroutine(DieTimeScaleArrange());
     }
-    private IEnumerator DieTimeScaleArrange(AsyncOperation loader)
+    private IEnumerator DieTimeScaleArrange()
     {
         while (Time.timeScale > 0.2f) 
         {
@@ -1340,7 +1182,7 @@ public class GameManager : MonoBehaviour
             yield return null;
         }
         Time.timeScale = 0.2f;
-        loader.allowSceneActivation = true;
+        SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().buildIndex, LoadSceneMode.Single);
     }
 
     public void SlowTime(float waitTime = 0f)
@@ -1358,6 +1200,7 @@ public class GameManager : MonoBehaviour
         IsTimeSlowed = true;
         GameManager._instance.BlurVolume.enabled = true;
 
+        SoundManager._instance.PlaySound(SoundManager._instance.TimeSlowEnter, transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         SoundManager._instance.SlowDownMusic();
         SoundManager._instance.SlowDownAllSound();
         while (Time.timeScale > 0.3f || isGameStopped)
@@ -1374,11 +1217,10 @@ public class GameManager : MonoBehaviour
 
         while (!TimeStopEndSignal)
         {
-            float staminaUse = 15f * (Time.timeScale == 0 ? 0f : Time.unscaledDeltaTime);
-            PlayerGainStamina(-staminaUse);
             yield return null;
         }
         TimeStopEndSignal = false;
+        SoundManager._instance.PlaySound(SoundManager._instance.TimeSlowExit, transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
         while (Time.timeScale < 0.95f)
         {
@@ -1395,14 +1237,15 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 1f;
         SoundManager._instance.UnSlowDownMusic();
         SoundManager._instance.UnSlowDownAllSound();
-        DisableWarningUI();
 
         IsTimeSlowed = false;
     }
     private IEnumerator SlowTimeCoroutine(float waitTime)
     {
         IsTimeSlowed = true;
+        GameManager._instance.BlurVolume.enabled = false;
 
+        SoundManager._instance.PlaySound(SoundManager._instance.TimeSlowEnter, transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         SoundManager._instance.SlowDownMusic();
         SoundManager._instance.SlowDownAllSound();
         while (Time.timeScale > 0.15f || isGameStopped)
@@ -1418,6 +1261,7 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 0.1f;
         
         yield return new WaitForSecondsRealtime(waitTime);
+        SoundManager._instance.PlaySound(SoundManager._instance.TimeSlowExit, transform.position, 0.6f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
         while (Time.timeScale < 0.95f)
         {
@@ -1433,7 +1277,6 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 1f;
         SoundManager._instance.UnSlowDownMusic();
         SoundManager._instance.UnSlowDownAllSound();
-        DisableWarningUI();
 
         IsTimeSlowed = false;
     }

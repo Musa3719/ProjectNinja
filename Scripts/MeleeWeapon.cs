@@ -47,8 +47,7 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
 
     public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude, IKillObject killer)
     {
-        if (IsHardHitWeapon) SoundManager._instance.PlaySound(SoundManager._instance.HardHit, transform.position, 0.25f, false, Random.Range(0.9f, 1f));
-        killable.Die(dir, killersVelocityMagnitude, killer);
+        killable.Die(dir, killersVelocityMagnitude, killer, IsHardHitWeapon);
     }
 
     private void OnTriggerEnter(Collider other)
@@ -106,9 +105,17 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
             hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(temp.r, temp.g, temp.b, 6.5f / 255f);
             Destroy(hitSmoke, 5f);
         }
+        if (other.transform.parent != null && other.transform.parent.CompareTag("Wolf"))
+        {
+            other.transform.parent.GetComponent<Wolf>().Die((other.transform.parent.transform.position - GetParent(transform).position).normalized, GetParent(transform).GetComponent<Rigidbody>().velocity.magnitude, this);
+            return;
+        }
 
         if (!other.CompareTag("HitBox")) return;
         if (IgnoreCollisionCheck(IgnoreCollisionCollider, other)) return;
+
+        
+        
 
         IKillable otherKillable = GameManager._instance.GetHitBoxIKillable(other);
         if (other!=null && otherKillable != null && !otherKillable.IsDead && !Killables.Contains(otherKillable))

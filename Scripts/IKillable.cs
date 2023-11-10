@@ -17,11 +17,12 @@ public interface IKillable
 
     public void OpenAttackCollider();
     public void CloseAttackCollider();
+    public void MeleeAttackFinished();
     public void AttackWarning(Collider collider, bool isFastAttack, Vector3 attackPosition);
     public void DeflectWithBlock(Vector3 dir, IKillable attacker, bool isRangedAttack);
     public void BombDeflected();
     public void Stun(float time, bool isSpeedChanges, Transform otherTransform);
     public void HitBreakable(GameObject breakable);
     public void StopBlockingAndDodge();
-    public void Die(Vector3 dir, float killersVelocityMagnitude, IKillObject killer);
+    public void Die(Vector3 dir, float killersVelocityMagnitude, IKillObject killer, bool isHardHit);
 }
