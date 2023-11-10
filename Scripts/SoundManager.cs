@@ -21,6 +21,20 @@ public class SoundManager : MonoBehaviour
 
     #region Sounds
     [SerializeField]
+    public List<AudioClip> WolfBarks;
+    [SerializeField]
+    public List<AudioClip> WolfAttacks;
+    [SerializeField]
+    public AudioClip Laser;
+    [SerializeField]
+    public AudioClip DeathByProjectile;
+    [SerializeField]
+    public AudioClip TextSound;
+    [SerializeField]
+    public AudioClip TimeSlowEnter;
+    [SerializeField]
+    public AudioClip TimeSlowExit;
+    [SerializeField]
     public AudioClip Button;
     [SerializeField]
     public AudioClip ButtonHover;
@@ -65,8 +79,6 @@ public class SoundManager : MonoBehaviour
     [SerializeField]
     public AudioClip Stab;
     [SerializeField]
-    public List<AudioClip> Cuts;
-    [SerializeField]
     public AudioClip Throw;
     [SerializeField]
     public AudioClip StoneHit;
@@ -94,18 +106,19 @@ public class SoundManager : MonoBehaviour
     public AudioClip DoorKeyUsed;
 
     [SerializeField]
-    public AudioClip HardHit;
-
+    public List<AudioClip> Cuts;
+    [SerializeField]
+    public List<AudioClip> Crushs;
     [SerializeField]
     public List<AudioClip> Blocks;
     [SerializeField]
     public List<AudioClip> Deflects;
     [SerializeField]
-    public List<AudioClip> Attacks;
+    public List<AudioClip> LightAttacks;
+    [SerializeField]
+    public List<AudioClip> HeavyAttacks;
     [SerializeField]
     public List<AudioClip> AttackDeflecteds;
-    [SerializeField]
-    public List<AudioClip> PlayerAttacks;
     [SerializeField]
     public List<AudioClip> EnemyDeathSounds;
 
@@ -154,6 +167,10 @@ public class SoundManager : MonoBehaviour
     [SerializeField]
     private List<AudioClip> AtmosphereSounds;
 
+    public AudioClip Boss1Enter;
+    public AudioClip Boss2Enter;
+    public AudioClip Boss3Enter;
+
     #region Musics
 
     [SerializeField]
@@ -168,11 +185,16 @@ public class SoundManager : MonoBehaviour
     [SerializeField]
     public List<AudioClip> Boss1Grunts;
     [SerializeField]
-    public List<AudioClip> Boss2Grunts;
+    public List<AudioClip> Boss2GruntsPhase1;
     [SerializeField]
-    public List<AudioClip> Boss3Grunts;
+    public List<AudioClip> Boss2GruntsPhase2;
 
-    public List<AudioClip> BossGrunts;
+    [SerializeField]
+    public List<AudioClip> Boss3GunShots;
+    [SerializeField]
+    public List<AudioClip> Boss3GunPowerUpShots;
+    [SerializeField]
+    private AudioClip Boss3Reload;
 
     private AudioClip Boss2Phase2Music;
     private AudioClip Boss3Phase2Music;
@@ -188,20 +210,6 @@ public class SoundManager : MonoBehaviour
         _instance = this;
         int sceneNumber = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex;
 
-        switch (sceneNumber)
-        {
-            case 8:
-                BossGrunts = Boss1Grunts;
-                break;
-            case 16:
-                BossGrunts = Boss2Grunts;
-                break;
-            case 24:
-                BossGrunts = Boss3Grunts;
-                break;
-            default:
-                break;
-        }
 
         CurrentMusicObject = GameObject.Find("MusicObject");
         CurrentAtmosphereObject = GameObject.Find("AtmosphereObject");
@@ -216,7 +224,7 @@ public class SoundManager : MonoBehaviour
 
         if (IsBossLevel(sceneNumber))
         {
-            PlayBossMusic(GetBossNumberFromLevel(sceneNumber));
+            StartCoroutine(PlayBossMusic(GetBossNumberFromLevel(sceneNumber)));
         }
         else if (sceneNumber < GameManager.Level2Index)
         {
@@ -263,6 +271,20 @@ public class SoundManager : MonoBehaviour
             default:
                 return GameManager.Boss1LevelIndex;
         }
+    }
+    public AudioClip GetAttackSound(Collider attackCollider)
+    {
+        if (attackCollider.transform.parent != null && attackCollider.transform.parent.GetComponent<MeleeWeaponForPlayer>() != null && attackCollider.transform.parent.GetComponent<MeleeWeaponForPlayer>().IsHardHit())
+            return GetRandomSoundFromList(HeavyAttacks);
+        else
+            return GetRandomSoundFromList(LightAttacks);
+    }
+    public AudioClip GetAttackSoundForPlayer(GameObject meleeWeapon)
+    {
+        if (meleeWeapon==null || !meleeWeapon.GetComponent<MeleeWeaponForPlayer>().IsHardHit())
+            return GetRandomSoundFromList(LightAttacks);
+        else
+            return GetRandomSoundFromList(HeavyAttacks);
     }
     /// <summary>
     /// Arranges Movement Sounds.
@@ -349,8 +371,10 @@ public class SoundManager : MonoBehaviour
     /// BossNumber Starts From 1
     /// </summary>
     /// <param name="bossNumber"></param>
-    public void PlayBossMusic(int bossNumber)
+    public IEnumerator PlayBossMusic(int bossNumber)
     {
+        yield return new WaitForSeconds(0.25f);
+        yield return new WaitWhile(() => GameManager._instance.isOnCutscene);
         PlayMusic(BossMusics[bossNumber - 1]);
     }
     public void PlayMusic(AudioClip clip, AudioClip atmosphere = null)
@@ -436,10 +460,15 @@ public class SoundManager : MonoBehaviour
         }
     }
 
+    public GameObject PlayBossEnterSound(AudioClip clip)
+    {
+        return PlaySound(clip, GameManager._instance.MainCutsceneCamera.transform.position, 0.5f);
+    }
+
     /// <summary>
     /// Play Sound by creating a AudioSourcePrefab Object.
     /// </summary>
-    public GameObject PlaySound(AudioClip clip, Vector3 position, float volume = 1f, bool isLooping = false, float pitch = 1f, bool isMusic = false, bool isAtmosphere = false)
+    public GameObject PlaySound(AudioClip clip, Vector3 position, float volume = 1f, bool isLooping = false, float pitch = 1f, bool isMusic = false, bool isAtmosphere = false, bool isMachine = false)
     {
         if (clip == null) return null;
 
@@ -457,6 +486,8 @@ public class SoundManager : MonoBehaviour
             audioSource.gameObject.transform.SetParent(SoundObjectsParent.transform);
         if (isMusic || isAtmosphere)
             audioSource.spatialBlend = 0f;
+        if (isMachine)
+            audioSource.gameObject.AddComponent<AudioCheckWalls>();
 
         if (!isLooping)
             Destroy(audioSource.gameObject, audioSource.clip.length / Mathf.Clamp(pitch, 0.1f, 1f) + 1f);
@@ -497,9 +528,9 @@ public class SoundManager : MonoBehaviour
     public void SlowDownMusic()
     {
         if (CurrentMusicObject != null)
-            CurrentMusicObject.GetComponent<AudioSource>().pitch = 0.95f;
+            CurrentMusicObject.GetComponent<AudioSource>().pitch = 0.5f;
         if (CurrentAtmosphereObject != null)
-            CurrentAtmosphereObject.GetComponent<AudioSource>().pitch = 0.95f;
+            CurrentAtmosphereObject.GetComponent<AudioSource>().pitch = 0.5f;
     }
     public void UnSlowDownMusic()
     {
@@ -513,7 +544,7 @@ public class SoundManager : MonoBehaviour
     {
         foreach (Transform sound in SoundObjectsParent.transform)
         {
-            sound.GetComponent<AudioSource>().pitch = 0.82f;
+            sound.GetComponent<AudioSource>().pitch = 0.85f;
         }
     }
     public void UnSlowDownAllSound()

@@ -3,12 +3,16 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
 public class UIHover : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     private TextMeshProUGUI _text;
     private Vector3 _baseScale;
     private Coroutine _textAnimation;
+
+    [SerializeField] private bool _isUsingNumberForCamera;
+    [SerializeField] private int _numberForMenuCameraMovement;
 
     private void Awake()
     {
@@ -18,13 +22,17 @@ public class UIHover : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     private void OnEnable()
     {
         _text.transform.localScale = _baseScale;
+        if (gameObject.name == "JoystickSettings" && Joystick.current == null)
+            gameObject.SetActive(false);
     }
     void IPointerEnterHandler.OnPointerEnter(PointerEventData eventData)
     {
         MakeTextBigger();
         GameObject cam = GameManager._instance == null ? Camera.main.gameObject : GameManager._instance.MainCamera;
-        SoundManager._instance.PlaySound(SoundManager._instance.ButtonHover, cam.transform.position, 0.15f, false, UnityEngine.Random.Range(0.7f, 0.8f));
+        SoundManager._instance.PlaySound(SoundManager._instance.ButtonHover, cam.transform.position, 0.09f, false, UnityEngine.Random.Range(0.7f, 0.8f)).transform.parent = cam.transform;
 
+        if (_isUsingNumberForCamera)
+            SceneController._instance.MenuCameraToPosAndRot(_numberForMenuCameraMovement);
     }
     void IPointerExitHandler.OnPointerExit(PointerEventData eventData)
     {
@@ -34,7 +42,7 @@ public class UIHover : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     {
         if (_textAnimation != null)
             StopCoroutine(_textAnimation);
-        _textAnimation = StartCoroutine(TextAnimation(_baseScale * 1.5f));
+        _textAnimation = StartCoroutine(TextAnimation(_baseScale * 1.35f));
     }
     private void MakeTextSmaller()
     {
