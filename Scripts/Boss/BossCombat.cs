@@ -43,14 +43,10 @@ public class BossCombat : MonoBehaviour, IKillable
     private Coroutine _closeIsAttackInterruptedCoroutine;
     private Coroutine _closeEyesCoroutine;
 
-    public Dictionary<string, string> _attackNameToPrepareName;
-    public Dictionary<string, float> _attackNameToHitOpenTime;
-
     public bool _IsStunned { get; private set; }
 
     [HideInInspector] public bool _IsInAttackPattern;
     [HideInInspector] public bool _IsAttacking;
-    [HideInInspector] public bool _IsPreparingAttack;
     [HideInInspector] public bool _IsAttackInterrupted;
     public bool _IsDodging { get; set; }
 
@@ -150,11 +146,8 @@ public class BossCombat : MonoBehaviour, IKillable
         }
         _meleeWeapon = _attackCollider.GetComponent<MeleeWeapon>();
 
-        _attackNameToPrepareName = new Dictionary<string, string>();
-        _attackNameToHitOpenTime = new Dictionary<string, float>();
-
         _IsAllowedToAttack = true;
-        _attackWaitTime = 1.25f;
+        _attackWaitTime = 0.5f;
         _dodgeTime = 0.8f;
         _blockMoveTime = 0.8f;
         _crashStunCheckValue = 13.5f;
@@ -277,7 +270,7 @@ public class BossCombat : MonoBehaviour, IKillable
 
         _CombatStamina -= _DodgeOrBlockStaminaUse / 2f;
         _bossStateController.ChangeAnimation(GetAttackDeflectedAnimName(), 0.2f, true);
-        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.AttackDeflecteds), transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.AttackDeflecteds), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
     }
     public void ChangeStamina(float amount)
     {
@@ -288,13 +281,14 @@ public class BossCombat : MonoBehaviour, IKillable
         _LastBlockOrDodgeTime = Time.time;
         _IsInAttackPattern = false;
         _IsAttacking = false;
-        _IsPreparingAttack = false;
         _bossStateController.EnableHeadAim();
 
+
+        if (_meleeWeapon != null && _meleeWeapon.transform.parent != null && _meleeWeapon.transform.parent.Find("Trail") != null)
+            _meleeWeapon.transform.parent.Find("Trail").gameObject.SetActive(false);
+
         _IsAttackInterrupted = true;
-        if (_closeIsAttackInterruptedCoroutine != null)
-            StopCoroutine(_closeIsAttackInterruptedCoroutine);
-        _closeIsAttackInterruptedCoroutine = StartCoroutine(CloseIsAttackInterruptedCoroutine(0.75f));
+        GameManager._instance.CoroutineCall(ref _closeIsAttackInterruptedCoroutine, CloseIsAttackInterruptedCoroutine(0.75f), this);
 
         _bossStateController.ChangeAnimation("Empty", 0.5f);
         _bossStateController.ChangeAnimation("EmptyBody", 0.5f);
@@ -345,9 +339,7 @@ public class BossCombat : MonoBehaviour, IKillable
         _LastBlockOrDodgeTime = Time.time;
 
         _IsDodgedLately = true;
-        if (_closeIsDodgedLatelyCoroutine != null)
-            StopCoroutine(_closeIsDodgedLatelyCoroutine);
-        _closeIsDodgedLatelyCoroutine = StartCoroutine(CloseIsDodgedLatelyCoroutine());
+        GameManager._instance.CoroutineCall(ref _closeIsDodgedLatelyCoroutine, CloseIsDodgedLatelyCoroutine(), this);
 
         if (!_IsAllowedToAttack)
         {
@@ -387,12 +379,12 @@ public class BossCombat : MonoBehaviour, IKillable
         {
             GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.SparksVFX), _sparkPosition.position, Quaternion.identity);
             Destroy(sparksVFX, 4f);
-            GameObject combatSmokeVFX = Instantiate(GameManager._instance.CombatSmokeVFX, transform.position, Quaternion.LookRotation(attacker.Object.transform.position - transform.position));
+            GameObject combatSmokeVFX = Instantiate(GameManager._instance.CombatSmokeVFX, transform.position, Quaternion.LookRotation(transform.forward));
             combatSmokeVFX.GetComponent<Rigidbody>().velocity = -transform.forward * 2f;
             Destroy(combatSmokeVFX, 4f);
 
             _bossStateController.ChangeAnimation(GetBlockAnimName(), 0.2f, true);
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.175f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.135f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
             _CombatStamina -= _DodgeOrBlockStaminaUse;
             if (!(_bossStateController._bossState is BossStates.RetreatBoss1) && !(_bossStateController._bossState is BossStates.SpecialAction))
@@ -401,102 +393,32 @@ public class BossCombat : MonoBehaviour, IKillable
             }
 
             _IsAllowedToAttack = false;
-            if (_openIsAllowedToAttackCoroutine != null)
-                StopCoroutine(_openIsAllowedToAttackCoroutine);
-            _openIsAllowedToAttackCoroutine = StartCoroutine(OpenIsAllowedToAttackCoroutine(_attackWaitTime * 0.8f));
+            GameManager._instance.CoroutineCall(ref _openIsAllowedToAttackCoroutine, OpenIsAllowedToAttackCoroutine(_attackWaitTime * 0.8f), this);
         }
         else
         {
             _IsDeflectedLately = true;
-            if (_closeIsDeflectedLatelyCoroutine != null)
-                StopCoroutine(_closeIsDeflectedLatelyCoroutine);
-            _closeIsDeflectedLatelyCoroutine = StartCoroutine(CloseIsDeflectedLatelyCoroutine());
+            GameManager._instance.CoroutineCall(ref _closeIsDeflectedLatelyCoroutine, CloseIsDeflectedLatelyCoroutine(), this);
 
             _IsAllowedToAttack = false;
-            if (_openIsAllowedToAttackCoroutine != null)
-                StopCoroutine(_openIsAllowedToAttackCoroutine);
-            _openIsAllowedToAttackCoroutine = StartCoroutine(OpenIsAllowedToAttackCoroutine(_attackWaitTime * 0.35f));
+            GameManager._instance.CoroutineCall(ref _openIsAllowedToAttackCoroutine, OpenIsAllowedToAttackCoroutine(_attackWaitTime * 0.35f), this);
 
             GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.ShiningSparksVFX), _sparkPosition.position, Quaternion.identity);
             Destroy(sparksVFX, 4f);
-            GameObject combatSmokeVFX = Instantiate(GameManager._instance.CombatSmokeVFX, transform.position, Quaternion.LookRotation(attacker.Object.transform.position - transform.position));
+            GameObject combatSmokeVFX = Instantiate(GameManager._instance.CombatSmokeVFX, transform.position, Quaternion.LookRotation(transform.forward));
             combatSmokeVFX.GetComponent<Rigidbody>().velocity = -transform.forward * 2f;
             Destroy(combatSmokeVFX, 4f);
 
             if (attacker != null && !isRangedAttack)
                 attacker.AttackDeflected(this as IKillable);
             _bossStateController.ChangeAnimation(GetDeflectAnimName(), 0.2f, true);
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.175f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Deflects), transform.position, 0.11f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         }
     }
     private IEnumerator CloseIsDeflectedLatelyCoroutine()
     {
         yield return new WaitForSeconds(1.5f);
         _IsDeflectedLately = false;
-    }
-    private void PrepareAttack(string attackName)
-    {
-        return;
-        if (!_attackNameToPrepareName.TryGetValue(attackName, out string x)) return;
-
-        _IsPreparingAttack = true;
-
-        StartCoroutine(PrepareAttackContinueOneFrameLater(attackName));
-    }
-    private IEnumerator PrepareAttackContinueOneFrameLater(string attackName)
-    {
-        _bossStateController.ChangeAnimation("Empty", 0.2f);
-
-        if (_attackNameToPrepareName[attackName] != "Empty")
-            yield return new WaitForSeconds(0.2f);
-
-        if (!_IsAttackInterrupted)
-        {
-            bool isIdle = _bossStateController.ChangeAnimation(_attackNameToPrepareName[attackName], 0.2f);
-
-            int animLayer = 1;
-            if (isIdle)
-            {
-                GameManager._instance.CallForAction(() =>
-                {
-                    if (_IsAttackInterrupted) return;
-                    _IsPreparingAttack = false;
-                }, 0.05f);
-                yield break;
-            }
-
-
-            yield return null;
-            float time = 0f;
-            bool isUsingCurrent = false;
-            while (_bossStateController._animator.GetNextAnimatorClipInfo(animLayer).Length == 0)
-            {
-                time += Time.deltaTime;
-                if (time > 0.05f && _bossStateController._animator.GetCurrentAnimatorClipInfo(animLayer).Length != 0)
-                {
-                    isUsingCurrent = true;
-                    break;
-                }
-                yield return null;
-            }
-            float animTime = 0f;
-            if (isUsingCurrent)
-            {
-                animTime = _bossStateController._animator.GetCurrentAnimatorClipInfo(animLayer)[0].clip.length / _bossStateController._animator.GetCurrentAnimatorStateInfo(animLayer).speed;
-                animTime = animTime * 0.6f;
-            }
-            else
-            {
-                animTime = _bossStateController._animator.GetNextAnimatorClipInfo(animLayer)[0].clip.length / _bossStateController._animator.GetNextAnimatorStateInfo(animLayer).speed;
-                animTime = animTime * 0.6f;
-            }
-
-            Action CloseIsPreparingToAttack = () => {
-                if (_IsAttackInterrupted) return;
-                _IsPreparingAttack = false;
-            };
-            GameManager._instance.CallForAction(CloseIsPreparingToAttack, animTime / 2f);
-        }
     }
     public void AttackWithPattern()
     {
@@ -512,9 +434,7 @@ public class BossCombat : MonoBehaviour, IKillable
             StopCoroutine(_closeIsAttackInterruptedCoroutine);
 
         List<string> patternNumbers = _bossStateController._bossAI.ChooseAttackPattern();
-        if (_attackCoroutine != null)
-            StopCoroutine(_attackCoroutine);
-        _attackCoroutine = StartCoroutine(AttackPatternCoroutine(patternNumbers));
+        GameManager._instance.CoroutineCall(ref _attackCoroutine, AttackPatternCoroutine(patternNumbers), this);
     }
     public IEnumerator AttackPatternCoroutine(List<string> patternNumbers)
     {
@@ -527,10 +447,15 @@ public class BossCombat : MonoBehaviour, IKillable
                 yield return new WaitForSeconds(0.7f - Mathf.Abs(Time.time - lastTimeAttacked));
             lastTimeAttacked = Time.time;
 
+            if (_IsAttackInterrupted)
+            {
+                yield break;
+            }
             if ((GameManager._instance.PlayerRb.transform.position - transform.position).magnitude > 12f)
             {
                 break;
             }
+
             if (c == 0)
             {
                 GameManager._instance.CallForAction(() => _bossStateController._bossMovement.MoveAfterAttack(true), 0.225f);
@@ -539,27 +464,6 @@ public class BossCombat : MonoBehaviour, IKillable
             {
                 GameManager._instance.CallForAction(() => _bossStateController._bossMovement.MoveAfterAttack(false), 0.225f);
             }
-
-            if (_lastAttackNumberForPattern == -1)
-            {
-                if (int.Parse(attackName.ToCharArray()[attackName.Length - 1].ToString()) != 1)
-                {
-                    PrepareAttack(attackName);
-                    yield return new WaitWhile(() => _IsPreparingAttack);
-                }
-            }
-            else if (_lastAttackNumberForPattern + 1 != int.Parse(attackName.ToCharArray()[attackName.Length - 1].ToString()))
-            {
-                PrepareAttack(attackName);
-                yield return new WaitWhile(() => _IsPreparingAttack);
-            }
-
-            //check after prepare
-            if (_IsAttackInterrupted)
-            {
-                yield break;
-            }
-
 
             Attack(attackName);
 
@@ -578,91 +482,57 @@ public class BossCombat : MonoBehaviour, IKillable
         _bossStateController.ChangeAnimation("Empty", 0.35f);
 
         _IsAllowedToAttack = false;
-        if (_openIsAllowedToAttackCoroutine != null)
-            StopCoroutine(_openIsAllowedToAttackCoroutine);
-        _openIsAllowedToAttackCoroutine = StartCoroutine(OpenIsAllowedToAttackCoroutine(_attackWaitTime));
-
+        GameManager._instance.CoroutineCall(ref _openIsAllowedToAttackCoroutine, OpenIsAllowedToAttackCoroutine(_attackWaitTime), this);
         _IsInAttackPattern = false;
 
     }
     
-    public void Attack(string attackName, int animLayer = 1, float animTime = 0f)
+    public void Attack(string attackName)
     {
         if (_IsAttacking || _IsDodging) return;
         _bossStateController.ChangeAnimation(attackName);
 
         int random = UnityEngine.Random.Range(0, 100);
         if (random > 80)
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.BossGrunts), transform.position, UnityEngine.Random.Range(0.2f, 0.4f), false, UnityEngine.Random.Range(0.93f, 1.07f));
+        {
+            if (_bossStateController._bossAI._BossNumber == 1)
+            {
+                SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Boss1Grunts), transform.position, UnityEngine.Random.Range(0.2f, 0.4f), false, UnityEngine.Random.Range(0.93f, 1.07f));
+            }
+            else
+            {
+                if (GameManager._instance.BossPhaseCounterBetweenScenes.transform.position.x == 1)
+                {
+                    SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Boss2GruntsPhase1), transform.position, UnityEngine.Random.Range(0.2f, 0.4f), false, UnityEngine.Random.Range(0.93f, 1.07f));
+                }
+                else
+                {
+                    SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Boss2GruntsPhase2), transform.position, UnityEngine.Random.Range(0.2f, 0.4f), false, UnityEngine.Random.Range(0.93f, 1.07f));
+                }
+            }
+        }
+        if (_meleeWeapon != null && _meleeWeapon.transform.parent != null && _meleeWeapon.transform.parent.Find("Trail") != null)
+            _meleeWeapon.transform.parent.Find("Trail").gameObject.SetActive(true);
 
         _IsAttacking = true;
         _bossStateController._bossMovement.AttackOrBlockRotation(true);
         _bossStateController.DisableHeadAim();
-
-        if (!_attackNameToHitOpenTime.TryGetValue(attackName, out float hitOpenTime)) return;
-        StartCoroutine(AttackContinueOneFrameLater(hitOpenTime, animLayer, animTime));
     }
-    private IEnumerator AttackContinueOneFrameLater(float hitOpenTime, int animLayer, float animTime)
+    public void MeleeAttackFinished()
     {
-        if (animTime == 0f)
-        {
-            yield return null;
-            float time = 0f;
-            bool isUsingCurrent = false;
-            while (_bossStateController._animator.GetNextAnimatorClipInfo(animLayer).Length == 0)
-            {
-                time += Time.deltaTime;
-                if (time > 0.25f && _bossStateController._animator.GetCurrentAnimatorClipInfo(animLayer).Length != 0)
-                {
-                    isUsingCurrent = true;
-                    break;
-                }
-                yield return null;
-            }
+        if (_IsAttackInterrupted) return;
+        _IsAttacking = false;
+        _attackColliderWarning.gameObject.SetActive(false);
+        _bossStateController.EnableHeadAim();
 
-            if (isUsingCurrent)
-            {
-                animTime = _bossStateController._animator.GetCurrentAnimatorClipInfo(animLayer)[0].clip.length / _bossStateController._animator.GetCurrentAnimatorStateInfo(animLayer).speed;
-                animTime = animTime * 0.85f;
-                animTime -= time;
-            }
-            else
-            {
-                animTime = _bossStateController._animator.GetNextAnimatorClipInfo(animLayer)[0].clip.length / _bossStateController._animator.GetNextAnimatorStateInfo(animLayer).speed;
-                animTime = animTime * 0.85f;
-                animTime -= time;
-            }
-        }
-        Action CloseIsAttacking = () => {
-            if (_IsAttackInterrupted) return;
-            _IsAttacking = false;
-            _bossStateController.EnableHeadAim();
-        };
-        GameManager._instance.CallForAction(CloseIsAttacking, animTime);
-
-        _attackColliderWarning.gameObject.SetActive(true);
-
-        GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; _attackColliderWarning.gameObject.SetActive(false); }, animTime);
-
-        /*Action OpenAttackCollider = () => {
-            if (_bossStateController._isDead || _IsAttackInterrupted) return;
-            _attackCollider.gameObject.SetActive(true);
-        };
-        GameManager._instance.CallForAction(OpenAttackCollider, hitOpenTime);
-
-        GameManager._instance.CallForAction(() => { SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f)); }, hitOpenTime * 1.75f);
-
-        Action CloseAttackCollider = () => {
-            if (_IsAttackInterrupted) return;
-            _attackCollider.gameObject.SetActive(false);
-        };
-        GameManager._instance.CallForAction(CloseAttackCollider, animTime);*/
+        if (_meleeWeapon != null && _meleeWeapon.transform.Find("Trail") != null)
+            _meleeWeapon.transform.Find("Trail").gameObject.SetActive(false);
     }
     public void OpenAttackCollider()
     {
         if (_bossStateController._isDead || _IsAttackInterrupted) return;
 
-        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        SoundManager._instance.PlaySound(SoundManager._instance.GetAttackSound(_attackCollider), transform.position, 0.225f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         _attackCollider.gameObject.SetActive(true);
     }
     public void CloseAttackCollider()
@@ -670,20 +540,24 @@ public class BossCombat : MonoBehaviour, IKillable
         if (_IsAttackInterrupted) return;
         _attackCollider.gameObject.SetActive(false);
     }
-    public void SingleAttack(string attackName, float animTime, int animLayer)
+    public IEnumerator SingleAttack(string attackName)
     {
-        _IsInAttackPattern = true;
+        _IsAllowedToAttack = false;
+        if (_openIsAllowedToAttackCoroutine != null)
+            StopCoroutine(_openIsAllowedToAttackCoroutine);
+
         _IsAttackInterrupted = false;
         if (_closeIsAttackInterruptedCoroutine != null)
             StopCoroutine(_closeIsAttackInterruptedCoroutine);
 
-        Attack(attackName, animLayer, animTime);
-        GameManager._instance.CallForAction(() => _IsInAttackPattern = false, animTime);
+        _IsInAttackPattern = true;
 
-        _IsAllowedToAttack = false; 
-        if (_openIsAllowedToAttackCoroutine != null)
-            StopCoroutine(_openIsAllowedToAttackCoroutine);
-        _openIsAllowedToAttackCoroutine = StartCoroutine(OpenIsAllowedToAttackCoroutine(_attackWaitTime));
+        Attack(attackName);
+        yield return new WaitWhile(() => _IsAttacking);
+
+        _IsInAttackPattern = false;
+        _IsAllowedToAttack = false;
+        GameManager._instance.CoroutineCall(ref _openIsAllowedToAttackCoroutine, OpenIsAllowedToAttackCoroutine(_attackWaitTime), this);
     }
     public void AttackWarning(Collider collider, bool isFast, Vector3 attackPosition)
     {
@@ -760,9 +634,7 @@ public class BossCombat : MonoBehaviour, IKillable
     }
     private void CloseEyes()
     {
-        if (_closeEyesCoroutine != null)
-            StopCoroutine(_closeEyesCoroutine);
-        _closeEyesCoroutine = StartCoroutine(CloseEyesCoroutine());
+        GameManager._instance.CoroutineCall(ref _closeEyesCoroutine, CloseEyesCoroutine(), this);
     }
     private IEnumerator CloseEyesCoroutine()
     {
@@ -796,11 +668,9 @@ public class BossCombat : MonoBehaviour, IKillable
             ArrangeBoss3BladesToHands();
         }
 
-        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.PlayerAttacks), transform.position, 0.45f, false, UnityEngine.Random.Range(1.1f, 1.25f));
+        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Crushs), transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
-        Vector3 VFXposition = transform.position + transform.forward * 0.5f;
-        GameObject bloodVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.BloodVFX), VFXposition, Quaternion.identity);
+        GameObject bloodVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.BloodVFX), transform.position, Quaternion.identity);
         bloodVFX.GetComponentInChildren<Rigidbody>().velocity = Vector3.up * 2f + Vector3.right * UnityEngine.Random.Range(-0.1f, 0.1f) + Vector3.forward * UnityEngine.Random.Range(-0.1f, 0.1f);
         Destroy(bloodVFX, 5f);
 
@@ -832,12 +702,12 @@ public class BossCombat : MonoBehaviour, IKillable
         _CombatStamina = _CombatStaminaLimit;
         _bossStateController._bossMovement.PhaseChange();
 
-        _bossStateController.StopAllCoroutines();
-        _bossStateController._bossMovement.StopAllCoroutines();
-        _bossStateController._bossCombat.StopAllCoroutines();
-        _bossStateController._bossAI.StopAllCoroutines();
+        foreach (var script in GetComponents<MonoBehaviour>())
+        {
+            script.StopAllCoroutines();
+        }
     }
-    public void Die(Vector3 dir, float killersVelocityMagnitude, IKillObject killer)
+    public void Die(Vector3 dir, float killersVelocityMagnitude, IKillObject killer, bool isHardHit)
     {
         if ((_bossStateController._bossState is BossStates.RetreatBoss1) || (_bossStateController._bossState is BossStates.SpecialAction))
         {
@@ -849,6 +719,7 @@ public class BossCombat : MonoBehaviour, IKillable
         }
         if (_CombatStamina > _DodgeOrBlockStaminaUse)
         {
+            DeflectWithBlock(dir, GameManager._instance.PlayerRb.GetComponent<IKillable>(), false);
             Debug.LogError("Die Error While Combat Stamina Is Enough");
             return;
         }
@@ -861,8 +732,12 @@ public class BossCombat : MonoBehaviour, IKillable
 
         if (IsDead) return;
 
-        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.4f, false, UnityEngine.Random.Range(1.05f, 1.15f));
-        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds), transform.position, 0.4f, false, UnityEngine.Random.Range(0.95f, 1.1f));
+        if(isHardHit)
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Crushs), transform.position, 0.4f, false, UnityEngine.Random.Range(1.05f, 1.15f));
+        else
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.4f, false, UnityEngine.Random.Range(0.95f, 1.05f));
+
+        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds), transform.position, 0.7f, false, UnityEngine.Random.Range(0.6f, 0.65f));
         //GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.EnemyDeathSounds), transform.position, 0.15f, false, UnityEngine.Random.Range(0.95f, 1.05f)), 1f);
 
         GameManager._instance.BossPhaseCounterBetweenScenes.transform.position = new Vector3(1f, 0f, 0f);
@@ -878,25 +753,30 @@ public class BossCombat : MonoBehaviour, IKillable
             CloseEyes();
         }
 
-        _bossStateController.StopAllCoroutines();
-        _bossStateController._bossMovement.StopAllCoroutines();
-        _bossStateController._bossCombat.StopAllCoroutines();
-        _bossStateController._bossAI.StopAllCoroutines();
+        foreach (var script in GetComponents<MonoBehaviour>())
+        {
+            script.StopAllCoroutines();
+        }
 
-        //_enemyStateController._animator.SetTrigger("Death");
-        Vector3 bloodDir = (GameManager._instance.MainCamera.transform.position - transform.position).normalized;
-        bloodDir.y = 0f;
-        Vector3 VFXposition = transform.position + bloodDir * 0.33f + Vector3.up * 0.07f;
-        GameObject bloodVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.BloodVFX), VFXposition, Quaternion.identity);
-        bloodVFX.GetComponentInChildren<Rigidbody>().velocity = Vector3.up * 1.25f + killersVelocityMagnitude * dir * 0.75f;
+        GameObject bloodVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.BloodVFX), transform.position - Vector3.up * 0.25f, Quaternion.identity);
+        bloodVFX.GetComponentInChildren<Rigidbody>().velocity = -Vector3.up * 1.25f + killersVelocityMagnitude * dir * 0.3f;
         Destroy(bloodVFX, 5f);
 
         GameObject bloodPrefab = GameManager._instance.BloodDecalPrefabs[UnityEngine.Random.Range(0, GameManager._instance.BloodDecalPrefabs.Count)];
         GameObject decal = Instantiate(bloodPrefab, transform);
-        float size = UnityEngine.Random.Range(1.75f, 3f);
-        decal.GetComponent<DecalProjector>().size = new Vector3(size, size, decal.GetComponent<DecalProjector>().size.z);
+        float sizeMul = UnityEngine.Random.Range(0.75f, 1.25f);
+        decal.GetComponent<DecalProjector>().size = new Vector3(decal.GetComponent<DecalProjector>().size.x * sizeMul, decal.GetComponent<DecalProjector>().size.y * sizeMul, decal.GetComponent<DecalProjector>().size.z);
         decal.GetComponent<DecalFollow>().FollowingTransform = _decalFollowTransform;
         decal.GetComponent<DecalFollow>().LocalPosition = new Vector3(UnityEngine.Random.Range(-0.2f, 0.2f), UnityEngine.Random.Range(0.2f, 0.7f), 0f);
+
+        Vector3 pos = transform.position + dir * UnityEngine.Random.Range(0.25f, 1.7f);
+        Physics.Raycast(pos, -Vector3.up, out RaycastHit hit, 50f, GameManager._instance.LayerMaskForVisible);
+        pos = hit.collider == null ? transform.position - Vector3.up * 0.7f : hit.point;
+        bloodPrefab = GameManager._instance.BloodDecalPrefabs[UnityEngine.Random.Range(0, GameManager._instance.BloodDecalPrefabs.Count)];
+        GameObject groundDecal = Instantiate(bloodPrefab, pos, Quaternion.identity);
+        groundDecal.transform.forward = hit.collider == null ? Vector3.up : -hit.normal;
+        groundDecal.GetComponent<DecalProjector>().size = new Vector3(groundDecal.GetComponent<DecalProjector>().size.x * sizeMul, groundDecal.GetComponent<DecalProjector>().size.y * sizeMul, groundDecal.GetComponent<DecalProjector>().size.z);
+        groundDecal.GetComponent<DecalProjector>().decalLayerMask = DecalLayerEnum.DecalLayerDefault;
 
         GameObject sparksVFX = Instantiate(GameManager._instance.ShiningSparksVFX[0], transform.position - transform.forward * 0.8f, Quaternion.identity);
         Destroy(sparksVFX, 4f);
@@ -962,6 +842,14 @@ public class BossCombat : MonoBehaviour, IKillable
 
         foreach (var collider in _ragdollColliders)
         {
+            if (collider.gameObject.name == "CC_Base_Hip")
+            {
+                GameObject bleedingVFX = Instantiate(GameManager._instance.BleedingVFX, Vector3.zero, Quaternion.identity);
+                bleedingVFX.transform.parent = collider.transform.Find("CC_Base_Waist").Find("CC_Base_Spine01").Find("CC_Base_Spine02");
+                bleedingVFX.transform.localPosition = Vector3.up * UnityEngine.Random.Range(-0.1f, 0.25f);
+                bleedingVFX.transform.forward = -dir;
+            }
+
             if (collider.GetComponent<PlaySoundOnCollision>() == null)
             {
                 Debug.LogWarning(collider.name + " object does not have a playsoundoncollision component");
@@ -976,7 +864,7 @@ public class BossCombat : MonoBehaviour, IKillable
             tempDir += new Vector3(UnityEngine.Random.Range(-0.6f, 0.6f), UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.6f, 0.6f));
             //tempDir = tempDir.normalized; commented for power variety
             if (collider.gameObject.name == "CC_Base_Hip")
-                collider.GetComponent<Rigidbody>().AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 4.5f + tempDir * forceMultiplier + Vector3.up * forceUpMultiplier) * 7.5f);
+                collider.GetComponent<Rigidbody>().AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 3.5f + tempDir * forceMultiplier + Vector3.up * forceUpMultiplier) * 5f);
 
             collider.gameObject.layer = LayerMask.NameToLayer("Default");
         }

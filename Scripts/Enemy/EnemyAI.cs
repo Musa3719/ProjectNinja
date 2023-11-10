@@ -12,12 +12,10 @@ public class EnemyAI : MonoBehaviour
     [HideInInspector] public bool _isAttackFast;
     [HideInInspector] public Vector3 _attackPosition;
     [HideInInspector] public bool _isThrowStarted;
+    [HideInInspector] public bool CanDeflectAttack;
 
-    private Vector3 _targetIdlePosition;
-    private float _idleTimer;
     private NavMeshAgent _agent;
     private EnemyStateController _controller;
-    private float _hearSoundCounter;
 
 
     private float _AgressiveValue;
@@ -26,10 +24,12 @@ public class EnemyAI : MonoBehaviour
     private float _StepBackValue;
     private float _ThrowValue;
 
-    private float _lastStanceAnimCounter;
+    private float _lastStepBackCounter;
 
+    private List<string> _selectedAnimNames;
     private void Awake()
     {
+        _selectedAnimNames = new List<string>();
         if (enemyAIs == null)
             enemyAIs = new Dictionary<GameObject, EnemyAI>();
 
@@ -38,7 +38,6 @@ public class EnemyAI : MonoBehaviour
         _rb = GetComponent<Rigidbody>();
         _agent = GetComponent<NavMeshAgent>();
         _controller = GetComponent<EnemyStateController>();
-        _targetIdlePosition = Vector3.zero;
     }
     private void OnEnable()
     {
@@ -60,10 +59,10 @@ public class EnemyAI : MonoBehaviour
     {
         if (GameManager._instance.isGameStopped || _controller._isDead) return;
 
-        if (_controller._animator.GetCurrentAnimatorStateInfo(1).IsName("Stance"))
-            _lastStanceAnimCounter = 0f;
-        else if (_lastStanceAnimCounter < 10f)
-            _lastStanceAnimCounter += Time.deltaTime;
+        if (_controller._enemyState is EnemyStates.StepBack)
+            _lastStepBackCounter = 0f;
+        else if (_lastStepBackCounter < 10f)
+            _lastStepBackCounter += Time.deltaTime;
 
         if (_agent.isOnOffMeshLink)
         {
@@ -72,9 +71,6 @@ public class EnemyAI : MonoBehaviour
             _controller.ChangeAnimation("Jump");
             SoundManager._instance.PlaySound(SoundManager._instance.Jump, transform.position, 0.1f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         }
-
-        if (_hearSoundCounter > 0f)
-            _hearSoundCounter -= Time.deltaTime;
     }
     public List<string> ChooseAttackPattern()
     {
@@ -104,7 +100,7 @@ public class EnemyAI : MonoBehaviour
                 break;
         }
 
-        List<string> selectedAnimNames = new List<string>();
+        _selectedAnimNames.Clear();
 
         //selectedAnimNames.Add("Attack3");
         //selectedAnimNames.Add("Attack6");
@@ -113,9 +109,9 @@ public class EnemyAI : MonoBehaviour
         int lastSelectedIndex = -2;
         for (int i = 0; i < attackAnimCount; i++)
         {
-            if (Random.Range(0, 8) < 3)
+            if (Random.Range(0, 8) < 2)
             {
-                lastSelectedIndex = AddAnimToPattern(selectedAnimNames, i);
+                lastSelectedIndex = AddAnimToPattern(_selectedAnimNames, i);
             }
             /*if (lastSelectedIndex + 1 == i)
             {
@@ -131,19 +127,19 @@ public class EnemyAI : MonoBehaviour
             }*/
         }
 
-        if (selectedAnimNames.Count == 1 && UnityEngine.Random.Range(0, 2) == 0)
+        if (_selectedAnimNames.Count == 1 && UnityEngine.Random.Range(0, 2) == 0)
         {
             if (lastSelectedIndex + 1 < attackAnimCount)
-                selectedAnimNames.Add("Attack" + (lastSelectedIndex + 2));
+                _selectedAnimNames.Add("Attack" + (lastSelectedIndex + 2));
         }
-        if (selectedAnimNames.Count == 0)
+        if (_selectedAnimNames.Count == 0)
         {
-            selectedAnimNames.Add("Attack" + (Random.Range(0, attackAnimCount) + 1).ToString());
+            _selectedAnimNames.Add("Attack" + (Random.Range(0, attackAnimCount) + 1).ToString());
         }
 
-        GameManager.Shuffle(selectedAnimNames);
+        GameManager.Shuffle(_selectedAnimNames);
 
-        return selectedAnimNames;
+        return _selectedAnimNames;
     }
     private int AddAnimToPattern(List<string> selectedAnimNames, int i)
     {
@@ -154,6 +150,9 @@ public class EnemyAI : MonoBehaviour
     IEnumerator Parabola(NavMeshAgent agent, float height, float duration)
     {
         _controller._isOnOffMeshLinkPath = true;
+
+        if (_controller._enemyCombat._isInAttackPattern)
+            _controller._enemyCombat.StopAttackInstantly();
 
         OffMeshLinkData data = agent.currentOffMeshLinkData;
         Vector3 startPos = agent.transform.position;
@@ -174,41 +173,16 @@ public class EnemyAI : MonoBehaviour
         Vector3 relativePos = -_rb.transform.forward * Random.Range(1.25f, 3f) + Random.Range(-1f, 1f) * _rb.transform.right * Random.Range(2.5f, 5f);
         return relativePos + agent.transform.position;
     }
-    public Vector3 GetIdleMovementPosition(NavMeshAgent agent)
+    public Vector3 GetDodgeDirection(bool isForward = false)
     {
-        if (_targetIdlePosition == Vector3.zero || (_targetIdlePosition - _rb.position).magnitude < 1f)
-        {
-            if(_idleTimer > 1f)
-            {
-                GetRandomWalkablePosition(agent);
-                _idleTimer -= 1f;
-            }
-            _idleTimer += Time.deltaTime;
-        }
-        return _targetIdlePosition;
-    }
-    private void GetRandomWalkablePosition(NavMeshAgent agent)
-    {
-        int i = 0;
-        while (i < 6)
-        {
-            _targetIdlePosition = _rb.position + new Vector3(Random.Range(-1f, 1f), 0f, Random.Range(-1f, 1f));
-            i++;
-            if (agent.enabled && agent.isOnNavMesh && !_controller._isOnOffMeshLinkPath)
-                agent.SetDestination(_targetIdlePosition);
-            if (agent.pathStatus == NavMeshPathStatus.PathComplete)
-                break;
-        }
-    }
-    public Vector3 GetDodgeDirection()
-    {
+        Vector3 forward = isForward ? transform.forward : -transform.forward;
         int random = Random.Range(0, 3);
         float xTemp, extraZ = 0f;
         switch (random)
         {
             case 0:
                 xTemp = 0;
-                extraZ = -0.2f;
+                extraZ = 0.125f;
                 break;
             case 1:
                 xTemp = -0.3f;
@@ -220,14 +194,14 @@ public class EnemyAI : MonoBehaviour
                 xTemp = 0;
                 break;
         }
-        return transform.right * xTemp + transform.forward * (Random.Range(-0.8f, -0.6f) + extraZ);
+        return transform.right * xTemp + forward * (Random.Range(0.6f, 0.7f) + extraZ);
     }
     
     public bool CheckForStepBack()
     {
-        if (_controller._enemyCombat._IsDodging || _controller._enemyCombat._IsBlocking || _controller._enemyCombat._isInAttackPattern) return false;
+        if (_controller._enemyCombat._IsRanged || _controller._enemyCombat._IsDodging || _controller._enemyCombat._IsBlocking || _controller._enemyCombat._isInAttackPattern) return false;
 
-        if (_StepBackValue * 3f * Time.deltaTime * 60f > Random.Range(0,1000))
+        if (_StepBackValue * 8f * Time.deltaTime * 60f > Random.Range(0,1000))
         {
             return true;
         }
@@ -240,9 +214,9 @@ public class EnemyAI : MonoBehaviour
 
         float chanceMultiplier = 1f;
         if (_isThrowStarted)
-            chanceMultiplier = 5f;
+            chanceMultiplier = 2.25f;
 
-        if (_ThrowValue / 4f * chanceMultiplier * Time.deltaTime * 60f > Random.Range(0, 1000))
+        if (_ThrowValue / 5f * chanceMultiplier * Time.deltaTime * 60f > Random.Range(0, 1000))
         {
             return true;
         }
@@ -255,18 +229,26 @@ public class EnemyAI : MonoBehaviour
     public bool CheckForDodgeOrBlock(float chanceMultiplier = 1f)
     {
         if (_controller._enemyCombat._IsDodging || _controller._enemyCombat._IsBlocking) return false;
-        
+
         if (IsAttackComing())
         {
-            if (_controller._enemyCombat._lastAttackDeflectedTime + 1.25f > Time.time)
-                chanceMultiplier *= 0.5f;
-            else if (IsAttackFast())
-                chanceMultiplier *= 0.33f;
+            if (_isAttackFast)
+                CanDeflectAttack = false;
             else
-                chanceMultiplier += (1000f - _DodgeOrBlockEfficiencyValue * 0.85f * chanceMultiplier * 1000) / 3f;
-            if (_lastStanceAnimCounter < 0.5f)
-                chanceMultiplier += (1000f - _DodgeOrBlockEfficiencyValue * 0.85f * chanceMultiplier * 1000) / 2f;
-            if (_DodgeOrBlockEfficiencyValue * 0.85f * chanceMultiplier * 1000 >= Random.Range(0, 1000))
+                CanDeflectAttack = true;
+
+            if (_controller._enemyCombat._lastAttackDeflectedTime + 1.75f > Time.time)
+                chanceMultiplier = 0.68f;
+            else if (GameManager._instance.IsPlayerHasMeleeWeapon)
+                chanceMultiplier = 0.81f;
+            else if (IsAttackFast())
+                chanceMultiplier = 0.71f;
+            else
+                chanceMultiplier = 1f;
+
+            if (_controller._enemyState is EnemyStates.StepBack)
+                chanceMultiplier = 1.35f;
+            if (_DodgeOrBlockEfficiencyValue * 1000 * chanceMultiplier >= Random.Range(0, 1000))
                 return true;
             return false;
         }
@@ -320,10 +302,10 @@ public class EnemyAI : MonoBehaviour
         if (_controller._enemyCombat._IsRanged)
         {
             Vector3 direction = (GameManager._instance.PlayerRb.transform.position - transform.position).normalized;
-            Physics.Raycast(transform.position + direction, direction, out RaycastHit hit, _controller._enemyCombat.AttackRange, GameManager._instance.LayerMaskForVisible);
+            Physics.Raycast(transform.position, direction, out RaycastHit hit, _controller._enemyCombat.AttackRange, GameManager._instance.LayerMaskForVisible);
             if (IsRayHitPlayer(hit) && _controller._enemyCombat._IsAllowedToAttack)
             {
-                if (_AgressiveValue * 80f * Time.deltaTime * 60f > Random.Range(0, 1000) && !CheckForAttackFriendlyFire())
+                if (_AgressiveValue * 160f * Time.deltaTime * 60f > Random.Range(0, 1000) && !CheckForAttackFriendlyFire())
                 {
                     return true;
                 }
@@ -347,12 +329,21 @@ public class EnemyAI : MonoBehaviour
         }
         
     }
-    public bool CheckForAttackFriendlyFire()
+    public bool CheckForAttackFriendlyFire(float range = 0f)
     {
+        if (range == 0f) range = _controller._enemyCombat.AttackRange * 1.5f;
         Vector3 direction = (GameManager._instance.PlayerRb.transform.position - transform.position).normalized;
-        Physics.Raycast(transform.position + direction, direction, out RaycastHit hit, _controller._enemyCombat.AttackRange * 1.5f, GameManager._instance.LayerMaskForVisible);
-        if (hit.collider!=null && hit.collider.CompareTag("HitBox") && GetParent(hit.collider.transform).CompareTag("Enemy"))
+        RaycastHit hit;
+        Physics.Raycast(transform.position, direction, out hit, range, GameManager._instance.LayerMaskForVisible);
+        if (hit.collider != null && hit.collider.CompareTag("Enemy"))
             return true;
+        Physics.Raycast(transform.position + transform.right, direction, out hit, range, GameManager._instance.LayerMaskForVisible);
+        if (hit.collider != null && hit.collider.CompareTag("Enemy"))
+            return true;
+        Physics.Raycast(transform.position - transform.right, direction, out hit, range, GameManager._instance.LayerMaskForVisible);
+        if (hit.collider != null && hit.collider.CompareTag("Enemy"))
+            return true;
+
         return false;
     }
     private Transform GetParent(Transform tr)
@@ -366,20 +357,16 @@ public class EnemyAI : MonoBehaviour
     }
     public void HearArtificialSound(Vector3 position)
     {
-        if (_hearSoundCounter <= 0f)
-        {
-            _controller._searchingPositionBuffer = position;
-            _controller._isHearTriggered = true;
-            _hearSoundCounter = 0.25f;
-        }
+        _controller._searchingPositionBuffer = position;
+        _controller._isHearTriggered = true;
     }
 
     public static void MakeArtificialSoundForPlayer(Vector3 position, float radius)
     {
-        radius *= 1.3f;
+        radius *= 1f;
         foreach (var nearEnemy in GameManager._instance.enemiesNearPlayer)
         {
-            if ((position - nearEnemy.transform.position).magnitude < radius / 2f)
+            if ((position - nearEnemy.transform.position).magnitude < radius / 3f)
                 enemyAIs[nearEnemy].HearArtificialSound(position);
             else if ((position - nearEnemy.transform.position).magnitude < radius)
             {
@@ -397,8 +384,8 @@ public class EnemyAI : MonoBehaviour
     
     public void MakeArtificialSoundForProjectileHit(Vector3 position, float radius)
     {
-        radius *= 1.5f;
-        if ((position - transform.position).magnitude <= radius / 2f)
+        radius *= 1f;
+        if ((position - transform.position).magnitude <= radius / 3f)
             HearArtificialSound(position);
         else if ((position-transform.position).magnitude <= radius)
         {

@@ -66,6 +66,9 @@ public class BossStateController : MonoBehaviour
 
     public GameObject EyeObject;
 
+    private char[] _arrayForChangeAnim;
+    private char[] _newArrayForChangeAnim;
+
     private void Awake()
     {
         TouchingGrounds = new List<GameObject>();
@@ -87,6 +90,11 @@ public class BossStateController : MonoBehaviour
         _checkDistance = 20f;
         _checkDistanceWhileInSmoke = 3.5f;
         _meshes = GetComponentsInChildren<SkinnedMeshRenderer>();
+
+        var data = headAimConstraint.data.sourceObjects;
+        data.SetTransform(0, GameManager._instance.PlayerHands.transform);
+        headAimConstraint.data.sourceObjects = data;
+        headAimConstraint.transform.parent.parent.GetComponent<RigBuilder>().Build();
     }
     private void Start()
     {
@@ -95,9 +103,7 @@ public class BossStateController : MonoBehaviour
     }
     public void TeleportAndDissolve(bool hasMovedAlready = false)
     {
-        if (_dissolveCoroutine != null)
-            StopCoroutine(_dissolveCoroutine);
-        _dissolveCoroutine = StartCoroutine(DissolveCoroutine(hasMovedAlready));
+        GameManager._instance.CoroutineCall(ref _dissolveCoroutine, DissolveCoroutine(hasMovedAlready), this);
     }
     private IEnumerator DissolveCoroutine(bool hasMovedAlready)
     {
@@ -221,8 +227,8 @@ public class BossStateController : MonoBehaviour
 
     public void BlendAnimationLocalPositions(float localX, float localZ)
     {
-        _animator.SetFloat("LocalX", localX);
-        _animator.SetFloat("LocalZ", localZ);
+        _animator.SetFloat("LocalX", Mathf.Lerp(_animator.GetFloat("LocalX"), localX, Time.deltaTime * 3f));
+        _animator.SetFloat("LocalZ", Mathf.Lerp(_animator.GetFloat("LocalZ"), localZ, Time.deltaTime * 3f));
     }
     private void CheckForPush()
     {
@@ -280,13 +286,13 @@ public class BossStateController : MonoBehaviour
     }
     private string AnimNameWithoutNumber(string name)
     {
-        char[] array = name.ToCharArray();
-        char[] newArray = new char[array.Length - 1];
-        for (int i = 0; i < array.Length - 1; i++)
+        _arrayForChangeAnim = name.ToCharArray();
+        _newArrayForChangeAnim = new char[_arrayForChangeAnim.Length - 1];
+        for (int i = 0; i < _arrayForChangeAnim.Length - 1; i++)
         {
-            newArray[i] = array[i];
+            _newArrayForChangeAnim[i] = _arrayForChangeAnim[i];
         }
-        return new string(newArray);
+        return new string(_newArrayForChangeAnim);
     }
     private void ArrangeAnimStateParameter()
     {
@@ -312,19 +318,19 @@ public class BossStateController : MonoBehaviour
         {
             if (_agent.velocity.magnitude < 0.1f)
             {
-                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
-                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 3f));
+                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 7f));
+                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 7f));
             }
             else
             {
-                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
-                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 1f, Time.deltaTime * 3f));
+                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 7f));
+                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 1f, Time.deltaTime * 7f));
             }
         }
         else
         {
-            _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0.75f, Time.deltaTime * 3f));
-            _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 3f));
+            _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0.75f, Time.deltaTime * 7f));
+            _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 7f));
         }
     }
     private void ArrangeCombatStamina()
@@ -402,9 +408,7 @@ public class BossStateController : MonoBehaviour
             {
                 ChangeAnimation("Stun");
                 SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.1f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-                if (_pushCoroutine != null)
-                    StopCoroutine(_pushCoroutine);
-                _pushCoroutine = StartCoroutine(PushCoroutine());
+                GameManager._instance.CoroutineCall(ref _pushCoroutine, PushCoroutine(), this);
             }
         }
     }
@@ -480,84 +484,6 @@ public class BossStateController : MonoBehaviour
         }
     }
 
-
-    public void SearchingFromChasing()
-    {
-        _searchingPositionBuffer = _playerTransform.position + _playerTransform.GetComponent<Rigidbody>().velocity.normalized * 4f;
-    }
-
-
-    /// <summary>
-    /// Checks for player in front of enemy
-    /// </summary>
-    /// <returns></returns>
-    public bool CheckForPlayerInSeen()
-    {
-        bool isSeeingPlayer = false;
-        bool isPlayerInSphere = false;
-        Transform playerTransform = null;
-
-        Collider[] hits = Physics.OverlapSphere(_rb.transform.position, 30f);
-
-        foreach (var hit in hits)
-        {
-            if (hit != null && hit.gameObject.CompareTag("Player"))
-            {
-                isPlayerInSphere = true;
-                playerTransform = hit.transform;
-            }
-        }
-
-        if (isPlayerInSphere)
-        {
-            float localCheckDistance;
-            if (_isInSmoke)
-                localCheckDistance = _checkDistanceWhileInSmoke;
-            else
-                localCheckDistance = _checkDistance;
-
-            RaycastHit hit;
-            Physics.Raycast(_rb.transform.position, (playerTransform.position - _rb.transform.position).normalized, out hit, localCheckDistance, GameManager._instance.LayerMaskForVisible);
-
-            if (hit.collider != null && hit.collider.gameObject.CompareTag("Player"))
-            {
-                Vector3 firstAngle = (playerTransform.position - _rb.transform.position).normalized;
-
-                Vector3 secondAngle = _rb.transform.forward;
-
-                //Debug.Log(Vector3.Angle(firstAngle, secondAngle));
-
-                bool isInAngle = Vector3.Angle(firstAngle, secondAngle) <= _seeAngleHalf ? true : false;
-
-                //Debug.Log(isInAngle);
-
-                if (isInAngle || (playerTransform.position - _rb.transform.position).magnitude < 2f)
-                    isSeeingPlayer = true;
-            }
-        }
-
-
-        if (isSeeingPlayer)
-        {
-            return true;
-        }
-
-        return false;
-    }
-
-    public bool CheckForStillSearching()
-    {
-        if (_searchStartTime == 0f) return false;
-
-        if (_searchStartTime + _searchingTime > Time.time)
-        {
-            return true;
-        }
-
-        return false;
-    }
-
-
     public void BlockOpen(Vector3 blockedEnemyPosition)
     {
         if(_bossState is BossStates.RetreatBoss1 || _bossState is BossStates.SpecialAction)
@@ -566,9 +492,7 @@ public class BossStateController : MonoBehaviour
             return;
         }
 
-        if (_blockCoroutine != null)
-            StopCoroutine(_blockCoroutine);
-        _blockCoroutine = StartCoroutine(BlockCoroutine());
+        GameManager._instance.CoroutineCall(ref _blockCoroutine, BlockCoroutine(), this);
 
         ChangeAnimation("Blocking");
 

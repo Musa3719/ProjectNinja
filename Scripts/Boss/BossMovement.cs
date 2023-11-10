@@ -118,8 +118,8 @@ public class BossMovement : MonoBehaviour
     }
     private bool ToGroundRaycast()
     {
-        Physics.Raycast(_footTransform.position, -Vector3.up, out RaycastHit hit, 0.7f);
-        if (hit.collider != null && hit.collider.gameObject.layer == LayerMask.NameToLayer("Grounds"))
+        Physics.Raycast(_footTransform.position, -Vector3.up, out RaycastHit hit, 0.4f);
+        if (hit.collider != null)
             return true;
         return false;
     }
@@ -153,9 +153,7 @@ public class BossMovement : MonoBehaviour
         if (_attackOrBlockRotationCoroutine != null)
             StopCoroutine(_attackOrBlockRotationCoroutine);
 
-        if (_blockMovementCoroutine != null)
-            StopCoroutine(_blockMovementCoroutine);
-        _blockMovementCoroutine = StartCoroutine(BlockMovementCoroutine(targetVel, _bossStateController._bossCombat._BlockMoveTime));
+        GameManager._instance.CoroutineCall(ref _blockMovementCoroutine, BlockMovementCoroutine(targetVel, _bossStateController._bossCombat._BlockMoveTime), this);
     }
     private IEnumerator BlockMovementCoroutine(Vector3 targetVel, float time)
     {
@@ -201,9 +199,7 @@ public class BossMovement : MonoBehaviour
         //if (subtranctByDistance < 0f) distanceMultiplier /= 1.6f;
 
         Vector3 targetVel = direction * 18f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 1.5f, 6.5f) / 3.35f;
-        if (_moveAfterAttackCoroutine != null)
-            StopCoroutine(_moveAfterAttackCoroutine);
-        _moveAfterAttackCoroutine = StartCoroutine(MoveAfterAttackCoroutine(targetVel));
+        GameManager._instance.CoroutineCall(ref _moveAfterAttackCoroutine, MoveAfterAttackCoroutine(targetVel), this);
     }
     private IEnumerator MoveAfterAttackCoroutine(Vector3 targetVel)
     {
@@ -342,9 +338,7 @@ public class BossMovement : MonoBehaviour
         if (_moveAfterAttackCoroutine != null)
             StopCoroutine(_moveAfterAttackCoroutine);
 
-        if (_dodgeCoroutine != null)
-            StopCoroutine(_dodgeCoroutine);
-        _dodgeCoroutine = StartCoroutine(DodgeCoroutine(targetVel));
+        GameManager._instance.CoroutineCall(ref _dodgeCoroutine, DodgeCoroutine(targetVel), this);
 
         return direction.x >= 0 ? true : false;
     }
@@ -355,12 +349,14 @@ public class BossMovement : MonoBehaviour
         while (Time.time < startTime + _bossStateController._bossCombat._DodgeTime / 8f)
         {
             _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 6f);
+            _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(-targetVel.normalized.x, 0f, -targetVel.normalized.z), Time.deltaTime * 5f);
             yield return null;
         }
         _rb.velocity = targetVel;
         while (Time.time < startTime + _bossStateController._bossCombat._DodgeTime)
         {
             _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, Time.deltaTime * 1.5f);
+            _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(-targetVel.normalized.x, 0f, -targetVel.normalized.z), Time.deltaTime * 5f);
             yield return null;
         }
         _rb.velocity = Vector3.zero;
@@ -385,6 +381,7 @@ public class BossMovement : MonoBehaviour
         {
             
         }*/
+        GameManager._instance.CoroutineCall(ref _retreatCoroutine, RetreatCoroutine(), this);
         if (_retreatCoroutine != null)
             StopCoroutine(_retreatCoroutine);
         _retreatCoroutine = StartCoroutine(RetreatCoroutine());
@@ -559,9 +556,7 @@ public class BossMovement : MonoBehaviour
     }
     public void ToGroundAfterRetreat()
     {
-        if (ToGroundCoroutineHolder != null)
-            StopCoroutine(ToGroundCoroutineHolder);
-        ToGroundCoroutineHolder = StartCoroutine(ToGroundCoroutine());
+        GameManager._instance.CoroutineCall(ref ToGroundCoroutineHolder, ToGroundCoroutine(), this);
     }
     private IEnumerator ToGroundCoroutine()
     {
@@ -594,19 +589,20 @@ public class BossMovement : MonoBehaviour
         //phase change position
         //cutscene etc
     }
-    public void MoveToPosition(Vector3 position, Vector3 lookAtPos, float rotationLerpSpeed = 10f, float? speed=null, float speedMultiplier = 1f)
+    public void MoveToPosition(Vector3 position, Vector3 lookAtPos, float rotationLerpSpeed = 10f, float? speed = null, float speedMultiplier = 1f)
     {
         if (!_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh || _bossStateController._isOnOffMeshLinkPath) return;
 
-        _navMeshAgent.acceleration = 2.5f;
-
+        _navMeshAgent.acceleration = 5f;
+        Vector3 direction = (lookAtPos - _rb.transform.position).normalized;
         if (speed != null)
         {
             _navMeshAgent.speed = speed.Value;
         }
-        else if ((position - transform.position).magnitude > 15f)
+        else if ((position - transform.position).magnitude > 12f)
         {
             _navMeshAgent.speed = _runSpeed;
+            direction = _navMeshAgent.desiredVelocity.normalized;
         }
         else
         {
@@ -616,7 +612,6 @@ public class BossMovement : MonoBehaviour
 
         //float lerpSpeed = 2.5f;
         //_rb.velocity = Vector3.Lerp(_rb.velocity, position * _moveSpeed, Time.deltaTime * lerpSpeed);
-        Vector3 direction = (lookAtPos - _rb.transform.position).normalized;
         _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(direction.x, 0f, direction.z), Time.deltaTime * rotationLerpSpeed);
 
         if (_navMeshAgent.destination != position)

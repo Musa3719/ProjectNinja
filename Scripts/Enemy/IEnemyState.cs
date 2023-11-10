@@ -21,7 +21,7 @@ namespace EnemyStates
         public void Enter(Rigidbody rb, IEnemyState oldState)
         {
             _enemyStateController = rb.GetComponent<EnemyStateController>();
-            _enemyStateController.HalfHeadAim();
+            _enemyStateController.DisableHeadAim();
             _enemyStateController._animator.SetFloat("LocomotionSpeedMultiplier", 0.75f + (_enemyStateController._enemyMovement._runSpeed - 10.5f) / 10f);
         }
         public void Exit(Rigidbody rb, IEnemyState newState)
@@ -45,7 +45,7 @@ namespace EnemyStates
                 return;
             }
 
-            if (GameManager._instance.IsFollowPlayerTriggered)
+            if (_enemyStateController.CheckIsFollowPlayerTriggered())
             {
                 _enemyStateController.EnterState(new Chasing());
             }
@@ -115,7 +115,7 @@ namespace EnemyStates
                 return;
             }
 
-            if (GameManager._instance.IsFollowPlayerTriggered)
+            if (_enemyStateController.CheckIsFollowPlayerTriggered())
             {
                 _enemyStateController.EnterState(new Chasing());
             }
@@ -156,7 +156,8 @@ namespace EnemyStates
 
         public Transform _playerTransform;
         private float _randomDirection;
-
+        private bool _isMovingTowardRight;
+        private float _changeRightDirectionCounter;
         public void Enter(Rigidbody rb, IEnemyState oldState)
         {
             _enemyStateController = rb.GetComponent<EnemyStateController>();
@@ -169,6 +170,7 @@ namespace EnemyStates
 
             _enemyStateController.EnableHeadAim();
 
+            _isMovingTowardRight = true;
             //rb.GetComponent<NavMeshAgent>().stoppingDistance = _enemyStateController._enemyMovement._ChaseStoppingDistance;
         }
         public void Exit(Rigidbody rb, IEnemyState newState)
@@ -192,7 +194,7 @@ namespace EnemyStates
                 return;
             }
 
-            if (!GameManager._instance.IsFollowPlayerTriggered && _enemyStateController._lastTimeCheckForPlayerInSeenCalled + 0.25f < Time.time && !_enemyStateController.CheckForPlayerInSeen())
+            if (_enemyStateController._lastTimeCheckForPlayerInSeenCalled + 0.25f < Time.time && !_enemyStateController.CheckForPlayerInSeen() && !_enemyStateController.CheckIsFollowPlayerTriggered())
             {
                 _enemyStateController._lastTimeCheckForPlayerInSeenCalled = Time.time;
                 _enemyStateController.SearchingFromChasing();
@@ -241,16 +243,36 @@ namespace EnemyStates
 
             if (!_enemyStateController._enemyCombat._IsDodging && !_enemyStateController._enemyCombat._isInAttackPattern && !_enemyStateController._enemyCombat._IsBlocking)
                 if (_enemyStateController._enemyCombat._IsRanged && (_playerTransform.position - _enemyStateController.transform.position).magnitude < _enemyStateController._enemyCombat.AttackRange * 0.75f)
-                    _enemyStateController._enemyMovement.MoveToPosition(_enemyStateController.transform.position, lookAtPos);
-                else if (!_enemyStateController._enemyCombat._IsRanged && (_playerTransform.position - _enemyStateController.transform.position).magnitude < _enemyStateController._enemyCombat.AttackRange * 0.5f)
+                {
                     if ((_playerTransform.position - _enemyStateController.transform.position).magnitude < _enemyStateController._enemyCombat.AttackRange * 0.4f)
-                        _enemyStateController._enemyMovement.MoveToPosition(GetPositionWhenNear(), lookAtPos, speedMultiplier: 0.4f);
-                    else if ((_playerTransform.position - _enemyStateController.transform.position).magnitude < _enemyStateController._enemyCombat.AttackRange * 0.25f)
-                        _enemyStateController._enemyMovement.MoveToPosition(GetPositionWhenNear(), lookAtPos, speedMultiplier: 0.15f);
+                        _enemyStateController._enemyMovement.MoveToPosition(_enemyStateController.transform.position - _enemyStateController.transform.forward, lookAtPos);
                     else
-                        _enemyStateController._enemyMovement.MoveToPosition(_enemyStateController.transform.position, lookAtPos, speedMultiplier: 0.15f);
+                        _enemyStateController._enemyMovement.MoveToPosition(_enemyStateController.transform.position, lookAtPos);
+                    _enemyStateController._animator.SetFloat("LocomotionSpeedMultiplier", 1f);
+                }
+                else if (!_enemyStateController._enemyCombat._IsRanged && (_playerTransform.position - _enemyStateController.transform.position).magnitude < _enemyStateController._enemyCombat.AttackRange * 0.8f)
+                {
+                    if (_enemyStateController._agent.velocity.magnitude < 1f)
+                    {
+                        _changeRightDirectionCounter += Time.deltaTime;
+                        if (_changeRightDirectionCounter > 2.5f)
+                        {
+                            _isMovingTowardRight = !_isMovingTowardRight;
+                            _changeRightDirectionCounter = 0f;
+                        }
+                    }
+                    else
+                    {
+                        _changeRightDirectionCounter = 0f;
+                    }
+                    _enemyStateController._enemyMovement.MoveToPosition(_enemyStateController.transform.position + _enemyStateController.transform.right * (_isMovingTowardRight ? 1f : -1f), lookAtPos, speedMultiplier: 0.55f);
+                    _enemyStateController._animator.SetFloat("LocomotionSpeedMultiplier", 0.7f);
+                }
                 else
+                {
                     _enemyStateController._enemyMovement.MoveToPosition(_playerTransform.position, lookAtPos);
+                    _enemyStateController._animator.SetFloat("LocomotionSpeedMultiplier", 1f);
+                }
         }
 
         public void DoStateFixedUpdate(Rigidbody rb)
@@ -261,20 +283,6 @@ namespace EnemyStates
         public void DoStateLateUpdate(Rigidbody rb)
         {
 
-        }
-        private Vector3 GetPositionWhenNear()
-        {
-            bool isInAngle = Vector3.Angle(_playerTransform.forward, _enemyStateController.transform.position - _playerTransform.position) < 15f;
-            if (isInAngle)
-            {
-                _enemyStateController._animator.SetFloat("LocomotionSpeedMultiplier", 0.8f);
-                return _enemyStateController.transform.position - _enemyStateController.transform.forward;
-            }
-            else
-            {
-                Vector3 pos = _playerTransform.position + _playerTransform.forward * 2.5f;
-                return pos;
-            }
         }
     }
     public class StepBack : IEnemyState

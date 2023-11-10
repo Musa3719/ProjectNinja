@@ -2,8 +2,7 @@
     "name": "Trap",
     "rootNamespace": "",
     "references": [
-        "GUID:bb7e32ee33829e147b09f6f9a38fa547",
-        "GUID:5919800db19f2cb45be886677f9397da"
+        "GUID:bb7e32ee33829e147b09f6f9a38fa547"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

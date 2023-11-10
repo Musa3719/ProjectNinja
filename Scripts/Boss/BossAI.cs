@@ -15,8 +15,6 @@ public class BossAI : MonoBehaviour
     private int _bossNumber;
     public int _BossNumber => _bossNumber;
 
-    private Vector3 _targetIdlePosition;
-    [HideInInspector] public float _idleTimer;
     private NavMeshAgent _agent;
     private BossStateController _controller;
 
@@ -27,12 +25,13 @@ public class BossAI : MonoBehaviour
 
     private Coroutine _specialActionMovementCoroutine;
 
+    private List<string> _selectedAnimNames;
     private void Awake()
     {
+        _selectedAnimNames = new List<string>();
         _rb = GetComponent<Rigidbody>();
         _agent = GetComponent<NavMeshAgent>();
         _controller = GetComponent<BossStateController>();
-        _targetIdlePosition = Vector3.zero;
     }
     private void Start()
     {
@@ -48,8 +47,6 @@ public class BossAI : MonoBehaviour
                 _DodgeOverBlockValue = 0.1f;
                 _RetreatValue = 0.4f;
                 _IdleValue = 0.5f;
-                _controller._bossCombat._attackNameToPrepareName = GameManager._instance.AttackNameToPrepareNameBoss;
-                _controller._bossCombat._attackNameToHitOpenTime = GameManager._instance.NameToHitOpenTimeBoss1;
                 _controller._animatorController = GameManager._instance.Boss1AnimatorGetter;
                 break;
             case 2:
@@ -58,8 +55,6 @@ public class BossAI : MonoBehaviour
                 _DodgeOverBlockValue = 0f;
                 _RetreatValue = 0.4f;
                 _IdleValue = 0.5f;
-                _controller._bossCombat._attackNameToPrepareName = GameManager._instance.AttackNameToPrepareNameBoss;
-                _controller._bossCombat._attackNameToHitOpenTime = GameManager._instance.NameToHitOpenTimeBoss2;
                 _controller._animatorController = GameManager._instance.Boss2AnimatorGetter;
                 break;
             case 3:
@@ -68,8 +63,6 @@ public class BossAI : MonoBehaviour
                 _DodgeOverBlockValue = 0.2f;
                 _RetreatValue = 0.4f;
                 _IdleValue = 0.5f;
-                _controller._bossCombat._attackNameToPrepareName = GameManager._instance.AttackNameToPrepareNameBoss;
-                _controller._bossCombat._attackNameToHitOpenTime = GameManager._instance.NameToHitOpenTimeBoss3;
                 _controller._animatorController = GameManager._instance.Boss3AnimatorGetter;
                 break;
             default:
@@ -320,7 +313,7 @@ public class BossAI : MonoBehaviour
     public List<string> ChooseAttackPattern()
     {
         int attackAnimCount = _controller._bossCombat._AttackAnimCount;
-        List<string> selectedAnimNames = new List<string>();
+        _selectedAnimNames.Clear();
 
         //selectedAnimNames.Add("Attack5");
         //return selectedAnimNames;
@@ -330,7 +323,7 @@ public class BossAI : MonoBehaviour
         {
             if (Random.Range(0, 8) < 3)
             {
-                lastSelectedIndex = AddAnimToPattern(selectedAnimNames, i);
+                lastSelectedIndex = AddAnimToPattern(_selectedAnimNames, i);
             }
             /*if (lastSelectedIndex + 1 == i)
             {
@@ -346,19 +339,19 @@ public class BossAI : MonoBehaviour
             }*/
         }
 
-        if (selectedAnimNames.Count == 1 && UnityEngine.Random.Range(0, 2) == 0)
+        if (_selectedAnimNames.Count == 1 && UnityEngine.Random.Range(0, 2) == 0)
         {
             if (lastSelectedIndex + 1 < attackAnimCount)
-                selectedAnimNames.Add("Attack" + (lastSelectedIndex + 2));
+                _selectedAnimNames.Add("Attack" + (lastSelectedIndex + 2));
         }
-        if (selectedAnimNames.Count == 0)
+        if (_selectedAnimNames.Count == 0)
         {
-            selectedAnimNames.Add("Attack" + (Random.Range(0, attackAnimCount) + 1).ToString());
+            _selectedAnimNames.Add("Attack" + (Random.Range(0, attackAnimCount) + 1).ToString());
         }
 
-        GameManager.Shuffle(selectedAnimNames);
+        GameManager.Shuffle(_selectedAnimNames);
 
-        return selectedAnimNames;
+        return _selectedAnimNames;
     }
     private int AddAnimToPattern(List<string> selectedAnimNames, int i)
     {
@@ -385,30 +378,7 @@ public class BossAI : MonoBehaviour
     }
     public Vector3 GetIdleMovementPosition(NavMeshAgent agent)
     {
-        if (_targetIdlePosition == Vector3.zero || (_targetIdlePosition - _rb.position).magnitude < 1f)
-        {
-            GetRandomWalkablePosition(agent);
-            _idleTimer = 2.5f;
-        }
-        else if (_idleTimer <= 0f)
-        {
-            GetRandomWalkablePosition(agent);
-            _idleTimer += 2.5f;
-        }
-        return _targetIdlePosition;
-    }
-    private void GetRandomWalkablePosition(NavMeshAgent agent)
-    {
-        int i = 0;
-        while (i < 6)
-        {
-            _targetIdlePosition = _rb.transform.position + (new Vector3(Random.Range(-1f, 1f), 0f, Random.Range(-1f, 1f)) * 1.5f);
-            i++;
-            if(agent.enabled && agent.isOnNavMesh && !_controller._isOnOffMeshLinkPath)
-                agent.SetDestination(_targetIdlePosition);
-            if (agent.pathStatus == NavMeshPathStatus.PathComplete)
-                break;
-        }
+        return transform.position + (transform.right * Random.Range(-1f, 1f) + transform.forward * Random.Range(-0.35f, 1f)) * 4f;
     }
     public Vector3 GetDodgeDirection()
     {
@@ -452,9 +422,9 @@ public class BossAI : MonoBehaviour
 
         if ((transform.position - _controller._playerTransform.position).magnitude > 8f)
         {
-            return UnityEngine.Random.Range(0, 1000) < Time.deltaTime * 60f * 25f * (1f - _IdleValue);
+            return UnityEngine.Random.Range(0, 1000) < Time.deltaTime * 60f * 10f * (1f - _IdleValue);
         }
-        return UnityEngine.Random.Range(0, 1000) < Time.deltaTime * 60f * 100f * (1f - _IdleValue);
+        return UnityEngine.Random.Range(0, 1000) < Time.deltaTime * 60f * 25f * (1f - _IdleValue);
     }
     public bool CheckForRetreatToSpecialAction()
     {

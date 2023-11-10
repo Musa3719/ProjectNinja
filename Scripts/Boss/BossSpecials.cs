@@ -14,6 +14,9 @@ public abstract class BossSpecial
     public abstract float DoRandomWallAction();
     public abstract float DoRandomGroundAction();
     public abstract float JumpToPlayer();
+
+    public Coroutine _singleAttackCoroutine;
+    public Coroutine _jumpCoroutine;
 }
 public class Boss1Special : BossSpecial
 {
@@ -190,8 +193,9 @@ public class Boss1Special : BossSpecial
     private void JumpToPlayerAttack()
     {
         float animTime = GameManager._instance.GetAnimationTime("JumpAttack", _controller._animatorController);
-        _controller._bossCombat.SingleAttack("JumpAttack", animTime, 6);
-        GameManager._instance.StartCoroutine(JumpToPlayerAttackCoroutine());
+        _controller._bossCombat.SingleAttack("JumpAttack");
+        GameManager._instance.CoroutineCall(ref _singleAttackCoroutine, _controller._bossCombat.SingleAttack("JumpAttack"), _controller._bossCombat);
+        GameManager._instance.CoroutineCall(ref _jumpCoroutine, JumpToPlayerAttackCoroutine(), _controller._bossCombat);
     }
     private IEnumerator JumpToPlayerAttackCoroutine()
     {

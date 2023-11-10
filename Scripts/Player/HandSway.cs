@@ -7,8 +7,8 @@ public class HandSway : MonoBehaviour
 
     bool canSway = true;
 
-    public float Amount = 0.1f;
-    public float maxAmount = 0.1f;
+    public float Amount = 0.025f;
+    public float maxAmount = 0.025f;
     public float SmoothAmount = 2;
 
     private Vector3 initialPositon;

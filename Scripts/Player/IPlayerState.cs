@@ -16,7 +16,6 @@ namespace PlayerStates
         public bool _isCrouching { get; set; }
         public void Enter(Rigidbody rb, IPlayerState oldState)
         {
-            //GameManager._instance.MidScreenDot.color = GameManager._instance.MidScreenDotMovementColor;
             GameManager._instance.IsPlayerOnWall = false;
         }
         public void Exit(Rigidbody rb, IPlayerState newState)
@@ -44,9 +43,6 @@ namespace PlayerStates
             PlayerStateController.CheckForBlock();
 
             PlayerStateController.CheckForWeaponChange();
-
-            //PlayerStateController._instance.CheckForTeleport();
-            //PlayerStateController._instance.CheckForInvertedMirror();
 
             if (PlayerCombat._instance._IsDodging)
             {
@@ -186,6 +182,7 @@ namespace PlayerStates
             PlayerStateController._instance._isSpinEnding = false;
             PlayerMovement._instance.WallMovementStarted(rb);
 
+
             if (PlayerMovement._instance._touchingWallColliders.Count > 0)
             {
                 Vector3 playerForward = PlayerMovement._instance.GetForwardDirectionForWall(rb.transform, 1f);
@@ -209,7 +206,6 @@ namespace PlayerStates
             }
             _firstLerpTime = 0f;
             PlayerCombat._instance._IsBlocking = false;
-            //GameManager._instance.MidScreenDot.color = GameManager._instance.MidScreenDotOnWallColor;
 
             PlayerStateController._instance.BladeSpinSoundObject = SoundManager._instance.PlaySound(SoundManager._instance.BladeSpin, PlayerStateController._instance.transform.position, 0.225f, true, 1.3f);
 
@@ -227,6 +223,8 @@ namespace PlayerStates
         }
         public void DoState(Rigidbody rb)
         {
+            if (PlayerCombat._instance.MeleeWeapon != null) PlayerStateController._instance.EnterState(new Movement());
+
             PlayerStateController.CheckForBuffers();
 
             PlayerStateController.CheckForDisableCrouch();
@@ -234,9 +232,6 @@ namespace PlayerStates
             PlayerStateController.CheckForBlock();
 
             PlayerStateController.CheckForWeaponChange();
-
-            //PlayerStateController._instance.CheckForTeleport();
-            //PlayerStateController._instance.CheckForInvertedMirror();
 
             PlayerMovement._instance.ArrangeOnWallSound();
 
@@ -377,7 +372,6 @@ namespace PlayerStates
                 else if (angle > 160f && angle <= 180f)
                 {
                     _isWallOnLeftSide = false;
-                    //PlayerStateController._instance.ChangeAnimation("RightOnWall");
                     return;
                 }
             }
@@ -409,13 +403,11 @@ namespace PlayerStates
                 else if (angle < 20f && angle >= 0f)
                 {
                     _isWallOnLeftSide = true;
-                    //PlayerStateController._instance.ChangeAnimation("LeftOnWall");
                     return;
                 }
             }
             PlayerMovement._instance._isAllowedToWallRun = true;
 
-            //Vector3 pos = isWallOnLeftSide ? GameManager._instance.PlayerLeftHandTransform.position + PlayerStateController._instance.transform.right / 2f : GameManager._instance.PlayerRightHandTransform.position - PlayerStateController._instance.transform.right / 2f;
             Vector3 pos = PlayerMovement._instance.transform.position + PlayerMovement._instance.GetForwardDirectionForWall(PlayerMovement._instance.transform, 1f) * -0.25f;
             PlayerStateController._instance.OnWallSpark = GameObject.Instantiate(GameManager._instance.SparksVFX[0], pos, Quaternion.identity);
             PlayerStateController._instance.OnWallSpark.GetComponentInChildren<Animator>().speed *= 4.5f;
@@ -423,12 +415,7 @@ namespace PlayerStates
             GameObject.Destroy(PlayerStateController._instance.OnWallSpark, 0.12f);
             GameObject.Destroy(SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds), PlayerStateController._instance.transform.position, Random.Range(0.14f, 0.17f), false, Random.Range(0.72f, 0.78f)), 2f);
 
-            /*GameObject decal = GameObject.Instantiate(GameManager._instance.HoleDecal, pos, Quaternion.identity);
-            decal.transform.forward = wallCollider.transform.right;
-            decal.transform.localEulerAngles = new Vector3(decal.transform.localEulerAngles.x, decal.transform.localEulerAngles.y, UnityEngine.Random.Range(0f, 360f));
-            */
             pos = _isWallOnLeftSide ? GameManager._instance.PlayerLeftHandTransform.position : GameManager._instance.PlayerRightHandTransform.position;
-            //pos += isWallOnLeftSide ? PlayerStateController._instance.transform.right * 0.25f : -PlayerStateController._instance.transform.right * 0.25f;
             GameObject hitSmoke = GameObject.Instantiate(GameManager._instance.HitSmokeVFX, pos, Quaternion.identity);
             hitSmoke.GetComponentInChildren<Animator>().speed = 1.5f;
             hitSmoke.transform.localScale *= 2f;
@@ -466,38 +453,4 @@ namespace PlayerStates
         }
     }
 
-
-    /*
-    public class Interact : PlayerState
-    {
-        Interactables interactable;
-
-        public Interact(Interactables interactable)
-        {
-            this.interactable = interactable;
-        }
-
-        public void Enter(Rigidbody rb)
-        {
-            interactable.Interact();
-        }
-        public void Exit(Rigidbody rb)
-        {
-            interactable.CloseInteract();
-        }
-        public void DoState(Rigidbody rb)
-        {
-
-        }
-
-        public void DoStateFixedUpdate(Rigidbody rb)
-        {
-
-        }
-
-        public void DoStateLateUpdate(Rigidbody rb)
-        {
-
-        }
-    }*/
 }

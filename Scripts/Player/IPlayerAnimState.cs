@@ -390,7 +390,10 @@ namespace PlayerAnimations
             _toGroundTime -= Time.deltaTime;
             if (_toGroundTime <= 0)
             {
-                PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Idle());
+                if(PlayerMovement._instance.IsGrounded())
+                    PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Idle());
+                else
+                    PlayerStateController._instance.EnterAnimState(new PlayerAnimations.InAir());
             }
         }
 

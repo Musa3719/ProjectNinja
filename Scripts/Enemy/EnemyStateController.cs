@@ -51,6 +51,7 @@ public class EnemyStateController : MonoBehaviour
     private float _checkDistanceWhileInSmoke;
 
     private float _pushCounter;
+    private float _notVisibleCounter;
 
     [HideInInspector] public bool _isHearTriggered;
     [HideInInspector] public float _lastTimeCheckForPlayerInSeenCalled;
@@ -60,13 +61,14 @@ public class EnemyStateController : MonoBehaviour
     public List<GameObject> TouchingGrounds { get; private set; }
 
     private Coroutine _blockCoroutine;
-
     private Coroutine _enableHeadAimCoroutine;
     private Coroutine _disableHeadAimCoroutine;
     private Coroutine _halfHeadAimCoroutine;
     private Coroutine _pushCoroutine;
-
     private Coroutine _dissolveCoroutine;
+
+    private char[] _arrayForChangeAnim;
+    private char[] _newArrayForChangeAnim;
 
     private void Awake()
     {
@@ -90,18 +92,22 @@ public class EnemyStateController : MonoBehaviour
         model.localScale = new Vector3(model.localScale.x, model.localScale.y * yScaleMultiplier, model.localScale.z);
         _meshes = GetComponentsInChildren<SkinnedMeshRenderer>();
         //_agent.baseOffset = _agent.baseOffset + (_agent.baseOffset - yScaleMultiplier * _agent.baseOffset);
+        var data = headAimConstraint.data.sourceObjects;
+        data.SetTransform(0, Camera.main.transform);
+        headAimConstraint.data.sourceObjects = data;
+        headAimConstraint.transform.parent.parent.GetComponent<RigBuilder>().Build();
     }
     private void Start()
     {
+        GameManager._instance.CallForAction(() => _animator.enabled = false, 1f);
         GameManager._instance.allEnemies.Add(gameObject);
         EnterState(new EnemyStates.Idle());
         EnterAnimState(new EnemyAnimations.Idle());
     }
     public void TeleportAndDissolve(bool hasMovedAlready = false)
     {
-        if (_dissolveCoroutine != null)
-            StopCoroutine(_dissolveCoroutine);
-        _dissolveCoroutine = StartCoroutine(DissolveCoroutine(hasMovedAlready));
+        return;
+        GameManager._instance.CoroutineCall(ref _dissolveCoroutine, DissolveCoroutine(hasMovedAlready), this);
     }
     private IEnumerator DissolveCoroutine(bool hasMovedAlready)
     {
@@ -134,7 +140,7 @@ public class EnemyStateController : MonoBehaviour
             direction.y = 0f;
             _rb.transform.position = _rb.transform.position - (direction * 6f);
         }
-
+        
         _mesh.material.SetFloat("_CutoffHeight", 0f);
         foreach (var renderer in renderers)
         {
@@ -161,6 +167,47 @@ public class EnemyStateController : MonoBehaviour
             weapon.GetComponentInChildren<MeshRenderer>().material = weapon.GetComponent<PlaySoundOnCollision>()._normalMaterial;
         }
     }
+    private void ArrangeVisibleToPlayer()
+    {
+        bool isVisible = RaysForVisibleToPlayer();
+        if (isVisible)
+        {
+            if (!_animator.enabled) _animator.enabled = true;
+            _notVisibleCounter = 0f;
+        }
+        else
+        {
+            _notVisibleCounter += Time.deltaTime;
+            if (_notVisibleCounter > 5f)
+            {
+                if (_animator.enabled) _animator.enabled = false;
+            }
+        }
+    }
+    private bool RaysForVisibleToPlayer()
+    {
+        if (RaysForVisibleToPlayerSingleRay(transform.position, GameManager._instance.PlayerRb.transform.position)) return true;
+        if (RaysForVisibleToPlayerSingleRay(transform.position + transform.right, GameManager._instance.PlayerRb.transform.position)) return true;
+        if (RaysForVisibleToPlayerSingleRay(transform.position - transform.right, GameManager._instance.PlayerRb.transform.position)) return true;
+        if (RaysForVisibleToPlayerSingleRay(transform.position + transform.up, GameManager._instance.PlayerRb.transform.position)) return true;
+        if (RaysForVisibleToPlayerSingleRay(transform.position - transform.up, GameManager._instance.PlayerRb.transform.position)) return true;
+        if (RaysForVisibleToPlayerSingleRay(transform.position + transform.forward, GameManager._instance.PlayerRb.transform.position)) return true;
+        if (RaysForVisibleToPlayerSingleRay(transform.position - transform.forward, GameManager._instance.PlayerRb.transform.position)) return true;
+        if (RaysForVisibleToPlayerSingleRay(transform.position + transform.right * 2f, GameManager._instance.PlayerRb.transform.position)) return true;
+        if (RaysForVisibleToPlayerSingleRay(transform.position - transform.right * 2f, GameManager._instance.PlayerRb.transform.position)) return true;
+        if (RaysForVisibleToPlayerSingleRay(transform.position + transform.up * 2f, GameManager._instance.PlayerRb.transform.position)) return true;
+        if (RaysForVisibleToPlayerSingleRay(transform.position - transform.up * 2f, GameManager._instance.PlayerRb.transform.position)) return true;
+        if (RaysForVisibleToPlayerSingleRay(transform.position + transform.forward * 2f, GameManager._instance.PlayerRb.transform.position)) return true;
+        if (RaysForVisibleToPlayerSingleRay(transform.position - transform.forward * 2f, GameManager._instance.PlayerRb.transform.position)) return true;
+        return false;
+    }
+    private bool RaysForVisibleToPlayerSingleRay(Vector3 pos, Vector3 targetPos)
+    {
+        Physics.Raycast(pos, (targetPos - pos).normalized, out RaycastHit hit, 250f, GameManager._instance.LayerMaskForVisible);
+        if (hit.collider != null && hit.collider.gameObject.CompareTag("Player"))
+            return true;
+        return false;
+    }
     private void ArrangeIsInSmoke()
     {
         for (int i = 0; i < SmokeTriggers.Count; i++)
@@ -186,6 +233,7 @@ public class EnemyStateController : MonoBehaviour
         _enemyAnimState.DoState(_rb);
         ArrangeAnimStateParameter();
         CheckForPush();
+        ArrangeVisibleToPlayer();
     }
     void LateUpdate()
     {
@@ -220,8 +268,8 @@ public class EnemyStateController : MonoBehaviour
 
     public void BlendAnimationLocalPositions(float localX, float localZ)
     {
-        _animator.SetFloat("LocalX", localX);
-        _animator.SetFloat("LocalZ", localZ);
+        _animator.SetFloat("LocalX", Mathf.Lerp(_animator.GetFloat("LocalX"), localX, Time.deltaTime * 3f));
+        _animator.SetFloat("LocalZ", Mathf.Lerp(_animator.GetFloat("LocalZ"), localZ, Time.deltaTime * 3f));
     }
     private void CheckForPush()
     {
@@ -272,13 +320,13 @@ public class EnemyStateController : MonoBehaviour
     }
     private string AnimNameWithoutNumber(string name)
     {
-        char[] array = name.ToCharArray();
-        char[] newArray = new char[array.Length - 1];
-        for (int i = 0; i < array.Length - 1; i++)
+        _arrayForChangeAnim = name.ToCharArray();
+        _newArrayForChangeAnim = new char[_arrayForChangeAnim.Length - 1];
+        for (int i = 0; i < _arrayForChangeAnim.Length - 1; i++)
         {
-            newArray[i] = array[i];
+            _newArrayForChangeAnim[i] = _arrayForChangeAnim[i];
         }
-        return new string(newArray);
+        return new string(_newArrayForChangeAnim);
     }
     
     private void ArrangeAnimStateParameter()
@@ -307,19 +355,24 @@ public class EnemyStateController : MonoBehaviour
             {
                 if (_agent.velocity.magnitude < 0.1f)
                 {
-                    _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
-                    _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 3f));
+                    _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 7f));
+                    _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 7f));
                 }
                 else
                 {
-                    _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
-                    _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 1f, Time.deltaTime * 3f));
+                    _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 7f));
+                    _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 1f, Time.deltaTime * 7f));
                 }
+            }
+            else if (_animator.GetCurrentAnimatorStateInfo(1).IsName("Attack1") || _animator.GetCurrentAnimatorStateInfo(1).IsName("Attack2") || _animator.GetCurrentAnimatorStateInfo(1).IsName("Attack3") || _animator.GetCurrentAnimatorStateInfo(1).IsName("Attack4") || _animator.GetCurrentAnimatorStateInfo(1).IsName("Attack5") || _animator.GetCurrentAnimatorStateInfo(1).IsName("Attack6"))
+            {
+                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 7f));
+                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 7f));
             }
             else
             {
-                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
-                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 3f));
+                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0.75f, Time.deltaTime * 7f));
+                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 7f));
             }
         }
         else
@@ -328,19 +381,19 @@ public class EnemyStateController : MonoBehaviour
             {
                 if (_agent.velocity.magnitude < 0.1f)
                 {
-                    _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
-                    _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 3f));
+                    _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 7f));
+                    _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 7f));
                 }
                 else
                 {
-                    _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 3f));
-                    _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 1f, Time.deltaTime * 3f));
+                    _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0f, Time.deltaTime * 7f));
+                    _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 1f, Time.deltaTime * 7f));
                 }
             }
             else
             {
-                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0.75f, Time.deltaTime * 3f));
-                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 3f));
+                _animator.SetLayerWeight(4, Mathf.Lerp(_animator.GetLayerWeight(4), 0.75f, Time.deltaTime * 7f));
+                _animator.SetLayerWeight(5, Mathf.Lerp(_animator.GetLayerWeight(5), 0f, Time.deltaTime * 7f));
             }
         }
         
@@ -411,9 +464,11 @@ public class EnemyStateController : MonoBehaviour
         if (other != null && other.gameObject != null)
         {
             if (other.CompareTag("Smoke") && !SmokeTriggers.Contains(other.gameObject))
-            {
                 SmokeTriggers.Add(other.gameObject);
-            }
+            else if (other.name == "LaserWarning")
+                _enemyCombat.LaserTrapTriggered();
+            else if (other.CompareTag("NailTrap") || other.CompareTag("ProjectileTrap"))
+                _enemyCombat.TrapTriggered();
         }
     }
    
@@ -439,9 +494,7 @@ public class EnemyStateController : MonoBehaviour
             {
                 ChangeAnimation("Stun");
                 SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.1f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-                if (_pushCoroutine != null)
-                    StopCoroutine(_pushCoroutine);
-                _pushCoroutine = StartCoroutine(PushCoroutine());
+                GameManager._instance.CoroutineCall(ref _pushCoroutine, PushCoroutine(), this);
             }
         }
     }
@@ -481,7 +534,11 @@ public class EnemyStateController : MonoBehaviour
         _searchingPositionBuffer = _playerTransform.position + _playerTransform.GetComponent<Rigidbody>().velocity.normalized * 4f;
     }
 
-
+    public bool CheckIsFollowPlayerTriggered()
+    {
+        if (!_isInSmoke && GameManager._instance.IsPlayerInSmoke) return false;
+        return GameManager._instance.IsFollowPlayerTriggered;
+    }
     /// <summary>
     /// Checks for player in front of enemy
     /// </summary>
@@ -544,9 +601,7 @@ public class EnemyStateController : MonoBehaviour
 
     public void BlockOpen(Vector3 blockedEnemyPosition)
     {
-        if (_blockCoroutine != null)
-            StopCoroutine(_blockCoroutine);
-        _blockCoroutine = StartCoroutine(BlockCoroutine());
+        GameManager._instance.CoroutineCall(ref _blockCoroutine, BlockCoroutine(), this);
 
         ChangeAnimation("Blocking");
 

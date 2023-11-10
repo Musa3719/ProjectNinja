@@ -34,6 +34,7 @@ public class EnemyMovement : MonoBehaviour
     private float _walkSoundCounter;
     private float _isOnNavMeshCounter;
 
+    private RaycastHit _hitForGrounded;
     private void Awake()
     {
         _rb = GetComponent<Rigidbody>();
@@ -111,8 +112,8 @@ public class EnemyMovement : MonoBehaviour
     }
     private bool ToGroundRaycast()
     {
-        Physics.Raycast(_footTransform.position, -Vector3.up, out RaycastHit hit, 0.7f);
-        if (hit.collider != null && hit.collider.gameObject.layer == LayerMask.NameToLayer("Grounds"))
+        Physics.Raycast(_footTransform.position, -Vector3.up, out _hitForGrounded, 0.4f);
+        if (_hitForGrounded.collider != null)
             return true;
         return false;
     }
@@ -132,9 +133,7 @@ public class EnemyMovement : MonoBehaviour
         if (_attackOrBlockRotationCoroutine != null)
             StopCoroutine(_attackOrBlockRotationCoroutine);
 
-        if (_blockMovementCoroutine != null)
-            StopCoroutine(_blockMovementCoroutine);
-        _blockMovementCoroutine = StartCoroutine(BlockMovementCoroutine(targetVel, _enemyStateController._enemyCombat._BlockMoveTime));
+        GameManager._instance.CoroutineCall(ref _blockMovementCoroutine, BlockMovementCoroutine(targetVel, _enemyStateController._enemyCombat._BlockMoveTime), this);
     }
     private IEnumerator BlockMovementCoroutine(Vector3 targetVel, float time)
     {
@@ -176,12 +175,11 @@ public class EnemyMovement : MonoBehaviour
         //if (subtranctByDistance < 0f) distanceMultiplier /= 1.6f;
 
         Vector3 targetVel = direction * 20f * firstMultiplier * Mathf.Clamp(distanceMultiplier, 1.5f, 5f) / 4.85f;
-        if (_moveAfterAttackCoroutine != null)
-            StopCoroutine(_moveAfterAttackCoroutine);
-        _moveAfterAttackCoroutine = StartCoroutine(MoveAfterAttackCoroutine(targetVel));
+        GameManager._instance.CoroutineCall(ref _moveAfterAttackCoroutine, MoveAfterAttackCoroutine(targetVel), this);
     }
     private IEnumerator MoveAfterAttackCoroutine(Vector3 targetVel)
     {
+        //if (_enemyStateController.EnemyNumber == 3 && _enemyStateController._enemyCombat.WeaponType == WeaponTypeEnum.Exist) yield return new WaitForSeconds(0.07f);
         float startTime = Time.time;
         float firstMoveTime = 0.1f;
         float secondMoveTime = 0.1f;
@@ -277,18 +275,45 @@ public class EnemyMovement : MonoBehaviour
 
         return direction.x >= 0 ? true : false;
     }
-    private IEnumerator DodgeCoroutine(Vector3 targetVel)
+    /// <returns>isDodgingToRight</returns>
+    public bool DodgeForward()
+    {
+        Vector3 direction = _enemyStateController._enemyAI.GetDodgeDirection(true);
+        _navMeshAgent.enabled = false;
+        _rb.isKinematic = false;
+        GameManager._instance.CallForAction(() => { if (_enemyStateController._enemyCombat.IsDead) return; _navMeshAgent.enabled = true; _rb.isKinematic = true; }, _enemyStateController._enemyCombat._DodgeTime);
+        Vector3 targetVel = direction * _dodgeSpeed * 0.8f;
+        StartCoroutine(DodgeCoroutine(targetVel, false));
+
+        return direction.x >= 0 ? true : false;
+    }
+    /// <returns>isDodgingToRight</returns>
+    public bool DodgeToDirection(Vector3 dodgeDirection)
+    {
+        _navMeshAgent.enabled = false;
+        _rb.isKinematic = false;
+        GameManager._instance.CallForAction(() => { if (_enemyStateController._enemyCombat.IsDead) return; _navMeshAgent.enabled = true; _rb.isKinematic = true; }, _enemyStateController._enemyCombat._DodgeTime);
+        Vector3 targetVel = dodgeDirection * _dodgeSpeed;
+        StartCoroutine(DodgeCoroutine(targetVel));
+
+        return dodgeDirection.x >= 0 ? true : false;
+    }
+    private IEnumerator DodgeCoroutine(Vector3 targetVel, bool isRotating = true)
     {
         float startTime = Time.time;
         while (Time.time < startTime + _enemyStateController._enemyCombat._DodgeTime / 8f)
         {
             _rb.velocity = Vector3.Lerp(_rb.velocity, targetVel, Time.deltaTime * 6f);
+            if(isRotating)
+                _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(-targetVel.normalized.x, 0f, -targetVel.normalized.z), Time.deltaTime * 5f);
             yield return null;
         }
         _rb.velocity = targetVel;
         while (Time.time < startTime + _enemyStateController._enemyCombat._DodgeTime)
         {
             _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, Time.deltaTime * 1.5f);
+            if (isRotating)
+                _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(-targetVel.normalized.x, 0f, -targetVel.normalized.z), Time.deltaTime * 5f);
             yield return null;
         }
         _rb.velocity = Vector3.zero;
@@ -297,8 +322,8 @@ public class EnemyMovement : MonoBehaviour
     {
         if (!_navMeshAgent.enabled) return;
 
-        _navMeshAgent.speed = _moveSpeed * 1.5f;
-        _navMeshAgent.acceleration = 2.5f;
+        _navMeshAgent.speed = _moveSpeed * 1.25f;
+        _navMeshAgent.acceleration = 1f;
 
         //float lerpSpeed = 2.5f;
         float rotationLerpSpeed = 4.5f;
@@ -319,15 +344,18 @@ public class EnemyMovement : MonoBehaviour
     {
         if (!_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh || _enemyStateController._isOnOffMeshLinkPath) return;
 
-        _navMeshAgent.acceleration = 2.5f;
+        _navMeshAgent.acceleration = 5f;
+
+        Vector3 direction = (lookAtPos - _rb.transform.position).normalized;
 
         if (speed != null)
         {
             _navMeshAgent.speed = speed.Value;
         }
-        else if ((position - transform.position).magnitude > 8.5f)
+        else if ((position - transform.position).magnitude > 8f)
         {
             _navMeshAgent.speed = _runSpeed;
+            direction = _navMeshAgent.desiredVelocity.normalized;
         }
         else
         {
@@ -335,9 +363,7 @@ public class EnemyMovement : MonoBehaviour
         }
         _navMeshAgent.speed *= speedMultiplier;
 
-        //float lerpSpeed = 2.5f;
-        //_rb.velocity = Vector3.Lerp(_rb.velocity, position * _moveSpeed, Time.deltaTime * lerpSpeed);
-        Vector3 direction = (lookAtPos - _rb.transform.position).normalized;
+
         if (direction.x != 0 || direction.z != 0)
             _rb.transform.forward = Vector3.Lerp(_rb.transform.forward, new Vector3(direction.x, 0f, direction.z), Time.deltaTime * rotationLerpSpeed);
 

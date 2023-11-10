@@ -131,8 +131,8 @@ public class CameraController : MonoBehaviour
         speed.y = 0f;
 
 
-        float xOffset = -InputHandler.GetAxis("Mouse Y") * Time.deltaTime * 60f / 24f * Options._instance.MouseSensitivity * _verticalCameraModifier; // cos func for slowing camera 
-        float yOffset = InputHandler.GetAxis("Mouse X") * Time.deltaTime * 60f / 24f * Options._instance.MouseSensitivity;
+        float xOffset = -InputHandler.GetAxis("Mouse Y") * Time.deltaTime * 60f / 34f * Options._instance.MouseSensitivity * _verticalCameraModifier; // cos func for slowing camera 
+        float yOffset = InputHandler.GetAxis("Mouse X") * Time.deltaTime * 60f / 34f * Options._instance.MouseSensitivity;
 
         if (Time.timeScale != 0f && Time.timeScale != 1f)
         {

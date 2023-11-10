@@ -37,9 +37,6 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField]
     private float _attackMoveSpeed;
     public float _AttackMoveSpeed => _attackMoveSpeed;
-    [SerializeField]
-    private float _forwardLeapSpeed;
-    public float _ForwardLeapSpeed => _forwardLeapSpeed;
 
     [SerializeField]
     private float _hookMovementSpeed;
@@ -68,7 +65,7 @@ public class PlayerMovement : MonoBehaviour
     public float _needStaminaForJump { get; private set; }
     public float _hookStaminaUse { get; private set; }
     public float _attackStaminaUse { get; private set; }
-    public float _forwardLeapStaminaUse { get; private set; }
+    public float _dashAttackStaminaUse { get; private set; }
     public float _dodgeStaminaUse { get; private set; }
     public float _blockedStaminaUse { get; private set; }
     public float _attackDeflectedStaminaUse { get; private set; }
@@ -131,6 +128,9 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField]
     private Transform _HandOffsetForUpHook;
 
+
+    private RaycastHit[] _hitsForGrounded;
+    private bool[] _raysForGrounded;
     private void OnEnable()
     {
         GameManager._instance._staminaGainEvent += StaminaGain;
@@ -198,7 +198,7 @@ public class PlayerMovement : MonoBehaviour
         _Stamina -= 7.5f;
         PlayerStateController._instance.ChangeAnimation("Stun");
         SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.15f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.25f));
+        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.5f));
         PushMove(direction);
     }
     private void ChangeAnimFromEvent(string name, float time)
@@ -210,6 +210,8 @@ public class PlayerMovement : MonoBehaviour
     }
     private void Awake()
     {
+        _hitsForGrounded = new RaycastHit[7];
+        _raysForGrounded = new bool[7];
         _instance = this;
         _MaxStamina = 85f;
         _Stamina = _MaxStamina;
@@ -225,7 +227,7 @@ public class PlayerMovement : MonoBehaviour
         _staminaIncreasePerSecond = 3f;
         _hookStaminaUse = _staminaIncreasePerSecond;
         _attackStaminaUse = 14f;
-        _forwardLeapStaminaUse = 16f;
+        _dashAttackStaminaUse = 22f;
         _dodgeStaminaUse = 16f;
         _blockedStaminaUse = 8f;
         _attackDeflectedStaminaUse = 14f;
@@ -249,14 +251,14 @@ public class PlayerMovement : MonoBehaviour
     {
         if (GameManager._instance.isPlayerDead || GameManager._instance.isGameStopped || GameManager._instance.isOnCutscene) return;
 
-        if (_Stamina <= 3f)
+        if (_Stamina <= 1.5f)
             _canRunWithStamina = false;
-        else if (_Stamina >= 15f)
+        else if (_Stamina >= 7.5f)
             _canRunWithStamina = true;
 
         if (PlayerStateController._instance._isStaminaManual)
         {
-            _Stamina += Time.deltaTime * _staminaIncreasePerSecond * Mathf.Clamp((PlayerStateController._instance._staminaManualCounter + 0.25f) * 5.5f, 1f, 15f);
+            _Stamina += Time.deltaTime * _staminaIncreasePerSecond * (PlayerCombat._instance.MeleeWeapon == null ? 1f : 0.7f) * Mathf.Clamp((PlayerStateController._instance._staminaManualCounter + 0.25f) * 7f, 1f, 10f);
         }
         else if(PlayerCombat._instance._IsBlocking)
         {
@@ -287,21 +289,19 @@ public class PlayerMovement : MonoBehaviour
                 _crouchTimerForGrounded -= Time.deltaTime;
         }
 
-        RaycastHit[] hits = new RaycastHit[7];
-        bool[] rays = new bool[7];
-        rays[0] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f + Vector3.right * _xBound * 9f / 10f + Vector3.forward * _zBound * 9f / 10f, -Vector3.up, out hits[0], 0.3f, GameManager._instance.LayerMaskForVisible);
-        rays[1] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f + Vector3.right * _xBound * 9f / 10f - Vector3.forward * _zBound * 9f / 10f, -Vector3.up, out hits[1], 0.3f, GameManager._instance.LayerMaskForVisible);
-        rays[2] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f, -Vector3.up, out hits[2], downDistance, GameManager._instance.LayerMaskForVisible);
-        rays[3] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f - Vector3.right * _xBound * 9f / 10f + Vector3.forward * _zBound * 9f / 10f, -Vector3.up, out hits[3], 0.3f, GameManager._instance.LayerMaskForVisible);
-        rays[4] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f - Vector3.right * _xBound * 9f / 10f - Vector3.forward * _zBound * 9f / 10f, -Vector3.up, out hits[4], 0.3f, GameManager._instance.LayerMaskForVisible);
+        _raysForGrounded[0] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f + Vector3.right * _xBound * 9f / 10f + Vector3.forward * _zBound * 9f / 10f, -Vector3.up, out _hitsForGrounded[0], 0.3f, GameManager._instance.LayerMaskForVisible);
+        _raysForGrounded[1] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f + Vector3.right * _xBound * 9f / 10f - Vector3.forward * _zBound * 9f / 10f, -Vector3.up, out _hitsForGrounded[1], 0.3f, GameManager._instance.LayerMaskForVisible);
+        _raysForGrounded[2] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f, -Vector3.up, out _hitsForGrounded[2], downDistance, GameManager._instance.LayerMaskForVisible);
+        _raysForGrounded[3] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f - Vector3.right * _xBound * 9f / 10f + Vector3.forward * _zBound * 9f / 10f, -Vector3.up, out _hitsForGrounded[3], 0.3f, GameManager._instance.LayerMaskForVisible);
+        _raysForGrounded[4] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f - Vector3.right * _xBound * 9f / 10f - Vector3.forward * _zBound * 9f / 10f, -Vector3.up, out _hitsForGrounded[4], 0.3f, GameManager._instance.LayerMaskForVisible);
 
-        rays[5] = Physics.Raycast(transform.position, -Vector3.up, out hits[5], 1.15f);
+        _raysForGrounded[5] = Physics.Raycast(transform.position, -Vector3.up, out _hitsForGrounded[5], 1.15f);
 
-        rays[6] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f, -Vector3.up, out hits[6], downDistance);
+        _raysForGrounded[6] = Physics.Raycast(transform.position - Vector3.up * _distToGround * 9f / 10f, -Vector3.up, out _hitsForGrounded[6], downDistance);
 
         bool rayForOnWall = false;
         if (_touchingWallColliders.Count > 0)
-            rayForOnWall = Physics.Raycast(transform.position + _touchingWallColliders[_touchingWallColliders.Count - 1].transform.right * 0.35f, -Vector3.up, out hits[5], 1.15f);
+            rayForOnWall = Physics.Raycast(transform.position + _touchingWallColliders[_touchingWallColliders.Count - 1].transform.right * 0.35f, -Vector3.up, out _hitsForGrounded[5], 1.15f);
 
         /*if(!(rays[0] || rays[1] || rays[2] || rays[3] || rays[4]))
         {
@@ -312,24 +312,24 @@ public class PlayerMovement : MonoBehaviour
         }*/
 
         int i = 0;
-        foreach (var hit in hits)
+        foreach (var hit in _hitsForGrounded)
         {
-            if (hit.collider != null && hit.collider.isTrigger && rays[i] == true)
+            if (hit.collider != null && hit.collider.isTrigger && _raysForGrounded[i] == true)
             {
-                rays[i] = false;
+                _raysForGrounded[i] = false;
             }
             i++;
         }
 
         bool isGrounded;
         if (PlayerStateController._instance._playerState is PlayerStates.OnWall)
-            isGrounded = rays[5] || rayForOnWall || IsGroundedCheckFromProps();
+            isGrounded = _raysForGrounded[5] || rayForOnWall || IsGroundedCheckFromProps();
         else
-            isGrounded = rays[0] || rays[1] || rays[2] || rays[3] || rays[4] || rays[5];
+            isGrounded = _raysForGrounded[0] || _raysForGrounded[1] || _raysForGrounded[2] || _raysForGrounded[3] || _raysForGrounded[4] || _raysForGrounded[5];
 
         if (!_isGroundedWorkedThisFrame)
         {
-            ArrangePlaneSound(hits[6]);
+            ArrangePlaneSound(_hitsForGrounded[6]);
             ArrangeIsAllowedInAir(isGrounded);
         }
 
@@ -480,15 +480,15 @@ public class PlayerMovement : MonoBehaviour
         _isOnAttackOrAttackDeflectedMove = true;
         _isAllowedToVelocityForward = false;
         float startTime = Time.time;
-        while (startTime + 0.5f * 0.7f > Time.time)
+        while (startTime + 0.6f * 0.25f > Time.time)
         {
-            rb.velocity = Vector3.Lerp(rb.velocity, (direction * 2f * _AttackMoveSpeed), Time.deltaTime * 16f);
+            rb.velocity = Vector3.Lerp(rb.velocity, (direction * 2f * _AttackMoveSpeed), Time.deltaTime * 14f);
             yield return null;
         }
         rb.velocity = (direction * 2f * _AttackMoveSpeed);
-        while (startTime + 0.5f > Time.time)
+        while (startTime + 0.6f > Time.time)
         {
-            rb.velocity = Vector3.Lerp(rb.velocity, Vector3.zero, Time.deltaTime * 10f);
+            rb.velocity = Vector3.Lerp(rb.velocity, Vector3.zero, Time.deltaTime * 3.75f);
             yield return null;
         }
         _isOnAttackOrAttackDeflectedMove = false;
@@ -540,22 +540,24 @@ public class PlayerMovement : MonoBehaviour
             switch (PlayerCombat._instance.MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().WeaponType)
             {
                 case MeleeWeaponType.Sword:
-                    speed *= 0.75f;
-                    break;
-                case MeleeWeaponType.Katana:
                     speed *= 0.85f;
                     break;
+                case MeleeWeaponType.Katana:
+                    speed *= 0.925f;
+                    break;
                 case MeleeWeaponType.Mace:
-                    speed *= 0.8f;
+                    speed *= 0.88f;
                     break;
                 case MeleeWeaponType.Hammer:
-                    speed *= 0.7f;
+                    speed *= 0.8f;
                     break;
                 case MeleeWeaponType.Axe:
                     speed *= 0.7f;
                     break;
                 case MeleeWeaponType.Zweihander:
-                    speed *= 0.75f;
+                    speed *= 0.7f;
+                    break;
+                case MeleeWeaponType.Spear:
                     break;
                 default:
                     break;
@@ -565,30 +567,29 @@ public class PlayerMovement : MonoBehaviour
 
         _isOnAttackOrAttackDeflectedMove = true;
 
-        float moveTime = 0.2f;
+        float moveTime = 0.22f;
         float startTime = Time.time;
 
         rb.velocity += transform.forward * speed;
         while (startTime + moveTime > Time.time && InputHandler.GetButton("Fire1"))
         {
-            rb.velocity += transform.forward * speed * Time.deltaTime;
+            if (rb.velocity.magnitude < 11.5f && IsGrounded())
+                rb.velocity += transform.forward * speed * Time.deltaTime;
             yield return null;
         }
-        rb.velocity *= 0.75f;
+        rb.velocity *= 0.85f;
 
         _isOnAttackOrAttackDeflectedMove = false;
     }
     public void AttackMoveTeleport(Rigidbody rb, float distance)
     {
-        if (_attackMoveTeleportCoroutine != null)
-            StopCoroutine(_attackMoveTeleportCoroutine);
-        _attackMoveTeleportCoroutine = StartCoroutine(AttackMoveTeleportCoroutine(rb, distance));
+        GameManager._instance.CoroutineCall(ref _attackMoveTeleportCoroutine, AttackMoveTeleportCoroutine(rb, distance), this);
     }
     private IEnumerator AttackMoveTeleportCoroutine(Rigidbody rb, float distance)
     {
         _isOnAttackOrAttackDeflectedMove = true;
 
-        float speed = 200f;
+        float speed = 400f;
         float moveTime = distance / speed;
         float startTime = Time.time;
 
@@ -614,7 +615,8 @@ public class PlayerMovement : MonoBehaviour
             moveState._isCrouching = true;
         }
         PlayerStateController._instance.SlidingSoundObject = SoundManager._instance.PlaySound(SoundManager._instance.Sliding, transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-        _crouchCoroutine = StartCoroutine("CrouchRoutine");
+
+        GameManager._instance.CoroutineCall(ref _crouchCoroutine, CrouchRoutine(), this);
     }
     public void SlideFromWall(Rigidbody rb)
     {
@@ -657,7 +659,6 @@ public class PlayerMovement : MonoBehaviour
         SoundManager._instance.PlaySound(SoundManager._instance.Jump, transform.position, 0.03f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
         float jumpPowerBySpeed = _JumpPower - _JumpPower * 0.2f * Mathf.Clamp(rb.velocity.magnitude, _MoveSpeed, _RunSpeed) / _RunSpeed;
-
         rb.velocity = new Vector3(rb.velocity.x , jumpPowerBySpeed, rb.velocity.z);
         _Stamina -= _needStaminaForJump;
 
@@ -667,12 +668,9 @@ public class PlayerMovement : MonoBehaviour
             float zAddition = Mathf.Clamp(rb.velocity.z, 0f, 4f) * 0.4f;
             rb.velocity += new Vector3(xAddition, 0f, zAddition);
         }
-        
 
 
-        if (_jumpCoroutine != null)
-            StopCoroutine(_jumpCoroutine);
-        _jumpCoroutine = StartCoroutine(JumpButtonHolding(rb));
+        GameManager._instance.CoroutineCall(ref _jumpCoroutine, JumpButtonHolding(rb), this);
 
         _isJumped = true;
 
@@ -701,18 +699,18 @@ public class PlayerMovement : MonoBehaviour
         rb.velocity = jumpVelocity;
         _Stamina -= _needStaminaForJump;
 
-        if (_wallJumpCoroutine != null)
-            StopCoroutine(_wallJumpCoroutine);
-        _wallJumpCoroutine = StartCoroutine(WallJumpButtonHolding(rb));
+        GameManager._instance.CoroutineCall(ref _wallJumpCoroutine, WallJumpButtonHolding(rb), this);
 
         _isJumped = true;
+        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.ToGround(0.15f));
 
         Action CloseIsJumped = () => { _isJumped = false; };
         GameManager._instance.CallForAction(CloseIsJumped, 0.2f);
     }
     IEnumerator JumpButtonHolding(Rigidbody rb)
     {
-        while (InputHandler.GetButton("Jump"))
+        yield return new WaitForSeconds(0.14f);
+        while (InputHandler.GetButton("Jump") && PlayerCombat._instance.MeleeWeapon == null)
         {
             yield return null;
         }
@@ -736,31 +734,13 @@ public class PlayerMovement : MonoBehaviour
     private void ArrangeIsVelocityToForward(float time)
     {
         _isAllowedToVelocityForward = false;
-        if (_openVelocityForwardCoroutine != null)
-            StopCoroutine(_openVelocityForwardCoroutine);
-        _openVelocityForwardCoroutine = StartCoroutine(OpenIsAllowedToVelocityForward(time));
+        GameManager._instance.CoroutineCall(ref _openVelocityForwardCoroutine, OpenIsAllowedToVelocityForward(time), this);
     }
     IEnumerator OpenIsAllowedToVelocityForward(float time)
     {
         yield return new WaitForSeconds(time);
         _isAllowedToVelocityForward = true;
     }
-
-    public void MakeBigJump(Rigidbody rb, float magnitude, float rightDirection, float forwardDirection)
-    {
-        PlayerStateController._instance.ChangeAnimation("BigJump");
-        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.3f));
-
-        SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, transform.position, 0.18f, false, UnityEngine.Random.Range(0.6f, 0.7f));
-        GameObject smokeVFX = Instantiate(GameManager._instance.HitSmokeVFX, transform.position, Quaternion.identity);
-        smokeVFX.transform.localScale *= 5f;
-        Color temp = smokeVFX.GetComponentInChildren<SpriteRenderer>().color;
-        smokeVFX.GetComponentInChildren<SpriteRenderer>().color = new Color(temp.r, temp.g, temp.b, 7.5f / 255f);
-        Destroy(smokeVFX, 5f);
-
-        rb.velocity = (rightDirection * transform.right + forwardDirection * transform.forward + Vector3.up).normalized * magnitude;
-    }
-   
     public void AimAssistToEnemy(GameObject enemy)
     {
         if (_aimAssistCoroutine != null)
@@ -775,7 +755,7 @@ public class PlayerMovement : MonoBehaviour
             if (Time.timeScale > 0.8f)
             {
                 float angle = Vector3.SignedAngle(transform.forward, enemy.transform.position - transform.position, Vector3.up);
-                transform.eulerAngles = new Vector3(transform.eulerAngles.x, transform.eulerAngles.y + Time.deltaTime * 60f * 0.16f * angle, transform.eulerAngles.z);
+                transform.eulerAngles = new Vector3(transform.eulerAngles.x, transform.eulerAngles.y + Time.deltaTime * 60f * 0.24f * angle, transform.eulerAngles.z);
             }
             
             yield return null;
@@ -803,7 +783,7 @@ public class PlayerMovement : MonoBehaviour
             else axis = Vector3.forward;
         }
         Vector3 direction = Quaternion.AngleAxis(angle, Vector3.up) * axis;
-        rb.velocity = direction * (PlayerCombat._instance.MeleeWeapon == null ? 1f : 0.5f) * _DodgeSpeed * 1.2f + rb.velocity * 0.1f;
+        rb.velocity = direction * (PlayerCombat._instance.MeleeWeapon == null ? 1f : 0.85f) * _DodgeSpeed * 1.2f + rb.velocity * 0.1f;
 
         if (InputHandler.GetAxis("Vertical") > 0)
         {
@@ -828,31 +808,6 @@ public class PlayerMovement : MonoBehaviour
         if (_attackDeflectedMoveCoroutine != null)
             StopCoroutine(_attackDeflectedMoveCoroutine);
         _attackDeflectedMoveCoroutine = StartCoroutine(AttackDeflectedMoveCoroutine(rb));
-    }
-    public void ForwardLeap(Rigidbody rb)
-    {
-        Vector3 tempForward = rb.transform.forward;
-        tempForward.y = 0f;
-        float angle = -Vector3.SignedAngle(tempForward, Vector3.forward, Vector3.up);
-        Vector3 direction = rb.transform.forward;
-        direction.y = 0f;
-
-        StartCoroutine(ForwardLeapCoroutine(rb, direction, Time.time));
-    }
-    private IEnumerator ForwardLeapCoroutine(Rigidbody rb, Vector3 dir, float startTime)
-    {
-        float localForwardSpeed = _ForwardLeapSpeed;
-        if (rb.velocity.magnitude > (dir * _ForwardLeapSpeed).magnitude)
-        {
-            localForwardSpeed *= 1.65f;
-        }
-
-        while (Time.time < startTime + PlayerCombat._instance._forwardLeapTime)
-        {
-            rb.velocity = Vector3.Lerp(rb.velocity, dir * localForwardSpeed, Time.deltaTime * 2.5f);
-            yield return null;
-        }
-        rb.velocity = dir * _ForwardLeapSpeed;
     }
     public void WallMovementStarted(Rigidbody rb)
     {
@@ -893,9 +848,9 @@ public class PlayerMovement : MonoBehaviour
             else if (directionToSpeedAngle > 7f)
                 Movement(rb, _RunSpeed * 0.7f, 13f);
             else if (rb.velocity.magnitude < _MoveSpeed + (_RunSpeed - _MoveSpeed) / 2f)
-                Movement(rb, _RunSpeed, 2.15f);
+                Movement(rb, _RunSpeed, 2.6f);
             else
-                Movement(rb, _RunSpeed, 1.5f);
+                Movement(rb, _RunSpeed, 2.4f);
 
             _Stamina -= Time.deltaTime * _staminaDecreasePerSecond;
         }
@@ -905,22 +860,25 @@ public class PlayerMovement : MonoBehaviour
             switch (PlayerCombat._instance.MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().WeaponType)
             {
                 case MeleeWeaponType.Sword:
-                    multiplier = 1.55f;
+                    multiplier = 1.8f;
                     break;
                 case MeleeWeaponType.Katana:
-                    multiplier = 1.75f;
+                    multiplier = 2f;
                     break;
                 case MeleeWeaponType.Mace:
-                    multiplier = 1.5f;
+                    multiplier = 1.75f;
                     break;
                 case MeleeWeaponType.Hammer:
-                    multiplier = 1.4f;
+                    multiplier = 1.65f;
                     break;
                 case MeleeWeaponType.Axe:
-                    multiplier = 1.4f;
+                    multiplier = 1.65f;
                     break;
                 case MeleeWeaponType.Zweihander:
-                    multiplier = 1.4f;
+                    multiplier = 1.65f;
+                    break;
+                case MeleeWeaponType.Spear:
+                    multiplier = 2.5f;
                     break;
                 default:
                     break;
@@ -972,22 +930,25 @@ public class PlayerMovement : MonoBehaviour
             switch (PlayerCombat._instance.MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().WeaponType)
             {
                 case MeleeWeaponType.Sword:
-                    speed *= 0.8f;
-                    break;
-                case MeleeWeaponType.Katana:
                     speed *= 0.9f;
                     break;
+                case MeleeWeaponType.Katana:
+                    speed *= 0.95f;
+                    break;
                 case MeleeWeaponType.Mace:
-                    speed *= 0.8f;
+                    speed *= 0.9f;
                     break;
                 case MeleeWeaponType.Hammer:
-                    speed *= 0.75f;
+                    speed *= 0.9f;
                     break;
                 case MeleeWeaponType.Axe:
-                    speed *= 0.75f;
+                    speed *= 0.9f;
                     break;
                 case MeleeWeaponType.Zweihander:
-                    speed *= 0.75f;
+                    speed *= 0.9f;
+                    break;
+                case MeleeWeaponType.Spear:
+                    speed *= 1f;
                     break;
                 default:
                     break;
@@ -1009,7 +970,7 @@ public class PlayerMovement : MonoBehaviour
         }
 
 
-        var targetVelocity = direction * speed;
+        var targetVelocity = direction * Mathf.Clamp(speed, 0, _RunSpeed * 0.85f);
         if (xInput != 0f || yInput != 0f)
             targetVelocity.y = rb.velocity.y;
         else
@@ -1111,10 +1072,10 @@ public class PlayerMovement : MonoBehaviour
         Vector3 tempVelocity = rb.velocity;
         tempVelocity.y = 0f;
 
-        if (yInput > 0f && tempVelocity.magnitude < 7f)
+        if (yInput > 0f && tempVelocity.magnitude < 5f)
         {
-            Vector3 temp = transform.forward * 7f;
-            targetVelocity += new Vector3(temp.x, 0f, temp.z) * Time.deltaTime * 2f;
+            Vector3 temp = transform.forward * 5f;
+            targetVelocity += new Vector3(temp.x, 0f, temp.z) * Time.deltaTime * (PlayerCombat._instance.MeleeWeapon == null ? 2f : 1.25f);
         }
         else if (yInput == 0f)
         {
@@ -1134,12 +1095,15 @@ public class PlayerMovement : MonoBehaviour
     }
     public void StaminaMovement(Rigidbody rb)
     {
-        Movement(rb, 2.5f, 12.5f);
+        if (PlayerCombat._instance.MeleeWeapon == null)
+            Movement(rb, 2.5f, 12.5f);
+        else
+            Movement(rb, 0.75f, 12.5f);
     }
     public void DeathMove(Vector3 dir, float killersVelocityMagnitude)
     {
-        float deathSpeed = 24f;
-        PlayerStateController._instance._rb.AddForce(dir * deathSpeed + dir * killersVelocityMagnitude / 2.5f, ForceMode.Impulse);
+        float deathSpeed = 5f;
+        PlayerStateController._instance._rb.AddForce(dir * deathSpeed + dir * killersVelocityMagnitude / 1.5f, ForceMode.Impulse);
     }
     
 }
