@@ -22,7 +22,7 @@ public class UIHover : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     private void OnEnable()
     {
         _text.transform.localScale = _baseScale;
-        if (gameObject.name == "JoystickSettings" && Joystick.current == null)
+        if (gameObject.name == "JoystickSettings")
             gameObject.SetActive(false);
     }
     void IPointerEnterHandler.OnPointerEnter(PointerEventData eventData)

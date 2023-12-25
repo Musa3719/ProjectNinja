@@ -1,11 +1,14 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.Video;
 
 public class SceneController : MonoBehaviour
 {
@@ -26,15 +29,6 @@ public class SceneController : MonoBehaviour
     [SerializeField]
     public GameObject OpeningCinematic;
 
-    [SerializeField]
-    private Sprite CinematicImage1;
-    [SerializeField]
-    private Sprite CinematicImage2;
-    [SerializeField]
-    private Sprite CinematicImage3;
-    [SerializeField]
-    private Sprite CinematicImage4;
-
     private Coroutine LevelNotReachedCoroutine;
     private Coroutine _cinematicImageChangeCoroutine;
     private Coroutine _openingCinematicArrangementCoroutine;
@@ -52,23 +46,28 @@ public class SceneController : MonoBehaviour
     private void Awake()
     {
         SceneBuildIndex = SceneManager.GetActiveScene().buildIndex;
-        SceneBuildIndex = 1;
 
         _lastMenuCameraNumber = -1;
 
-        if (SceneBuildIndex == 0)
+        if (SceneBuildIndex == 0 || IsLastScene())
         {
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
         }
-        
+
         _instance = this;
         Time.timeScale = 1f;
         if (SceneBuildIndex == 0)
         {
             ArrangeMenuLevels();
+
+            if (Gamepad.current == null)
+            {
+                GameObject.Find("Canvas").transform.Find("MainMenu").Find("TutorialSettingText").gameObject.SetActive(false);
+                GameObject.Find("Canvas").transform.Find("MainMenu").Find("TutorialSetting").gameObject.SetActive(false);
+            }
         }
-        else
+        else if (!IsLastScene())
         {
             if (PlayerPrefs.GetInt("Level", 0) < SceneBuildIndex)
                 PlayerPrefs.SetInt("Level", SceneBuildIndex);
@@ -96,12 +95,17 @@ public class SceneController : MonoBehaviour
         _numberToAngles.Add(ButtonNamesForMenu.JoystickSettings, new Vector3(28.257f, 133.558f, 0f));
 
     }
-    
+
     private void Start()
     {
         GameObject debug = GameObject.Find("[Debug Updater]");
         if (debug != null)
             debug.SetActive(false);
+    }
+    public bool IsLastScene()
+    {
+        if (SceneBuildIndex == SceneManager.sceneCountInBuildSettings - 1) return true;
+        return false;
     }
     public void CallForAction(Action action, float time)
     {
@@ -192,29 +196,36 @@ public class SceneController : MonoBehaviour
         OpeningCinematic.SetActive(true);
         GameObject.Find("Canvas").SetActive(false);
 
-        if (_cinematicImageChangeCoroutine != null)
-            StopCoroutine(_cinematicImageChangeCoroutine);
-        _cinematicImageChangeCoroutine = StartCoroutine(CinematicImageChangeCoroutine(CinematicImage1, "Cutter"));
+        foreach (Transform item in SoundManager._instance.SoundObjectsParent.transform)
+        {
+            if (item.GetComponent<AudioSource>() != null && item.GetComponent<AudioSource>().clip.name.Equals("Burning_1"))
+                item.GetComponent<AudioSource>().Stop();
+        }
 
-        yield return new WaitForSeconds(4f);
+        StartCoroutine(OpeningCinematicTextCoroutine());
 
-        if (_cinematicImageChangeCoroutine != null)
-            StopCoroutine(_cinematicImageChangeCoroutine);
-        _cinematicImageChangeCoroutine = StartCoroutine(CinematicImageChangeCoroutine(CinematicImage2, "Samurai"));
+        float startTime = Time.time;
+        while (startTime + 90f > Time.time)
+        {
+            if (InputHandler.GetButtonDown("Esc"))
+            {
+                if (!GameObject.Find("OpeningCinematic").transform.Find("PassCinematic").gameObject.activeInHierarchy)
+                {
+                    GameObject.Find("OpeningCinematic").transform.Find("PassCinematic").gameObject.SetActive(true);
+                    Time.timeScale = 0f;
+                    GameObject.Find("OpeningCinematic").transform.Find("RawImage").GetComponent<VideoPlayer>().Pause();
+                }
+                else
+                {
+                    GameObject.Find("OpeningCinematic").transform.Find("PassCinematic").gameObject.SetActive(false);
+                    Time.timeScale = 1f;
+                    GameObject.Find("OpeningCinematic").transform.Find("RawImage").GetComponent<VideoPlayer>().Play();
+                }
 
-        yield return new WaitForSeconds(3f);
-
-        if (_cinematicImageChangeCoroutine != null)
-            StopCoroutine(_cinematicImageChangeCoroutine);
-        _cinematicImageChangeCoroutine = StartCoroutine(CinematicImageChangeCoroutine(CinematicImage3, "Grave Digger"));
-
-        yield return new WaitForSeconds(3f);
-
-        if (_cinematicImageChangeCoroutine != null)
-            StopCoroutine(_cinematicImageChangeCoroutine);
-        _cinematicImageChangeCoroutine = StartCoroutine(CinematicImageChangeCoroutine(CinematicImage4, "Traitor"));
-
-        yield return new WaitForSeconds(3f);
+            }
+            yield return null;
+        }
+        if (OpeningCinematic.transform.Find("Loading").gameObject.activeInHierarchy) yield break;
 
         OpeningCinematic.transform.Find("Loading").gameObject.SetActive(true);
 
@@ -222,49 +233,54 @@ public class SceneController : MonoBehaviour
 
         LoadSceneAsync(1);
     }
-    private IEnumerator CinematicImageChangeCoroutine(Sprite newImage, string text)
+    private IEnumerator OpeningCinematicTextCoroutine()
     {
-        SoundManager._instance.PlaySound(SoundManager._instance.TutorialText, Camera.main.transform.position, 0.25f, false, UnityEngine.Random.Range(0.55f, 0.65f));
-
-        OpeningCinematic.GetComponentInChildren<TextMeshProUGUI>().text = text;
-
-        var cinematicObjects = OpeningCinematic.GetComponentsInChildren<Image>();
-
-        OpeningCinematic.transform.Find("Image").GetComponent<RectTransform>().anchoredPosition = new Vector2(200f, OpeningCinematic.transform.Find("Image").GetComponent<RectTransform>().anchoredPosition.y);
-
-        foreach (var item in cinematicObjects)
-        {
-            item.sprite = newImage;
-            item.color = new Color(item.color.r, item.color.g, item.color.b, 0f);
-        }
-        float startTime = Time.time;
-        while (Time.time < startTime + 1f)
-        {
-            foreach (var item in cinematicObjects)
-            {
-                item.color = new Color(item.color.r, item.color.g, item.color.b, item.color.a + Time.deltaTime * 2f);
-                if (item.name == "Image")
-                    item.GetComponent<RectTransform>().anchoredPosition = new Vector2(item.GetComponent<RectTransform>().anchoredPosition.x - Time.deltaTime * 50f, item.GetComponent<RectTransform>().anchoredPosition.y);
-            }
-            yield return null;
-        }
-
-        foreach (var item in cinematicObjects)
-        {
-            item.color = new Color(item.color.r, item.color.g, item.color.b, 1f);
-        }
-
+        SetOpeningCinematicText(0);
+        int i = 1;
         while (true)
         {
-            foreach (var item in cinematicObjects)
+            bool canChangeText = (i == 1 && GameObject.Find("OpeningCinematic").transform.Find("RawImage").GetComponent<VideoPlayer>().time > 10f) ||
+                (i == 2 && GameObject.Find("OpeningCinematic").transform.Find("RawImage").GetComponent<VideoPlayer>().time > 20f) ||
+                (i == 3 && GameObject.Find("OpeningCinematic").transform.Find("RawImage").GetComponent<VideoPlayer>().time > 30f) ||
+                (i == 4 && GameObject.Find("OpeningCinematic").transform.Find("RawImage").GetComponent<VideoPlayer>().time > 40f) ||
+                (i == 5 && GameObject.Find("OpeningCinematic").transform.Find("RawImage").GetComponent<VideoPlayer>().time > 47.5f) ||
+                (i == 6 && GameObject.Find("OpeningCinematic").transform.Find("RawImage").GetComponent<VideoPlayer>().time > 55f) ||
+                (i == 7 && GameObject.Find("OpeningCinematic").transform.Find("RawImage").GetComponent<VideoPlayer>().time > 61f) ||
+                (i == 8 && GameObject.Find("OpeningCinematic").transform.Find("RawImage").GetComponent<VideoPlayer>().time > 71f) ||
+                (i == 9 && GameObject.Find("OpeningCinematic").transform.Find("RawImage").GetComponent<VideoPlayer>().time > 81f);
+            if (canChangeText)
             {
-                if (item.name == "Image")
-                    item.GetComponent<RectTransform>().anchoredPosition = new Vector2(item.GetComponent<RectTransform>().anchoredPosition.x - Time.deltaTime * 50f, item.GetComponent<RectTransform>().anchoredPosition.y);
+                SetOpeningCinematicText(i);
+                i++;
             }
             yield return null;
         }
     }
-    
+    private void SetOpeningCinematicText(int i)
+    {
+        string languageFilePath = (Localization._instance._ActiveLanguage).ToString();
+        string path = Application.streamingAssetsPath + "/Texts/" + languageFilePath + "/Cinematic/Opening.txt";
+        StreamReader reader = new StreamReader(path);
+        string line = "";
+        int c = 0;
+        while ((line = reader.ReadLine()) != null)
+        {
+            if (c == i)
+            {
+                OpeningCinematic.GetComponentInChildren<TextMeshProUGUI>().text = line;
+                break;
+            }
+            c++;
+        }
+        reader.Close();
+    }
+    public void PassOpeningCinematic()
+    {
+        InputHandler._isAllowedToInput = false;
+        GameObject.Find("OpeningCinematic").transform.Find("PassCinematic").gameObject.SetActive(false);
+        OpeningCinematic.transform.Find("Loading").gameObject.SetActive(true);
+        CallForAction(() => LoadSceneAsync(1), 0.1f); 
+    }
     public void OpenEpisodeSelectScreen()
     {
         GameObject.Find("Canvas").transform.Find("MainMenu").gameObject.SetActive(false);
@@ -308,6 +324,7 @@ public class SceneController : MonoBehaviour
         if (LoadingObject.activeInHierarchy) return;
 
         LoadingObject.SetActive(true);
+        InputHandler._isAllowedToInput = false;
         CallForAction(() => SceneManager.LoadSceneAsync(index), 0.25f);
     }
     public void LoadScene(int index)

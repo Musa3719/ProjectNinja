@@ -185,23 +185,19 @@ public class SoundManager : MonoBehaviour
     [SerializeField]
     public List<AudioClip> Boss1Grunts;
     [SerializeField]
-    public List<AudioClip> Boss2GruntsPhase1;
-    [SerializeField]
-    public List<AudioClip> Boss2GruntsPhase2;
+    public List<AudioClip> Boss2Grunts;
 
     [SerializeField]
     public List<AudioClip> Boss3GunShots;
     [SerializeField]
     public List<AudioClip> Boss3GunPowerUpShots;
     [SerializeField]
-    private AudioClip Boss3Reload;
-
-    private AudioClip Boss2Phase2Music;
-    private AudioClip Boss3Phase2Music;
+    public AudioClip Boss3Reload;
 
     [SerializeField]
     private AudioClip EndingMusic;
 
+    public List<AudioClip> BossDialogues;
     #endregion
 
     
@@ -224,15 +220,18 @@ public class SoundManager : MonoBehaviour
 
         if (IsBossLevel(sceneNumber))
         {
+            GameManager._instance.StopScreen.transform.Find("ChangeMusicButton").gameObject.SetActive(false);
             StartCoroutine(PlayBossMusic(GetBossNumberFromLevel(sceneNumber)));
         }
         else if (sceneNumber < GameManager.Level2Index)
         {
-            PlayMusic(LevelMusics[0], AtmosphereSounds[0]);
+            if (CurrentMusicObject == null || !LevelMusics.Contains(CurrentMusicObject.GetComponent<AudioSource>().clip))
+                PlayMusic(GetRandomSoundFromList(LevelMusics), AtmosphereSounds[0]);
         }
         else if (sceneNumber < GameManager.Level3Index)
         {
-            PlayMusic(LevelMusics[1], AtmosphereSounds[1]);
+            if (CurrentMusicObject == null || !LevelMusics.Contains(CurrentMusicObject.GetComponent<AudioSource>().clip))
+                PlayMusic(GetRandomSoundFromList(LevelMusics), AtmosphereSounds[1]);
         }
         else if(sceneNumber == GameManager.LastLevelIndex)
         {
@@ -240,7 +239,8 @@ public class SoundManager : MonoBehaviour
         }
         else
         {
-            PlayMusic(LevelMusics[2], AtmosphereSounds[2]);
+            if (CurrentMusicObject == null || !LevelMusics.Contains(CurrentMusicObject.GetComponent<AudioSource>().clip))
+                PlayMusic(GetRandomSoundFromList(LevelMusics), AtmosphereSounds[2]);
         }
     }
     private void LateUpdate()
@@ -248,6 +248,9 @@ public class SoundManager : MonoBehaviour
         if (SoundManager._instance.CurrentMusicObject != null && GameManager._instance != null)
         {
             CurrentMusicObject.transform.position = GameManager._instance.MainCamera.transform.position;
+
+            if (CurrentMusicObject.GetComponent<AudioSource>().time / CurrentMusicObject.GetComponent<AudioSource>().clip.length > 0.97f)
+                ChangeLevelMusic();
         }
         if (SoundManager._instance.CurrentAtmosphereObject != null && GameManager._instance != null)
         {
@@ -281,7 +284,7 @@ public class SoundManager : MonoBehaviour
     }
     public AudioClip GetAttackSoundForPlayer(GameObject meleeWeapon)
     {
-        if (meleeWeapon==null || !meleeWeapon.GetComponent<MeleeWeaponForPlayer>().IsHardHit())
+        if (meleeWeapon == null || !meleeWeapon.GetComponent<MeleeWeaponForPlayer>().IsHardHit())
             return GetRandomSoundFromList(LightAttacks);
         else
             return GetRandomSoundFromList(HeavyAttacks);
@@ -361,12 +364,6 @@ public class SoundManager : MonoBehaviour
         return list[UnityEngine.Random.Range(0, list.Count)];
     }
 
-
-    public void PlayBossMusicPhaseChanged(AudioClip clip)
-    {
-        PlayMusic(clip);
-    }
-
     /// <summary>
     /// BossNumber Starts From 1
     /// </summary>
@@ -404,6 +401,15 @@ public class SoundManager : MonoBehaviour
             PlayMusicArrangement(clip);
         }
     }
+    public void ChangeLevelMusic()
+    {
+        AudioClip clip;
+        do
+        {
+            clip = GetRandomSoundFromList(LevelMusics);
+        } while (clip == CurrentMusicObject.GetComponent<AudioSource>().clip);
+        PlayMusic(clip);
+    }
     private IEnumerator StopCurrentAtmosphereAndPlay(AudioClip clip)
     {
         AudioSource source = CurrentAtmosphereObject.GetComponent<AudioSource>();
@@ -412,7 +418,7 @@ public class SoundManager : MonoBehaviour
 
         while (source.volume > 0.05f)
         {
-            source.volume -= Time.deltaTime * 3f;
+            source.volume -= Time.deltaTime * 1.25f;
             yield return null;
         }
         Destroy(CurrentAtmosphereObject);
@@ -430,7 +436,7 @@ public class SoundManager : MonoBehaviour
 
         while (source.volume > 0.05f)
         {
-            source.volume -= Time.deltaTime * 3f;
+            source.volume -= Time.deltaTime * 1.25f;
             yield return null;
         }
         Destroy(CurrentMusicObject);
@@ -440,8 +446,6 @@ public class SoundManager : MonoBehaviour
     private void PlayMusicArrangement(AudioClip clip)
     {
         float volume = 0.25f;
-        if (clip.name == "MenuForDemo") volume = 0.35f;
-        if (clip.name == "SongForDemo") volume = 0.35f;
         CurrentMusicObject = PlaySound(clip, Vector3.zero, volume, true, 1f, true, false);
         if (CurrentMusicObject != null)
         {
@@ -527,13 +531,15 @@ public class SoundManager : MonoBehaviour
 
     public void SlowDownMusic()
     {
+        return;
         if (CurrentMusicObject != null)
-            CurrentMusicObject.GetComponent<AudioSource>().pitch = 0.5f;
+            CurrentMusicObject.GetComponent<AudioSource>().pitch = 0.93f;
         if (CurrentAtmosphereObject != null)
-            CurrentAtmosphereObject.GetComponent<AudioSource>().pitch = 0.5f;
+            CurrentAtmosphereObject.GetComponent<AudioSource>().pitch = 0.93f;
     }
     public void UnSlowDownMusic()
     {
+        return;
         if (CurrentMusicObject != null)
             CurrentMusicObject.GetComponent<AudioSource>().pitch = 1f;
         if (CurrentAtmosphereObject != null)

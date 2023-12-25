@@ -7,10 +7,7 @@ public class WaitingScreen : MonoBehaviour
 {
     private Image image;
     private bool _activated;
-    private void Awake()
-    {
-        InputHandler._isAllowedToInput = true;
-    }
+
     void Update()
     {
         if (!_activated)

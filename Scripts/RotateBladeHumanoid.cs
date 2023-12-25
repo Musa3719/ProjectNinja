@@ -9,7 +9,6 @@ public class RotateBladeHumanoid : MonoBehaviour
 
     private float _speed;
     private float _lastSpeed;
-    private Vector3 _lastAngle;
     private float _lerpSpeed;
 
     private Rigidbody _rb;
@@ -22,8 +21,6 @@ public class RotateBladeHumanoid : MonoBehaviour
     }
     void LateUpdate()
     {
-        if (GameManager._instance.isGameStopped) { transform.localEulerAngles = _lastAngle; return; }
-
         _lastSpeed = _speed;
         _speed = 1600f;
         if (_killable.AttackCollider != null && _killable.AttackCollider.activeInHierarchy) _speed *= 8f;
@@ -35,7 +32,6 @@ public class RotateBladeHumanoid : MonoBehaviour
 
         _speed = Mathf.Lerp(_lastSpeed, _speed, Time.deltaTime * _lerpSpeed);
         transform.RotateAround(transform.position, transform.up, Time.deltaTime * _speed);
-        _lastAngle = transform.localEulerAngles;
     }
 
     private Transform GetParent(Transform getParent)

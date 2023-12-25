@@ -13,7 +13,11 @@ public class SteamConnection : MonoBehaviour
             return;
         }
         _instance = this;
-        //Steamworks.SteamClient.Init(2355960, true);
+        Steamworks.SteamClient.Init(2355960, true);
         DontDestroyOnLoad(gameObject);
+    }
+    private void OnApplicationQuit()
+    {
+        Steamworks.SteamClient.Shutdown();
     }
 }

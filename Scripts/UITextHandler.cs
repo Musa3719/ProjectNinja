@@ -32,21 +32,9 @@ public class UITextHandler : MonoBehaviour
     }
     public void SetText()
     {
-        switch (Localization._instance._ActiveLanguage)
-        {
-            case Language.EN:
-            case Language.TR:
-                _text.font = _defaultFont;
-                break;
-            case Language.SC:
-            case Language.JP:
-                _text.font = Localization._instance.CJKFont;
-                break;
-            default:
-                break;
-        }
-
-        if (Localization._instance.UI[Number] != null)
+        if (Localization._instance.Newspapers.Count == 0)
+            SceneController._instance.CallForAction(SetText, 0.1f);
+        else if (Localization._instance.UI[Number] != null)
             GetComponent<TextMeshProUGUI>().text = Localization._instance.UI[Number];
     }
     private void OpeningMovement()

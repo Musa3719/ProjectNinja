@@ -12,7 +12,7 @@ public class TutorialText : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if(other!=null && other.CompareTag("Player"))
+        if(other!=null && other.CompareTag("Player") && !IsNumberTriggeredBefore())
         {
             if (GameManager._instance.isOnCutscene)
             {
@@ -39,5 +39,10 @@ public class TutorialText : MonoBehaviour
             return Localization._instance.Tutorial[1].Split('\n')[_number];
         else
             return Localization._instance.Tutorial[0].Split('\n')[_number];
+    }
+    private bool IsNumberTriggeredBefore()
+    {
+        if (GameManager._instance.LevelNumberObject.transform.position.y >= _number) return true;
+        return false;
     }
 }

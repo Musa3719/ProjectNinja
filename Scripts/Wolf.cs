@@ -209,7 +209,7 @@ public class Wolf : MonoBehaviour
         }
         return false;
     }
-    public void MoveToPosition(Vector3 position, Vector3 lookAtPos, float rotationLerpSpeed = 7.5f, float speedMul = 1f)
+    public void MoveToPosition(Vector3 position, Vector3 lookAtPos, float rotationLerpSpeed = 9f, float speedMul = 1f)
     {
         if (!_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh) return;
 
@@ -357,12 +357,15 @@ public class Wolf : MonoBehaviour
             mesh.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             mesh.material = _dissolveMaterial;
         }
-
-        while (meshes[0].material.GetFloat("_CutoffHeight") > 0f)
+        foreach (var mesh in meshes)
+        {
+            mesh.material.SetFloat("_CutoffHeight", 12.5f);
+        }
+        while (meshes[0].material.GetFloat("_CutoffHeight") > 10.5f)
         {
             foreach (var mesh in meshes)
             {
-                mesh.material.SetFloat("_CutoffHeight", mesh.material.GetFloat("_CutoffHeight") - 1.5f * Time.deltaTime);
+                mesh.material.SetFloat("_CutoffHeight", mesh.material.GetFloat("_CutoffHeight") - 1f * Time.deltaTime);
             }
             yield return null;
         }
@@ -385,13 +388,13 @@ public class Wolf : MonoBehaviour
 
         foreach (var mesh in meshes)
         {
-            mesh.material.SetFloat("_CutoffHeight", 0f);
+            mesh.material.SetFloat("_CutoffHeight", 10.5f);
         }
-        while (meshes[0].material.GetFloat("_CutoffHeight") < 3f)
+        while (meshes[0].material.GetFloat("_CutoffHeight") < 12.5f)
         {
             foreach (var mesh in meshes)
             {
-                mesh.material.SetFloat("_CutoffHeight", mesh.material.GetFloat("_CutoffHeight") + 1.5f * Time.deltaTime);
+                mesh.material.SetFloat("_CutoffHeight", mesh.material.GetFloat("_CutoffHeight") + 1f * Time.deltaTime);
             }
             yield return null;
         }
