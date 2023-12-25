@@ -66,7 +66,7 @@ public class PlaySoundOnCollision : MonoBehaviour
 
         float volume = 0.1f;
         if (pitch == 0f)
-            pitch = Random.Range(0.85f, 1.15f);
+            pitch = Random.Range(0.8f, 0.9f);
 
         if (_isDoor)
         {

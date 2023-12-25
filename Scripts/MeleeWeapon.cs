@@ -21,6 +21,7 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
     public GameObject Owner => IgnoreCollisionCollider == null ? null : IgnoreCollisionCollider.gameObject;
     public bool IsRanged;
     private bool _isDecalCreatedForThisAttack;
+    public Vector3 WeaponVelocityForPlayer;
 
     private void Awake()
     {
@@ -53,7 +54,6 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
     private void OnTriggerEnter(Collider other)
     {
         if (other == null) return;
-
         if (other.CompareTag("BreakableObject"))
         {
             other.GetComponent<BreakableObject>().BrakeObject((other.transform.position - GetParent(transform).position).normalized);
@@ -63,13 +63,13 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
         else if ((other.CompareTag("Wall") || IsProp(other)) && !_isDecalCreatedForThisAttack)
         {
             _isDecalCreatedForThisAttack = true;
-            SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, IgnoreCollisionCollider.transform.position + IgnoreCollisionCollider.transform.forward * 0.5f, 0.1f, false, UnityEngine.Random.Range(0.6f, 0.7f));
+            SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, IgnoreCollisionCollider.transform.position + IgnoreCollisionCollider.transform.forward * 0.5f, 0.1f, false, UnityEngine.Random.Range(0.6f, 0.65f));
             GameObject decal = Instantiate(GameManager._instance.HoleDecal, transform.position, Quaternion.identity);
 
             decal.transform.forward = -other.transform.right;
             decal.transform.localEulerAngles = new Vector3(decal.transform.localEulerAngles.x, decal.transform.localEulerAngles.y, UnityEngine.Random.Range(0f, 360f));
-            
-            if (IgnoreCollisionCollider.CompareTag("Player"))
+
+            if (IgnoreCollisionCollider.CompareTag("Player") && transform.parent.parent != null)
             {
                 GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, IgnoreCollisionCollider.transform.position + IgnoreCollisionCollider.transform.forward * 0.4f + IgnoreCollisionCollider.transform.up * 0.1f, Quaternion.identity);
                 hitSmoke.transform.position = new Vector3(hitSmoke.transform.position.x, GameManager._instance.PlayerLeftHandTransform.position.y, hitSmoke.transform.position.z);
@@ -82,7 +82,7 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
             }
             else
             {
-                GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, IgnoreCollisionCollider.transform.position + IgnoreCollisionCollider.transform.forward * 0.7f + Vector3.up * 0.35f, Quaternion.identity);
+                GameObject hitSmoke = Instantiate(GameManager._instance.HitSmokeVFX, transform.position, Quaternion.identity);
                 hitSmoke.transform.localScale *= 3f;
                 Color temp = hitSmoke.GetComponentInChildren<SpriteRenderer>().color;
                 hitSmoke.GetComponentInChildren<SpriteRenderer>().color = new Color(temp.r, temp.g, temp.b, 9f / 255f);
@@ -107,14 +107,12 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
         }
         if (other.transform.parent != null && other.transform.parent.CompareTag("Wolf"))
         {
-            other.transform.parent.GetComponent<Wolf>().Die((other.transform.parent.transform.position - GetParent(transform).position).normalized, GetParent(transform).GetComponent<Rigidbody>().velocity.magnitude, this);
+            other.transform.parent.GetComponent<Wolf>().Die((other.transform.parent.transform.position - GetParent(transform).position).normalized, GetKillerVelocity(), this);
             return;
         }
 
         if (!other.CompareTag("HitBox")) return;
         if (IgnoreCollisionCheck(IgnoreCollisionCollider, other)) return;
-
-        
         
 
         IKillable otherKillable = GameManager._instance.GetHitBoxIKillable(other);
@@ -126,13 +124,13 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
             bool isTargetBlocking = otherKillable.IsBlockingGetter;
             if (!isTargetBlocking && !isTargetDodging)
             {
-                Kill(otherKillable, (otherKillable.Object.transform.position - GetParent(transform).position).normalized, GetParent(transform).GetComponent<Rigidbody>().velocity.magnitude, this);
+                Kill(otherKillable, GetDirectionForKill(otherKillable), GetKillerVelocity(), this);
             }
             else if (isTargetDodging)
             {
                 if (otherKillable.Object.CompareTag("Enemy"))
                 {
-                    Kill(otherKillable, (otherKillable.Object.transform.position - GetParent(transform).position).normalized, GetParent(transform).GetComponent<Rigidbody>().velocity.magnitude, this);
+                    Kill(otherKillable, GetDirectionForKill(otherKillable), GetKillerVelocity(), this);
                 }
             }
             else if (isTargetBlocking)
@@ -151,10 +149,26 @@ public class MeleeWeapon : MonoBehaviour, IKillObject
                     }
                     else
                     {
-                        Kill(otherKillable, (other.transform.position - GetParent(transform).position).normalized, GetParent(transform).GetComponent<Rigidbody>().velocity.magnitude, this);
+                        Kill(otherKillable, GetDirectionForKill(otherKillable), GetKillerVelocity(), this);
                     }
                 }
             }
+        }
+    }
+    private Vector3 GetDirectionForKill(IKillable otherKillable)
+    {
+        if (IgnoreCollisionCollider.CompareTag("Player"))
+            return ((otherKillable.Object.transform.position - GetParent(transform).position).normalized + WeaponVelocityForPlayer).normalized;
+        else
+            return (otherKillable.Object.transform.position - GetParent(transform).position).normalized;
+    }
+    private float GetKillerVelocity()
+    {
+        if (GetParent(transform).GetComponent<Rigidbody>() != null)
+            return GetParent(transform).GetComponent<Rigidbody>().velocity.magnitude;
+        else
+        {
+            return GameManager._instance.PlayerRb.velocity.magnitude;
         }
     }
     private bool IsProp(Collider other)

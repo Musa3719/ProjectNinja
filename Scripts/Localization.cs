@@ -8,9 +8,7 @@ using TMPro;
 public enum Language
 {
     EN,
-    TR,
-    SC,
-    JP
+    TR
 }
 public class Localization : MonoBehaviour
 {
@@ -36,6 +34,9 @@ public class Localization : MonoBehaviour
         Dialogues = new List<string>();
         UI = new List<string>();
         Tutorial = new List<string>();
+    }
+    private void Start()
+    {
         SetLanguage(_ActiveLanguage);
     }
 
@@ -56,45 +57,37 @@ public class Localization : MonoBehaviour
 
     private void LocalizeTexts()
     {
-        ArrangeList("/Newspapers/", Newspapers);
-        ArrangeList("/Dialogues/", Dialogues);
-        ArrangeList("/Tutorial/", Tutorial);
+        ArrangeList("/Newspapers/", Newspapers, 24);
+        ArrangeList("/Dialogues/", Dialogues, 10);
+        ArrangeListOld("/Tutorial/", Tutorial);
         ArrangeUI();
 
         _LanguageChangedEvent?.Invoke();
-
-        if (GameManager._instance != null)
-            ArrangeTutorialFonts();
-
-        if (SceneController._instance.SceneBuildIndex == 0)
-        {
-            if (_ActiveLanguage == Language.SC || _ActiveLanguage == Language.JP)
-                Options._instance.JoystickUI.transform.Find("ControllerImage").Find("PressedButton").GetComponent<TextMeshProUGUI>().font = CJKFont;
-            else
-                Options._instance.JoystickUI.transform.Find("ControllerImage").Find("PressedButton").GetComponent<TextMeshProUGUI>().font = Options._instance.QualityUI.GetComponentInChildren<TextMeshProUGUI>().font;
-
-            Options._instance.JoystickUI.transform.Find("ControllerImage").Find("PressedButton").GetComponent<TextMeshProUGUI>().text = "";
-        }
     }
-    private void ArrangeTutorialFonts()
+
+    private void ArrangeList(string lastDirectory, List<string> list, int lenght)
     {
-        switch (Localization._instance._ActiveLanguage)
+        list.Clear();
+        string languageFilePath = (_ActiveLanguage).ToString();
+        string path = Application.streamingAssetsPath + "/Texts/" + languageFilePath + lastDirectory;
+
+        for (int i = 0; i < lenght; i++)
         {
-            case Language.EN:
-            case Language.TR:
-                GameManager._instance.TutorialTextUI.transform.Find("Text").GetComponent<TextMeshProUGUI>().font = TutorialFont;
-                GameManager._instance.TutorialTextUI.transform.Find("Text (1)").GetComponent<TextMeshProUGUI>().font = TutorialFont;
-                break;
-            case Language.SC:
-            case Language.JP:
-                GameManager._instance.TutorialTextUI.transform.Find("Text").GetComponent<TextMeshProUGUI>().font = CJKFont;
-                GameManager._instance.TutorialTextUI.transform.Find("Text (1)").GetComponent<TextMeshProUGUI>().font = CJKFont;
-                break;
-            default:
-                break;
+            string path2 = Application.streamingAssetsPath + "/Texts/" + languageFilePath + lastDirectory + "/" + (i + 1).ToString() + ".txt";
+            StreamReader reader = new StreamReader(path2);
+            string textString = "";
+            var line = "";
+            while ((line = reader.ReadLine()) != null)
+            {
+                if (line != "")
+                    textString += "\n";
+                textString += line;
+            }
+            list.Add(textString);
+            reader.Close();
         }
     }
-    private void ArrangeList(string lastDirectory, List<string> list)
+    private void ArrangeListOld(string lastDirectory, List<string> list)
     {
         list.Clear();
         string languageFilePath = (_ActiveLanguage).ToString();
@@ -124,7 +117,7 @@ public class Localization : MonoBehaviour
     {
         UI.Clear();
         string fileName = "";
-        if (SceneManager.GetActiveScene().buildIndex == 0 || SceneManager.GetActiveScene().name=="DemoEnded" || SceneManager.GetActiveScene().name == "GameEnded")
+        if (SceneManager.GetActiveScene().buildIndex == 0 || SceneManager.GetActiveScene().buildIndex == SceneManager.sceneCountInBuildSettings - 1)
             fileName = "Menu.txt";
         else
             fileName = "Game.txt";

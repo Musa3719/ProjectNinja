@@ -8,6 +8,12 @@ public class PrefabHolder : MonoBehaviour
     public static PrefabHolder _instance;
 
     [SerializeField]
+    public GameObject Boss3;
+
+    [SerializeField]
+    public GameObject LaserPrefabBoss;
+
+    [SerializeField]
     public GameObject KnifePrefab;
     [SerializeField]
     public GameObject ShurikenPrefab;
@@ -29,6 +35,8 @@ public class PrefabHolder : MonoBehaviour
     public GameObject L5Explosive;
     [SerializeField]
     public GameObject L1ExplosiveBroken;
+    [SerializeField]
+    public GameObject Wolf;
 
     [SerializeField]
     public GameObject KnifeItemMesh;

@@ -41,7 +41,7 @@ public class Projectile : MonoBehaviour, IKillObject
         {
             rb = transform.parent.GetComponent<Rigidbody>();
         }
-        soundObj = SoundManager._instance.PlaySound(SoundManager._instance.ProjectileMoving, transform.position, 0.1f, true, 1f);
+        soundObj = SoundManager._instance.PlaySound(SoundManager._instance.ProjectileMoving, transform.position, 0.07f, true, 1f);
         soundObj.GetComponent<AudioSource>().maxDistance /= 3f;
     }
     public void ChangeSoundObj(GameObject newObj)
@@ -74,7 +74,8 @@ public class Projectile : MonoBehaviour, IKillObject
     }
     public void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude, IKillObject killer)
     {
-        SoundManager._instance.PlaySound(SoundManager._instance.Stab, transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        if (!killable.Object.CompareTag("Player"))
+            SoundManager._instance.PlaySound(SoundManager._instance.Stab, transform.position, 0.4f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         killable.Die(dir / 2f, killersVelocityMagnitude / 2f, killer, false);
     }
 

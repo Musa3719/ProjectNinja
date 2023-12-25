@@ -23,5 +23,23 @@ public class MeleeWeaponForPlayer : MonoBehaviour
             return true;
         return false;
     }
+    public float GetAttackTime()
+    {
+        switch (WeaponType)
+        {
+            case MeleeWeaponType.Katana:
+                return 0.7f;
+            case MeleeWeaponType.Sword:
+            case MeleeWeaponType.Mace:
+            case MeleeWeaponType.Hammer:
+                return 0.9f;
+            case MeleeWeaponType.Zweihander:
+            case MeleeWeaponType.Axe:
+                return 1.1f;
+            case MeleeWeaponType.Spear:
+            default:
+                return 0f;
+        }
+    }
 
 }

@@ -10,6 +10,7 @@ using UnityEngine.Animations.Rigging;
 using UnityEngine.AI;
 using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.Video;
+using Steamworks;
 
 public class GameManager : MonoBehaviour
 {
@@ -106,7 +107,7 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     private SlicedFilledImage BossStaminaBar;
     [SerializeField]
-    private GameObject BossUI;
+    public GameObject BossUI;
     [SerializeField]
     private GameObject DarkenFromBossUI;
     [SerializeField]
@@ -218,7 +219,6 @@ public class GameManager : MonoBehaviour
 
     public bool IsPlayerInSmoke { get; set; }
     public bool IsFollowPlayerTriggered { get; set; }
-
     public GameObject BossPhaseCounterBetweenScenes { get; private set; }
     public GameObject LevelNumberObject { get; private set; }
 
@@ -415,7 +415,7 @@ public class GameManager : MonoBehaviour
                 _bornEvent?.Invoke();
             }
         }
-        LevelNumberObject.transform.position = new Vector3(SceneManager.GetActiveScene().buildIndex, 0f, 0f);
+        LevelNumberObject.transform.position = new Vector3(SceneManager.GetActiveScene().buildIndex, LevelNumberObject.transform.position.y, 0f);
     }
     private void Update()
     {
@@ -746,6 +746,8 @@ public class GameManager : MonoBehaviour
     {
         if (_lastTutorialTextNumber == number) return;
 
+        LevelNumberObject.transform.position = new Vector3(LevelNumberObject.transform.position.x, number, 0f);
+
         _lastTutorialTextNumber = number;
         TutorialTextUI.SetActive(true);
         SoundManager._instance.PlaySound(SoundManager._instance.TutorialText, MainCamera.transform.position, 0.12f, false, 0.8f);
@@ -773,7 +775,6 @@ public class GameManager : MonoBehaviour
         }
         
         Time.timeScale = 0f;
-        SoundManager._instance.PauseMusic();
         SoundManager._instance.PauseAllSound();
         isGameStopped = true;
     }
@@ -1032,6 +1033,10 @@ public class GameManager : MonoBehaviour
     {
         if (isOnCutscene) return;
 
+        if (SoundManager._instance.CurrentMusicObject != null && (SceneController._instance.SceneBuildIndex == 8 || SceneController._instance.SceneBuildIndex == 16))
+        {
+            Destroy(SoundManager._instance.CurrentMusicObject);
+        }
 
         _defaultCamera.SetActive(false);
         CutsceneCameras.SetActive(true);
@@ -1064,12 +1069,9 @@ public class GameManager : MonoBehaviour
         }
         else if (SceneManager.GetActiveScene().buildIndex == Boss2LevelIndex)
         {
-
+            CutsceneController._instance.SIGNALBoss2End();
         }
-        else if (SceneManager.GetActiveScene().buildIndex == Boss3LevelIndex)
-        {
-
-        }
+        
 
         Instantiate(WaitingScreenPrefab, InGameScreen.transform.parent);
         PlayerHands.SetActive(true);
@@ -1078,8 +1080,8 @@ public class GameManager : MonoBehaviour
         CutsceneCameras.SetActive(false);
         MainCamera = _defaultCamera;
 
-        CloseStopScreen();
         isOnCutscene = false;
+        CloseStopScreen();
         _bornEvent?.Invoke();
     }
     public void ActivatePassageToNextScene()
@@ -1122,7 +1124,10 @@ public class GameManager : MonoBehaviour
         StopScreen.transform.Find("OptionsScreen").gameObject.SetActive(false);
 
         PassCutsceneButton.SetActive(false);
-        InGameScreen.SetActive(true);
+
+        if(!isOnCutscene)
+            InGameScreen.SetActive(true);
+
         Time.timeScale = 1f;
         SoundManager._instance.ContinueMusic();
         SoundManager._instance.ContinueAllSound();

@@ -58,6 +58,9 @@ public class CutsceneController : MonoBehaviour
                 _currentCutscene.GetComponent<PlayableDirector>().Stop();
         }
     }
+
+
+    #region Signals
     public void Boss1Pos()
     {
         StartCoroutine(Boss1PosCoroutine());
@@ -75,8 +78,6 @@ public class CutsceneController : MonoBehaviour
             yield return null;
         }
     }
-
-    #region Signals
     public void SIGNALOpenLockAndFightSound()
     {
         SoundManager._instance.PlaySound(SoundManager._instance.DoorKeyUsed, GameManager._instance.MainCamera.transform.position, 0.5f, false, 1f);
@@ -104,6 +105,27 @@ public class CutsceneController : MonoBehaviour
         GameObject boss = GameObject.FindGameObjectWithTag("Boss");
         boss.transform.Find("Model").Find("Armature").Find("RL_BoneRoot").Find("CC_Base_Hip").position = new Vector3(-0.0003641245f, 0.03000933f, 0.9237275f);
         boss.transform.position = new Vector3(-11.726f, 3.411f, 45.679f);
+
+        boss.GetComponent<NavMeshAgent>().enabled = true;
+        boss.transform.Find("Model").Find("AnimationRigging").GetComponent<Rig>().weight = 1f;
+
+        if (_bossEnterSound != null)
+            Destroy(_bossEnterSound);
+    }
+
+
+    public void SIGNALBoss2Enter()
+    {
+        GameObject boss = GameObject.FindGameObjectWithTag("Boss");
+        boss.transform.Find("Model").GetComponent<Animator>().Play("Cutscene1_1");
+        boss.GetComponent<NavMeshAgent>().enabled = false;
+        boss.transform.position = new Vector3(9.489f, 2.8f, 42.734f);
+        boss.transform.Find("Model").Find("AnimationRigging").GetComponent<Rig>().weight = 0f;
+        GameManager._instance.CallForAction(() => _bossEnterSound = SoundManager._instance.PlayBossEnterSound(SoundManager._instance.Boss2Enter), 0.5f);
+    }
+    public void SIGNALBoss2End()
+    {
+        GameObject boss = GameObject.FindGameObjectWithTag("Boss");
 
         boss.GetComponent<NavMeshAgent>().enabled = true;
         boss.transform.Find("Model").Find("AnimationRigging").GetComponent<Rig>().weight = 1f;

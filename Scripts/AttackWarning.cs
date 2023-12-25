@@ -62,11 +62,15 @@ public class AttackWarning : MonoBehaviour
             {
                 otherKillable.AttackWarning(GetComponent<Collider>(), false, transform.position);
             }
+            else if (transform.parent.GetComponent<MeleeWeaponThrowed>() != null)
+            {
+                otherKillable.AttackWarning(GetComponent<Collider>(), Random.Range(0, 4) == 0, transform.position - transform.parent.gameObject.GetComponent<Rigidbody>().velocity / 3f);
+            }
             else if (IgnoreCollisionCollider.gameObject.CompareTag("Player") && isMeleeWeapon)
             {
                 Rigidbody rb = transform.parent.gameObject.GetComponent<Rigidbody>();
                 if (rb == null) return;
-                bool isFast = _isRunningForPlayer && rb.velocity.magnitude > 12f && !GameManager._instance.IsPlayerHasMeleeWeapon;
+                bool isFast = _isRunningForPlayer && rb.velocity.magnitude > 10.5f && !GameManager._instance.IsPlayerHasMeleeWeapon;
                 otherKillable.AttackWarning(GetComponent<Collider>(), isFast, rb.transform.position);
             }
             else

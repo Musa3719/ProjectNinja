@@ -41,6 +41,8 @@ public class MeleeWeaponThrowed : MonoBehaviour
         if (collision.collider == null || GetParentCollider(collision.collider) == null || GetParentCollider(collision.collider) == IgnoreCollisionCollider) return;
         if ((collision.collider.isTrigger && collision.collider.CompareTag("HitBox")) || !collision.collider.isTrigger)
         {
+            if (!transform.Find("AttackCollider").gameObject.activeInHierarchy && (collision.collider.CompareTag("HitBox") || collision.collider.CompareTag("Enemy")) && GetParentCollider(collision.collider).GetComponent<IKillable>() != null)
+                OpenKillableBlock(collision.collider);
             if (transform.Find("AttackCollider").gameObject.activeInHierarchy && (collision.collider.CompareTag("HitBox") || collision.collider.CompareTag("Enemy")) && GetParentCollider(collision.collider).GetComponent<IKillable>() != null)
                 TryToKill(collision.collider);
             if (transform.Find("AttackCollider").gameObject.activeInHierarchy && collision.collider.CompareTag("ExplosiveL1"))
@@ -72,6 +74,15 @@ public class MeleeWeaponThrowed : MonoBehaviour
             {
                 Kill(otherKillable, _rb.velocity.normalized, GetParent(transform).GetComponent<Rigidbody>().velocity.magnitude, transform.Find("AttackCollider").GetComponent<MeleeWeapon>());
             }
+        }
+    }
+    private void OpenKillableBlock(Collider other)
+    {
+        IKillable otherKillable = GameManager._instance.GetHitBoxIKillable(other);
+        if (other != null && otherKillable != null && !otherKillable.IsDead && !Killables.Contains(otherKillable))
+        {
+            Killables.Add(otherKillable);
+            otherKillable.StopBlockingAndDodge();
         }
     }
     private void Kill(IKillable killable, Vector3 dir, float killersVelocityMagnitude, IKillObject killer)

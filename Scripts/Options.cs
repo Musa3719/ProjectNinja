@@ -37,6 +37,9 @@ public class Options : MonoBehaviour
         SoundVolume = PlayerPrefs.GetFloat("Sound", 0.33f);
         MusicVolume = PlayerPrefs.GetFloat("Music", 0.33f);
         FOV = PlayerPrefs.GetFloat("FOV", 63f);
+
+        if (SceneController._instance.IsLastScene()) return;
+
         SoundSlider.value = SoundVolume;
         MusicSlider.value = MusicVolume;
         FovSlider.value = FOV;
@@ -49,6 +52,8 @@ public class Options : MonoBehaviour
 
     private void Start()
     {
+        if (SceneController._instance.IsLastScene()) return;
+
         SensitivitySlider.value = PlayerPrefs.GetFloat("Sensitivity", 0.3f);
         MouseSensitivity = SensitivitySlider.value * MaxSensitivity;
         Options._instance.ArrangeQualityUI();

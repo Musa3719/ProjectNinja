@@ -33,21 +33,9 @@ public class Newspaper : MonoBehaviour
     }
     public void SetText()
     {
-        switch (Localization._instance._ActiveLanguage)
-        {
-            case Language.EN:
-            case Language.TR:
-                GameManager._instance.NewspaperUI.transform.Find("NewspaperImage").GetComponentInChildren<TextMeshProUGUI>().font = _defaultFont;
-                break;
-            case Language.SC:
-            case Language.JP:
-                GameManager._instance.NewspaperUI.transform.Find("NewspaperImage").GetComponentInChildren<TextMeshProUGUI>().font = Localization._instance.CJKFont;
-                break;
-            default:
-                break;
-        }
-
-        if (Localization._instance.Newspapers[_number] != null)
+        if (Localization._instance.Newspapers.Count == 0)
+            SceneController._instance.CallForAction(SetText, 0.1f);
+        else if (Localization._instance.Newspapers[_number] != null)
             _text = Localization._instance.Newspapers[_number];
     }
 }

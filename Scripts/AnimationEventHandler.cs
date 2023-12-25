@@ -32,4 +32,13 @@ public class AnimationEventHandler : MonoBehaviour
     {
         GetParent().GetComponent<IKillable>().MeleeAttackFinished();
     }
+    public void TransformPositionForCutscene()
+    {
+        Transform _targetTransform = transform.Find("Armature").Find("RL_BoneRoot").Find("CC_Base_Hip");
+        SkinnedMeshRenderer[] skinnedMeshRenderers = transform.GetComponentsInChildren<SkinnedMeshRenderer>();
+        Vector3 distance = _targetTransform.position - transform.position;
+        distance.y = 0f;
+        transform.parent.position += distance;
+        _targetTransform.position -= distance;
+    }
 }
