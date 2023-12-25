@@ -11,7 +11,7 @@ public class WeaponInAir : MonoBehaviour
     private bool _isHitBefore;
     private void Awake()
     {
-        transform.Find("AttackCollider").gameObject.SetActive(true);
+        GameManager._instance.CallForAction(() => transform.Find("AttackCollider").gameObject.SetActive(true), 0.25f);
         _rb = GetComponent<Rigidbody>();
     }
     private void OnTriggerEnter(Collider other)

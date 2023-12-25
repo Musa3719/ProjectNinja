@@ -42,6 +42,8 @@ public class BossCombat : MonoBehaviour, IKillable
     private Coroutine _openIsAllowedToAttackCoroutine;
     private Coroutine _closeIsAttackInterruptedCoroutine;
     private Coroutine _closeEyesCoroutine;
+    private Coroutine _meleeAttackFinishedCoroutine;
+    private Coroutine Boss3SpecialAttackCoroutine;
 
     public bool _IsStunned { get; private set; }
 
@@ -60,10 +62,14 @@ public class BossCombat : MonoBehaviour, IKillable
     private List<float> _combatStaminaLimit;
     public float _CombatStaminaLimit => _combatStaminaLimit[(int)GameManager._instance.BossPhaseCounterBetweenScenes.transform.position.x - 1];
     private float _combatStamina;
-    public float _CombatStamina { get => _combatStamina; set { 
+    public float _CombatStamina
+    {
+        get => _combatStamina; set
+        {
             if (value > _CombatStaminaLimit) _combatStamina = _CombatStaminaLimit;
-            else if (value < 0f) _combatStamina = 0f; else _combatStamina = value; }
-            }
+            else if (value < 0f) _combatStamina = 0f; else _combatStamina = value;
+        }
+    }
     public float _DodgeOrBlockStaminaUse { get; private set; }
 
 
@@ -71,6 +77,8 @@ public class BossCombat : MonoBehaviour, IKillable
     private Transform _weaponHolderTransform;
     [SerializeField]
     private Transform _decalFollowTransform;
+    [SerializeField]
+    public GameObject _rangedWarning;
 
     [SerializeField]
     private int _attackAnimCount;
@@ -116,6 +124,10 @@ public class BossCombat : MonoBehaviour, IKillable
     [HideInInspector]
     public float _LastBlockOrDodgeTime;
 
+    private Transform _followPlayerTransform;
+    [HideInInspector]
+    public GameObject Boss3ExtraWeapon;
+
     private void Awake()
     {
         _bossStateController = GetComponent<BossStateController>();
@@ -159,15 +171,12 @@ public class BossCombat : MonoBehaviour, IKillable
             _weaponLocalPosition = _weaponObject.transform.localPosition;
             _weaponLocalEulerAngles = _weaponObject.transform.localEulerAngles;
         }
-       
+
     }
 
     private void Start()
     {
-        if (_bossStateController._bossAI._BossNumber == 3)
-        {
-            ArrangeBoss3BladesToHands();
-        }
+        if (_bossStateController._bossAI._BossNumber == 3) ArrangeBoss3BladesToHands();
         if (_bossStateController._bossAI._BossNumber == 2) _attackWaitTime = 0.25f;
         _bossStateController._bossMovement._moveSpeed = 4f * _bossTypeSpeedMultiplier;
         _bossStateController._bossMovement._runSpeed = 12f * _bossTypeSpeedMultiplier;
@@ -196,17 +205,15 @@ public class BossCombat : MonoBehaviour, IKillable
     {
         if (_blockCounterTimer > 0)
             _blockCounterTimer -= Time.deltaTime;
-        else if(_blockCounter > 0)
+        else if (_blockCounter > 0)
         {
-            _blockCounter--;
-            _blockCounterTimer = 1f;
+            _blockCounter = 0;
         }
     }
     public void ThrowWeapon()
     {
         if (_bossStateController._isDead) return;
 
-        //wait animTime * 0.83f
         _weaponObject.transform.parent = null;
         Rigidbody rb = (Rigidbody)_weaponObject.AddComponent(typeof(Rigidbody));
         WeaponInAir weaponInAir = (WeaponInAir)_weaponObject.AddComponent(typeof(WeaponInAir));
@@ -218,12 +225,12 @@ public class BossCombat : MonoBehaviour, IKillable
         rb.velocity = (GameManager._instance.PlayerRb.transform.position - transform.position).normalized * 37f;
         rb.angularVelocity = new Vector3(0f, 5f, 0f);
     }
-    
+
     public void GetWeaponBack()
     {
         if (_bossStateController._isDead) return;
 
-        if (_weaponObject.transform.parent == null && _getWeaponBackCoroutine == null)
+        if (_weaponObject.transform.parent == null)
         {
             _getWeaponBackCoroutine = StartCoroutine(GetWeaponBackCoroutine());
         }
@@ -263,12 +270,12 @@ public class BossCombat : MonoBehaviour, IKillable
     {
         StopAttackInstantly();
 
-        if (!(_bossStateController._bossState is BossStates.RetreatBoss1) && !(_bossStateController._bossState is BossStates.SpecialAction))
+        if (!(_bossStateController._bossState is BossStates.RetreatBoss1) && !(_bossStateController._bossState is BossStates.SpecialActionBoss1))
         {
             _bossStateController._bossMovement.BlockMovement(deflectedKillable.Object.transform.position);
         }
 
-        _CombatStamina -= _DodgeOrBlockStaminaUse / 2f;
+        _CombatStamina -= _DodgeOrBlockStaminaUse;
         _bossStateController.ChangeAnimation(GetAttackDeflectedAnimName(), 0.2f, true);
         SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.AttackDeflecteds), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
     }
@@ -312,28 +319,20 @@ public class BossCombat : MonoBehaviour, IKillable
     }
     public void StopBlockingAndDodge()
     {
-        _CombatStamina -= _DodgeOrBlockStaminaUse;//additional stamina use in the dodge
+        _CombatStamina -= _DodgeOrBlockStaminaUse / 2f;//additional stamina use in the dodge
         _bossStateController.StopBlocking();
         if (_CombatStamina != 0)
         {
             bool isDodgingToRight = _bossStateController._bossMovement.Dodge();
             Dodge(isDodgingToRight);
         }
-        
+
     }
     public void Dodge(bool isDodgingToRight)
     {
-        if (_IsInAttackPattern)
+        if (_IsInAttackPattern || _bossStateController._bossState is BossStates.FastAttackBoss2 || _bossStateController._bossState is BossStates.TeleportBoss3)
         {
             StopAttackInstantly();
-
-            /*if (UnityEngine.Random.Range(0, 101) >= 30)
-            {
-                _bossStateController._bossMovement.Teleport();
-                return;
-            }
-            else
-                StopAttackInstantly();*/
         }
 
         _LastBlockOrDodgeTime = Time.time;
@@ -349,12 +348,12 @@ public class BossCombat : MonoBehaviour, IKillable
         }
 
 
-        _CombatStamina -= _DodgeOrBlockStaminaUse;
         _IsDodging = true;
         _bossStateController.ChangeAnimation(GetDodgeAnimName(isDodgingToRight));
         SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.ArmorWalkSounds), transform.position, 0.18f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
-        Action CloseIsDodging = () => {
+        Action CloseIsDodging = () =>
+        {
             _IsDodging = false;
         };
         GameManager._instance.CallForAction(CloseIsDodging, _dodgeTime);
@@ -370,12 +369,13 @@ public class BossCombat : MonoBehaviour, IKillable
         _IsBlocking = false;
 
         int chanceChange = 0;
-        if (_blockCounter == 0) { chanceChange = 25; _blockCounter++; }
+        if (_blockCounter == 0) { chanceChange = 30; _blockCounter++; }
         else if (_blockCounter == 1) { chanceChange = 15; _blockCounter++; }
-        _blockCounterTimer = 1f;
+        else if (_blockCounter > 1) { chanceChange = -20; _blockCounter++; }
+        _blockCounterTimer = 1.25f;
 
 
-        if (UnityEngine.Random.Range(0, 100) < 60 + chanceChange && !_IsInAttackPattern)
+        if (UnityEngine.Random.Range(0, 100) < 60 + chanceChange && !_IsAttacking)
         {
             GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.SparksVFX), _sparkPosition.position, Quaternion.identity);
             Destroy(sparksVFX, 4f);
@@ -387,7 +387,9 @@ public class BossCombat : MonoBehaviour, IKillable
             SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Blocks), transform.position, 0.135f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
             _CombatStamina -= _DodgeOrBlockStaminaUse;
-            if (!(_bossStateController._bossState is BossStates.RetreatBoss1) && !(_bossStateController._bossState is BossStates.SpecialAction))
+            if (GameManager._instance.IsPlayerHasMeleeWeapon)
+                _CombatStamina -= _DodgeOrBlockStaminaUse * 0.55f;
+            if (!(_bossStateController._bossState is BossStates.RetreatBoss1) && !(_bossStateController._bossState is BossStates.SpecialActionBoss1))
             {
                 _bossStateController._bossMovement.BlockMovement(_bossStateController._BlockedEnemyPosition);
             }
@@ -456,13 +458,17 @@ public class BossCombat : MonoBehaviour, IKillable
                 break;
             }
 
-            if (c == 0)
+            if (_bossStateController._bossAI._BossNumber == 3)
             {
-                GameManager._instance.CallForAction(() => _bossStateController._bossMovement.MoveAfterAttack(true), 0.225f);
+                GameManager._instance.CallForAction(() => _bossStateController._bossMovement.MoveAfterAttack(false), 0.19f);
+            }
+            else if (c == 0)
+            {
+                GameManager._instance.CallForAction(() => _bossStateController._bossMovement.MoveAfterAttack(true), 0.3f);
             }
             else
             {
-                GameManager._instance.CallForAction(() => _bossStateController._bossMovement.MoveAfterAttack(false), 0.225f);
+                GameManager._instance.CallForAction(() => _bossStateController._bossMovement.MoveAfterAttack(false), 0.3f);
             }
 
             Attack(attackName);
@@ -486,41 +492,32 @@ public class BossCombat : MonoBehaviour, IKillable
         _IsInAttackPattern = false;
 
     }
-    
+
     public void Attack(string attackName)
     {
         if (_IsAttacking || _IsDodging) return;
         _bossStateController.ChangeAnimation(attackName);
 
-        int random = UnityEngine.Random.Range(0, 100);
-        if (random > 80)
-        {
-            if (_bossStateController._bossAI._BossNumber == 1)
-            {
-                SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Boss1Grunts), transform.position, UnityEngine.Random.Range(0.2f, 0.4f), false, UnityEngine.Random.Range(0.93f, 1.07f));
-            }
-            else
-            {
-                if (GameManager._instance.BossPhaseCounterBetweenScenes.transform.position.x == 1)
-                {
-                    SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Boss2GruntsPhase1), transform.position, UnityEngine.Random.Range(0.2f, 0.4f), false, UnityEngine.Random.Range(0.93f, 1.07f));
-                }
-                else
-                {
-                    SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Boss2GruntsPhase2), transform.position, UnityEngine.Random.Range(0.2f, 0.4f), false, UnityEngine.Random.Range(0.93f, 1.07f));
-                }
-            }
-        }
         if (_meleeWeapon != null && _meleeWeapon.transform.parent != null && _meleeWeapon.transform.parent.Find("Trail") != null)
             _meleeWeapon.transform.parent.Find("Trail").gameObject.SetActive(true);
 
         _IsAttacking = true;
         _bossStateController._bossMovement.AttackOrBlockRotation(true);
         _bossStateController.DisableHeadAim();
+
+        if (_bossStateController._bossAI._BossNumber == 2)
+        {
+            GameManager._instance.CoroutineCall(ref _meleeAttackFinishedCoroutine, MeleeAttackFinishedCoroutine(1f), this);
+        }
+    }
+    private IEnumerator MeleeAttackFinishedCoroutine(float waitTime)
+    {
+        yield return new WaitForSeconds(waitTime);
+        MeleeAttackFinished();
     }
     public void MeleeAttackFinished()
     {
-        if (_IsAttackInterrupted) return;
+        if (_bossStateController._isDead || _IsAttackInterrupted || !_IsAttacking) return;
         _IsAttacking = false;
         _attackColliderWarning.gameObject.SetActive(false);
         _bossStateController.EnableHeadAim();
@@ -532,12 +529,26 @@ public class BossCombat : MonoBehaviour, IKillable
     {
         if (_bossStateController._isDead || _IsAttackInterrupted) return;
 
-        SoundManager._instance.PlaySound(SoundManager._instance.GetAttackSound(_attackCollider), transform.position, 0.225f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        int random = UnityEngine.Random.Range(0, 100);
+        if (_bossStateController._bossAI._BossNumber == 1 && random > 45)
+        {
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Boss1Grunts), transform.position, UnityEngine.Random.Range(0.4f, 0.6f), false, UnityEngine.Random.Range(0.93f, 1.07f));
+        }
+        else if (_bossStateController._bossAI._BossNumber == 2 && random > 25)
+        {
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Boss2Grunts), transform.position, UnityEngine.Random.Range(0.35f, 0.5f), false, UnityEngine.Random.Range(0.93f, 1.07f));
+        }
+        else if (_bossStateController._bossAI._BossNumber == 3 && random > 62)
+        {
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Boss1Grunts), transform.position, UnityEngine.Random.Range(0.16f, 0.24f), false, UnityEngine.Random.Range(1.7f, 2.2f));
+        }
+
+        SoundManager._instance.PlaySound(SoundManager._instance.GetAttackSound(_attackCollider), transform.position, 0.275f, false, UnityEngine.Random.Range(1.02f, 1.12f));
         _attackCollider.gameObject.SetActive(true);
     }
     public void CloseAttackCollider()
     {
-        if (_IsAttackInterrupted) return;
+        if (_bossStateController._isDead || _IsAttackInterrupted) return;
         _attackCollider.gameObject.SetActive(false);
     }
     public IEnumerator SingleAttack(string attackName)
@@ -596,6 +607,129 @@ public class BossCombat : MonoBehaviour, IKillable
             GameManager._instance._pushEvent?.Invoke((GameManager._instance.PlayerRb.transform.position - transform.position).normalized * 1f);
 
     }
+    public void GunAttack()
+    {
+        GameManager._instance.CoroutineCall(ref Boss3SpecialAttackCoroutine, GunAttackCoroutine(), this);
+    }
+    private IEnumerator GunAttackCoroutine()
+    {
+        GameObject Gun = Instantiate(PrefabHolder._instance.GunPrefab, _weaponHolderTransform);
+        Boss3ExtraWeapon = Gun;
+        Gun.transform.localPosition = new Vector3(-0.089f, 0.195f, 0.183f);
+        Gun.transform.localEulerAngles = new Vector3(40.921f, -42.733f, -88.043f);
+        _bossStateController.ChangeAnimation("GunAim");
+
+        float aimTime = UnityEngine.Random.Range(1.4f, 2.4f);
+        float startTime = Time.time;
+        while (startTime + aimTime > Time.time)
+        {
+            if (_IsAttackInterrupted)
+            {
+                Destroy(Gun);
+                _bossStateController.EnterState(new BossStates.Chase());
+                yield break;
+            }
+            if(_bossStateController._agent.isOnNavMesh)
+                _bossStateController._agent.SetDestination(transform.position);
+            RangedAttackLookToPlayer();
+            yield return null;
+        }
+        _bossStateController.ChangeAnimation("GunFire");
+        SoundManager._instance.PlaySound(SoundManager._instance.GunFired, transform.position, 0.24f, false, UnityEngine.Random.Range(1.07f, 1.25f));
+        Instantiate(GameManager._instance.GunFireVFX, Gun.transform.Find("GunMesh").Find("BulletSpawnPos").position, Quaternion.identity);
+        Gun.GetComponentInChildren<RangedWeapon>().Fire(GameManager._instance.BulletPrefab, Gun.transform.Find("GunMesh").Find("BulletSpawnPos").position, _collider, transform.forward, 60f);
+        Destroy(Gun);
+
+        _bossStateController.EnterState(new BossStates.Chase());
+    }
+    public void LaserAttack()
+    {
+        GameManager._instance.CoroutineCall(ref Boss3SpecialAttackCoroutine, LaserAttackCoroutine(), this);
+    }
+    private IEnumerator LaserAttackCoroutine()
+    {
+        _followPlayerTransform = GameObject.Find("FollowPlayer").transform;
+        GameObject Laser = Instantiate(PrefabHolder._instance.LaserPrefabBoss, _weaponHolderTransform);
+        Boss3ExtraWeapon = Laser;
+        Laser.transform.localPosition = new Vector3(0.0227931f, 0.05016499f, 0.02713142f);
+        Laser.transform.localScale /= 2f;
+        Laser.transform.localEulerAngles = new Vector3(3.4f, -275.86f, 55.65f);
+        _bossStateController.ChangeAnimation("HoldLaser");
+
+        float aimTime = UnityEngine.Random.Range(3f, 5f);
+        float startTime = Time.time;
+        while (startTime + aimTime > Time.time)
+        {
+            if (_IsAttackInterrupted)
+            {
+                _bossStateController.ChangeAnimation("EmptyBody");
+                Destroy(Laser);
+                _bossStateController.EnterState(new BossStates.Chase());
+                yield break;
+            }
+            if (_bossStateController._agent.isOnNavMesh)
+                _bossStateController._agent.SetDestination(transform.position);
+            LaserAttackLookToPlayer();
+            yield return null;
+        }
+        _bossStateController.ChangeAnimation("EmptyBody");
+        Destroy(Laser);
+
+        yield return new WaitForSeconds(0.5f);
+        _bossStateController.EnterState(new BossStates.Chase());
+    }
+    public void Throw()
+    {
+        GameManager._instance.CoroutineCall(ref Boss3SpecialAttackCoroutine, ThrowCoroutine(), this);
+    }
+    private IEnumerator ThrowCoroutine()
+    {
+        int random = UnityEngine.Random.Range(0, 5);
+        if (random == 0)
+            _ThrowableItem = new Smoke();
+        else if (random == 1 || random == 2)
+            _ThrowableItem = new Shuriken();
+        else
+            _ThrowableItem = new Knife();
+        _ThrowableItem.CountInterface = 1;
+        _rangedWarning.SetActive(true);
+        yield return new WaitForSeconds(0.35f);
+        _rangedWarning.SetActive(false);
+        _bossStateController.ChangeAnimation("Throw3");
+        GameManager._instance.CallForAction(() => _ThrowableItem.Use(_bossStateController._rb, _collider, false), 0.2f);
+        SoundManager._instance.PlaySound(SoundManager._instance.Throw, transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+
+        float waitTime = UnityEngine.Random.Range(0.65f, 0.8f);
+        float startTime = Time.time;
+        while (startTime + waitTime > Time.time)
+        {
+            if (_bossStateController._agent.isOnNavMesh)
+                _bossStateController._agent.SetDestination(transform.position);
+            RangedAttackLookToPlayer();
+            yield return null;
+        }
+        _bossStateController.EnterState(new BossStates.Chase());
+    }
+    private void RangedAttackLookToPlayer()
+    {
+        float random = UnityEngine.Random.Range(0.1f, 0.4f);
+        Vector3 lookAtPos = GameManager._instance.PlayerRb.transform.position + GameManager._instance.PlayerRb.velocity * random * 0.07f * (GameManager._instance.PlayerRb.transform.position - _bossStateController.transform.position).magnitude;
+        Vector3 normalDir = (GameManager._instance.PlayerRb.transform.position - _bossStateController.transform.position).normalized;
+        Vector3 futureDir = (GameManager._instance.PlayerRb.transform.position + GameManager._instance.PlayerRb.velocity * random * 0.07f * (GameManager._instance.PlayerRb.transform.position - _bossStateController.transform.position).magnitude - _bossStateController.transform.position).normalized;
+        float angle = Vector3.Angle(normalDir, futureDir);
+        if (angle > 30f)
+        {
+            if (Vector3.Angle(Quaternion.AngleAxis(30f, Vector3.up) * normalDir, futureDir) < angle)
+                lookAtPos = Quaternion.AngleAxis(30f, Vector3.up) * normalDir;
+            else
+                lookAtPos = Quaternion.AngleAxis(-30f, Vector3.up) * normalDir;
+        }
+        _bossStateController._bossMovement.MoveToPosition(_bossStateController.transform.position, lookAtPos);
+    }
+    private void LaserAttackLookToPlayer()
+    {
+        _bossStateController._bossMovement.MoveToPosition(_bossStateController.transform.position, _followPlayerTransform.position, rotationLerpSpeed: 60f);
+    }
     public void HitBreakable(GameObject breakable)
     {
 
@@ -642,7 +776,7 @@ public class BossCombat : MonoBehaviour, IKillable
         Color emissiveColor = new Color(255f / 255f, 0f, 51f / 255f, 1f);
         float newIntensity = 11f;
         float startTime = Time.time;
-        while(startTime + 3.5f > Time.time)
+        while (startTime + 3.5f > Time.time)
         {
             newIntensity = Mathf.Clamp(newIntensity - Time.deltaTime * 20f, 0f, 15f);
             foreach (var mesh in meshes)
@@ -662,11 +796,6 @@ public class BossCombat : MonoBehaviour, IKillable
     {
         if (_IsInAttackPattern)
             StopAttackInstantly();
-
-        if (_bossStateController._bossAI._BossNumber == 3)
-        {
-            ArrangeBoss3BladesToHands();
-        }
 
         SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Crushs), transform.position, 0.3f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
@@ -691,12 +820,13 @@ public class BossCombat : MonoBehaviour, IKillable
         _bossStateController.EnterState(new BossStates.Chase());
 
         GameManager._instance.StopAllHumanoids();
+        GameManager._instance.PlayerGainStamina(100f);
 
         GameManager._instance.CloseBossUI();
         GameManager._instance.CallForAction(GameManager._instance.OpenBossUI, 2f);
         _bossStateController._bossAI._bossSpecial._phase++;
 
-        string cutsceneName = "BossPhase" + _bossStateController._bossAI._bossSpecial._phase.ToString() + "Cutscene";
+        string cutsceneName = "BossPhase2Cutscene";
         GameManager._instance.EnterCutscene(cutsceneName);
         GameManager._instance.BossPhaseCounterBetweenScenes.transform.position = new Vector3(_bossStateController._bossAI._bossSpecial._phase, 0f, 0f);
         _CombatStamina = _CombatStaminaLimit;
@@ -709,7 +839,7 @@ public class BossCombat : MonoBehaviour, IKillable
     }
     public void Die(Vector3 dir, float killersVelocityMagnitude, IKillObject killer, bool isHardHit)
     {
-        if ((_bossStateController._bossState is BossStates.RetreatBoss1) || (_bossStateController._bossState is BossStates.SpecialAction))
+        if ((_bossStateController._bossState is BossStates.RetreatBoss1) || (_bossStateController._bossState is BossStates.SpecialActionBoss1))
         {
             _bossStateController.ChangeAnimation("BlockWhile");
             GameObject sparks = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.SparksVFX), _sparkPosition.position, Quaternion.identity);
@@ -719,7 +849,11 @@ public class BossCombat : MonoBehaviour, IKillable
         }
         if (_CombatStamina > _DodgeOrBlockStaminaUse)
         {
-            DeflectWithBlock(dir, GameManager._instance.PlayerRb.GetComponent<IKillable>(), false);
+            if (killer != null && killer.Owner.CompareTag("Player"))
+                DeflectWithBlock(dir, GameManager._instance.PlayerRb.GetComponent<IKillable>(), false);
+            else
+                DeflectWithBlock(dir, null, false);
+
             Debug.LogError("Die Error While Combat Stamina Is Enough");
             return;
         }
@@ -732,12 +866,12 @@ public class BossCombat : MonoBehaviour, IKillable
 
         if (IsDead) return;
 
-        if(isHardHit)
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Crushs), transform.position, 0.4f, false, UnityEngine.Random.Range(1.05f, 1.15f));
+        if (isHardHit)
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Crushs), transform.position, 0.6f, false, UnityEngine.Random.Range(0.9f, 1f));
         else
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.4f, false, UnityEngine.Random.Range(0.95f, 1.05f));
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.7f, false, UnityEngine.Random.Range(0.9f, 1f));
 
-        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds), transform.position, 0.7f, false, UnityEngine.Random.Range(0.6f, 0.65f));
+        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds), transform.position, 0.45f, false, UnityEngine.Random.Range(0.6f, 0.65f));
         //GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.EnemyDeathSounds), transform.position, 0.15f, false, UnityEngine.Random.Range(0.95f, 1.05f)), 1f);
 
         GameManager._instance.BossPhaseCounterBetweenScenes.transform.position = new Vector3(1f, 0f, 0f);
@@ -751,6 +885,11 @@ public class BossCombat : MonoBehaviour, IKillable
         if (_bossStateController._bossAI._BossNumber == 1)
         {
             CloseEyes();
+        }
+        else if (_bossStateController._bossAI._BossNumber == 3)
+        {
+            GetComponent<BossTextHandler>().StopTalking();
+            GameManager._instance.CallForAction(() => SceneController._instance.NextScene(), 6f);
         }
 
         foreach (var script in GetComponents<MonoBehaviour>())
@@ -788,6 +927,23 @@ public class BossCombat : MonoBehaviour, IKillable
         GetComponent<Rigidbody>().velocity = Vector3.zero;
         ActivateRagdoll(dir, killersVelocityMagnitude, currentVelocity);
 
+        if (_bossStateController._bossAI._BossNumber == 1)
+        {
+            if (Steamworks.SteamClient.IsValid && !new Steamworks.Data.Achievement("DefeatBoss1Achievement").State)
+                new Steamworks.Data.Achievement("DefeatBoss1Achievement").Trigger();
+        }
+        else if (_bossStateController._bossAI._BossNumber == 2)
+        {
+            if (Steamworks.SteamClient.IsValid && !new Steamworks.Data.Achievement("DefeatBoss2Achievement").State)
+                new Steamworks.Data.Achievement("DefeatBoss2Achievement").Trigger();
+        }
+        else if (_bossStateController._bossAI._BossNumber == 3)
+        {
+            if (Steamworks.SteamClient.IsValid && !new Steamworks.Data.Achievement("DefeatBoss3Achievement").State)
+                new Steamworks.Data.Achievement("DefeatBoss3Achievement").Trigger();
+        }
+
+
         if (!GameManager._instance.isPlayerDead)
         {
             GameManager._instance.SlowTime(1f);
@@ -817,7 +973,7 @@ public class BossCombat : MonoBehaviour, IKillable
         if (!IsDead) return;
 
         float forceMultiplier = 1000f;
-        float forceUpMultiplier = -20f;
+        float forceUpMultiplier = -40f;
 
         _bossStateController._animator.enabled = false;
         //_enemyStateController._animator.avatar = null;
@@ -874,16 +1030,24 @@ public class BossCombat : MonoBehaviour, IKillable
     }
     private void ArrangeBoss3BladesToHands()
     {
-        GameObject rBlade = GameObject.Find("R_Blade");
-        GameObject lBlade = GameObject.Find("L_Blade");
+        GameObject rBlade = null, lBlade = null;
+
+        var blades = GetComponentsInChildren<RotateBladeHumanoid>();
+        foreach (var blade in blades)
+        {
+            if (blade.name.Equals("R_Blade"))
+                rBlade = blade.gameObject;
+            else
+                lBlade = blade.gameObject;
+        }
 
         rBlade.transform.parent = GameObject.Find("CC_Base_R_Hand").transform;
         lBlade.transform.parent = GameObject.Find("CC_Base_L_Hand").transform;
 
-        Vector3 rBladeNewPos = new Vector3(0.001355575f, 0.1047062f, -0.004732913f);
-        Vector3 rBladeNewRot = new Vector3(-108.37f, -21.97302f, 113.927f);
-        Vector3 lBladeNewPos = new Vector3(-0.005183703f, 0.09486907f, -0.01518293f);
-        Vector3 lBladeNewRot = new Vector3(-47.185f, 180.631f, -290.029f);
+        Vector3 rBladeNewPos = new Vector3(-0.01950011f, 0.1074f, -0.004499607f);
+        Vector3 rBladeNewRot = new Vector3(7.861f, -2.673f, 79.488f);
+        Vector3 lBladeNewPos = new Vector3(0.02410386f, 0.1007111f, -0.008408492f);
+        Vector3 lBladeNewRot = new Vector3(104.661f, -41.14398f, -127.66f);
 
         rBlade.transform.localPosition = rBladeNewPos;
         rBlade.transform.localEulerAngles = rBladeNewRot;

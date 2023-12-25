@@ -27,7 +27,7 @@ public class NailTrap : MonoBehaviour, ITrap
     private IEnumerator OpenTrap()
     {
         _isOpenTrapCoroutineActive = true;
-        yield return new WaitForSeconds(0.4f);
+        yield return new WaitForSeconds(0.525f);
 
         Transform childTransform = transform.Find("WalkTrapBlade");
         Transform childTransform2 = transform.Find("NailTrapKiller");
@@ -45,7 +45,7 @@ public class NailTrap : MonoBehaviour, ITrap
         childTransform2.localPosition = new Vector3(childTransform2.localPosition.x, 1.5f, childTransform2.localPosition.z);
 
         //wait for close
-        yield return new WaitForSeconds(0.35f);
+        yield return new WaitForSeconds(0.45f);
         _isOpenTrapCoroutineActive = false;
 
         //close it

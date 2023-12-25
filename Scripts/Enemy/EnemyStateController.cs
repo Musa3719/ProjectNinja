@@ -38,6 +38,8 @@ public class EnemyStateController : MonoBehaviour
     public bool _isOnOffMeshLinkPath { get; set; }
     public bool _isInSmoke { get; set; }
 
+    private bool _isHeadAimEnabled;
+
     public Vector3 _searchingPositionBuffer { get; set; }
 
     public float _searchStartTime { get; set; }
@@ -234,6 +236,7 @@ public class EnemyStateController : MonoBehaviour
         ArrangeAnimStateParameter();
         CheckForPush();
         ArrangeVisibleToPlayer();
+        ArrangeHeadAimWeight();
     }
     void LateUpdate()
     {
@@ -271,6 +274,11 @@ public class EnemyStateController : MonoBehaviour
         _animator.SetFloat("LocalX", Mathf.Lerp(_animator.GetFloat("LocalX"), localX, Time.deltaTime * 3f));
         _animator.SetFloat("LocalZ", Mathf.Lerp(_animator.GetFloat("LocalZ"), localZ, Time.deltaTime * 3f));
     }
+    private void ArrangeHeadAimWeight()
+    {
+        if ((GameManager._instance.PlayerRb.transform.position - transform.position).magnitude < 2.75f && _isHeadAimEnabled)
+            DisableHeadAim();
+    }
     private void CheckForPush()
     {
         if (_pushCounter > 1f && !_enemyCombat._isAttacking && !_enemyCombat._IsDodging && !_enemyCombat._IsBlocking)
@@ -299,7 +307,7 @@ public class EnemyStateController : MonoBehaviour
         else if (AnimNameWithoutNumber(name).Equals("Dodge"))
         {
             EnterAnimState(new EnemyAnimations.Dodge());
-            _animator.CrossFadeInFixedTime(name, fadeTime);
+            _animator.CrossFadeInFixedTime("Block1", fadeTime);
             return false;
         }
         else if (name.Equals("Die"))
@@ -407,6 +415,7 @@ public class EnemyStateController : MonoBehaviour
         if (_halfHeadAimCoroutine != null)
             StopCoroutine(_halfHeadAimCoroutine);
 
+        _isHeadAimEnabled = true;
         _enableHeadAimCoroutine = StartCoroutine(EnableHeadAimCoroutine());
     }
     private IEnumerator EnableHeadAimCoroutine()
@@ -427,6 +436,7 @@ public class EnemyStateController : MonoBehaviour
         if (_halfHeadAimCoroutine != null)
             StopCoroutine(_halfHeadAimCoroutine);
 
+        _isHeadAimEnabled = false;
         _disableHeadAimCoroutine = StartCoroutine(DisableHeadAimCoroutine());
     }
     private IEnumerator DisableHeadAimCoroutine()
@@ -467,8 +477,10 @@ public class EnemyStateController : MonoBehaviour
                 SmokeTriggers.Add(other.gameObject);
             else if (other.name == "LaserWarning")
                 _enemyCombat.LaserTrapTriggered();
-            else if (other.CompareTag("NailTrap") || other.CompareTag("ProjectileTrap"))
-                _enemyCombat.TrapTriggered();
+            else if (other.CompareTag("NailTrap"))
+                _enemyCombat.TrapTriggered(20f);
+            else if (other.CompareTag("ProjectileTrap"))
+                _enemyCombat.TrapTriggered(80f);
         }
     }
    
@@ -504,15 +516,15 @@ public class EnemyStateController : MonoBehaviour
         _rb.isKinematic = false;
         Vector3 direction = (transform.position - GameManager._instance.PlayerRb.transform.position).normalized;
         float startTime = Time.time;
-        while (startTime + 0.15f > Time.time)
+        while (startTime + 0.1f > Time.time)
         {
-            _rb.velocity = Vector3.Lerp(_rb.velocity, (direction * GameManager._instance.PlayerLastSpeed * 2f), Time.deltaTime * 15f);
+            _rb.velocity = Vector3.Lerp(_rb.velocity, (direction * GameManager._instance.PlayerLastSpeed), Time.deltaTime * 15f);
             yield return null;
         }
         _rb.velocity = (direction * 2f * GameManager._instance.PlayerLastSpeed);
-        while (startTime + 0.65f > Time.time)
+        while (startTime + 0.2f > Time.time)
         {
-            _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, Time.deltaTime * 2.5f);
+            _rb.velocity = Vector3.Lerp(_rb.velocity, Vector3.zero, Time.deltaTime * 15f);
             yield return null;
         }
         _agent.enabled = true;
@@ -545,19 +557,17 @@ public class EnemyStateController : MonoBehaviour
     /// <returns></returns>
     public bool CheckForPlayerInSeen()
     {
-        bool isSeeingPlayer = false;
+        if (GameManager._instance.IsPlayerInSmoke)
+        {
+            return false;
+        }
 
+        bool isSeeingPlayer = false;
         float localCheckDistance;
         if (_isInSmoke)
             localCheckDistance = _checkDistanceWhileInSmoke;
         else
-        {
             localCheckDistance = _checkDistance;
-            if (GameManager._instance.IsPlayerInSmoke)
-            {
-                return false;
-            }
-        }
 
         RaycastHit hit;
         Physics.Raycast(_rb.transform.position, (GameManager._instance.PlayerRb.transform.position - _rb.transform.position).normalized, out hit, localCheckDistance, GameManager._instance.LayerMaskForVisible);
@@ -602,7 +612,6 @@ public class EnemyStateController : MonoBehaviour
     public void BlockOpen(Vector3 blockedEnemyPosition)
     {
         GameManager._instance.CoroutineCall(ref _blockCoroutine, BlockCoroutine(), this);
-
         ChangeAnimation("Blocking");
 
         if (_enemyCombat._isInAttackPattern)

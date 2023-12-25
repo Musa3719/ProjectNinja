@@ -108,6 +108,8 @@ public class EnemyCombat : MonoBehaviour, IKillable
     private float _blockMoveTime;
     public float _BlockMoveTime => _blockMoveTime;
 
+    private float _isAttackingActiveTime;
+
     private float _crashStunCheckValue;
     private float _collisionVelocity;
 
@@ -129,7 +131,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
         _blockMoveTime = 0.8f;
         _crashStunCheckValue = 13.5f;
     }
-    
+
     private void Start()
     {
         ArrangeRagdoll();
@@ -181,7 +183,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
                         Debug.LogError("Number Not Found...");
                         break;
                 }
-                _enemyStateController._enemyAI.SetValuesForAI(0.7f, 0.75f, 0.25f, 0.5f, 0.5f);
+                _enemyStateController._enemyAI.SetValuesForAI(0.7f, 0.75f, 0.25f, 0.5f, 0.3f);
                 _IsRanged = false;
                 break;
             case WeaponTypeEnum.Axe:
@@ -192,7 +194,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0.013f, -0.002f, 0.005f);
                 _weaponObject.transform.localEulerAngles = new Vector3(-188.181f, -182.17f, 11.242f);
-                _enemyStateController._enemyAI.SetValuesForAI(0.75f, 0.7f, 0.1f, 0.65f, 0.3f);
+                _enemyStateController._enemyAI.SetValuesForAI(0.75f, 0.7f, 0.1f, 0.65f, 0.2f);
                 _IsRanged = false;
                 break;
             case WeaponTypeEnum.Halberd:
@@ -203,7 +205,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0.006f, 0.035f, 0.01f);
                 _weaponObject.transform.localEulerAngles = new Vector3(5.095f, -2.786f, -171.695f);
-                _enemyStateController._enemyAI.SetValuesForAI(0.9f, 0.7f, 0.05f, 0.7f, 0.2f);
+                _enemyStateController._enemyAI.SetValuesForAI(0.8f, 0.7f, 0.05f, 0.7f, 0.2f);
                 _IsRanged = false;
                 break;
             case WeaponTypeEnum.Mace:
@@ -215,7 +217,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
                 _weaponObject.transform.localPosition = new Vector3(0.045f, 0.03f, -0.002f);
                 _weaponObject.transform.localEulerAngles = new Vector3(-192.652f, -0.9320068f, -5.200989f);
-                _enemyStateController._enemyAI.SetValuesForAI(0.35f, 0.65f, 0.1f, 0.75f, 0.3f);
+                _enemyStateController._enemyAI.SetValuesForAI(0.35f, 0.65f, 0.1f, 0.75f, 0.2f);
                 _IsRanged = false;
                 break;
             case WeaponTypeEnum.Hammer:
@@ -236,7 +238,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 _enemyStateController._enemyMovement._runSpeed = 8f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.BowPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
-                _enemyStateController._enemyAI.SetValuesForAI(50f, 0.5f, 1f, 0.2f, 0f);
+                _enemyStateController._enemyAI.SetValuesForAI(50f, 0.3f, 1f, 0.2f, 0f);
                 _IsRanged = true;
                 transform.Find("RangedWeapon").gameObject.SetActive(true);
                 _rangedWeapon = GetComponentInChildren<RangedWeapon>();
@@ -257,7 +259,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 _enemyStateController._enemyMovement._runSpeed = 7.5f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.CrossbowPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
-                _enemyStateController._enemyAI.SetValuesForAI(60f, 0.4f, 1f, 0.2f, 0f);
+                _enemyStateController._enemyAI.SetValuesForAI(60f, 0.3f, 1f, 0.2f, 0f);
                 _IsRanged = true;
                 transform.Find("RangedWeapon").gameObject.SetActive(true);
                 _rangedWeapon = GetComponentInChildren<RangedWeapon>();
@@ -278,7 +280,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
                 _enemyStateController._enemyMovement._runSpeed = 14f * _enemyTypeSpeedMultiplier;
                 _weaponObject = Instantiate(PrefabHolder._instance.GunPrefab, _weaponHolderTransform);
                 GetComponentInChildren<RagdollForWeapon>()._Weapons.Add(_weaponObject);
-                _enemyStateController._enemyAI.SetValuesForAI(70f, 0.4f, 1f, 0.2f, 0f);
+                _enemyStateController._enemyAI.SetValuesForAI(70f, 0.3f, 1f, 0.2f, 0f);
                 _IsRanged = true;
                 transform.Find("RangedWeapon").gameObject.SetActive(true);
                 _rangedWeapon = GetComponentInChildren<RangedWeapon>();
@@ -317,14 +319,14 @@ public class EnemyCombat : MonoBehaviour, IKillable
                         Debug.LogError("Number Not Found...");
                         break;
                 }
-                _enemyStateController._enemyAI.SetValuesForAI(0.95f, 0.8f, 0.05f, 0.15f, 0.6f);
+                _enemyStateController._enemyAI.SetValuesForAI(0.9f, 0.725f, 0.18f, 0.2f, 0.3f);
                 _IsRanged = false;
                 break;
             case WeaponTypeEnum.Exist:
                 _attackRange = 9f;
                 _enemyStateController._enemyMovement._moveSpeed = 6f * _enemyTypeSpeedMultiplier;
                 _enemyStateController._enemyMovement._runSpeed = 14f * _enemyTypeSpeedMultiplier;
-                _enemyStateController._enemyAI.SetValuesForAI(0.85f, 0.7f, 0.2f, 0.25f, 1f);
+                _enemyStateController._enemyAI.SetValuesForAI(0.85f, 0.7f, 0.2f, 0.25f, 0.25f);
                 _IsRanged = false;
                 if (_weaponHolderTransform.Find("Weapon") == null)
                 {
@@ -371,7 +373,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
                         Debug.LogError("Number Not Found...");
                         break;
                 }
-                _enemyStateController._enemyAI.SetValuesForAI(0.95f, 0.75f, 0f, 0.075f, 0.15f);
+                _enemyStateController._enemyAI.SetValuesForAI(0.95f, 0.7f, 0f, 0.075f, 0.15f);
                 _IsRanged = false;
                 break;
             default:
@@ -399,54 +401,23 @@ public class EnemyCombat : MonoBehaviour, IKillable
     }
     private void ArrangeThrowableCount()
     {
-        int number = UnityEngine.Random.Range(0, 101);
-
-        if (_throwableType == ThrowableEnemyTypeEnum.Bomb)
+        _ThrowableItem.CountInterface = 1;
+    }
+    private void Update()
+    {
+        if (_isAttacking)
         {
-            if (number < 33)
+            if (_isAttackingActiveTime > 1.5f)
             {
-                _ThrowableItem.CountInterface = 0;
-            }
-
-            else if (number < 90)
-            {
-                _ThrowableItem.CountInterface = 1;
+                StopAttackInstantly();
+                _isAttackingActiveTime = 0f;
             }
             else
-            {
-                _ThrowableItem.CountInterface = 2;
-            }
+                _isAttackingActiveTime += Time.deltaTime;
         }
         else
-        {
-            if (number < 33)
-            {
-                _ThrowableItem.CountInterface = 0;
-            }
-            else if (number < 50)
-            {
-                _ThrowableItem.CountInterface = 1;
-            }
-            else if (number < 70)
-            {
-                _ThrowableItem.CountInterface = 2;
-            }
-            else if (number < 90)
-            {
-                _ThrowableItem.CountInterface = 3;
-            }
-            else if (number < 97)
-            {
-                _ThrowableItem.CountInterface = 4;
-            }
-            else
-            {
-                _ThrowableItem.CountInterface = 5;
-            }
-        }
-
+            _isAttackingActiveTime = 0f;
     }
-
     private void FixedUpdate()
     {
         if (IsDead) return;
@@ -472,7 +443,6 @@ public class EnemyCombat : MonoBehaviour, IKillable
         StopAttackInstantly();
         Stun(0.7f, false, deflectedKillable.Object.transform);
         _enemyStateController._enemyMovement.BlockMovement(deflectedKillable.Object.transform.position);
-        _enemyStateController.ChangeAnimation(GetAttackDeflectedAnimName(), 0.2f, true);
         SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.AttackDeflecteds), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
     }
     public void StopAttackInstantly()
@@ -499,7 +469,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
         _isAttackInterrupted = true;
         GameManager._instance.CoroutineCall(ref _closeIsAttackInterruptedCoroutine, CloseIsAttackInterruptedCoroutine(0.5f), this);
 
-        _enemyStateController.ChangeAnimation("Empty");
+        _enemyStateController.ChangeAnimation(GetAttackDeflectedAnimName(), 0.1f);
         _attackColliderWarning.gameObject.SetActive(false);
         _attackCollider.gameObject.SetActive(false);
 
@@ -524,7 +494,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
     }
     public void Dodge(bool isDodgingToRight)
     {
-        if(_isInAttackPattern)
+        if (_isInAttackPattern)
         {
             StopAttackInstantly();
         }
@@ -533,7 +503,8 @@ public class EnemyCombat : MonoBehaviour, IKillable
         _enemyStateController.ChangeAnimation(GetDodgeAnimName(isDodgingToRight));
         SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.ArmorWalkSounds), transform.position, 0.18f, false, UnityEngine.Random.Range(0.93f, 1.07f));
 
-        Action CloseIsDodging = () => {
+        Action CloseIsDodging = () =>
+        {
             _IsDodging = false;
         };
         GameManager._instance.CallForAction(CloseIsDodging, _dodgeTime / 2);
@@ -542,7 +513,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
     {
         _IsBlocking = false;
 
-        if (!(_enemyStateController._enemyState is EnemyStates.StepBack) && (!_enemyStateController._enemyAI.CanDeflectAttack || _isInAttackPattern || UnityEngine.Random.Range(0, 100) < 85))
+        if (!(_enemyStateController._enemyState is EnemyStates.StepBack) && (!_enemyStateController._enemyAI.CanDeflectAttack || _isAttacking || UnityEngine.Random.Range(0, 100) < 92))
         {
             GameObject sparksVFX = Instantiate(GameManager._instance.GetRandomFromList(GameManager._instance.SparksVFX), _sparkPosition.position, Quaternion.identity);
             Destroy(sparksVFX, 4f);
@@ -582,7 +553,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
         _IsAllowedToAttack = false;
         if (_openIsAllowedToAttackCoroutine != null)
             StopCoroutine(_openIsAllowedToAttackCoroutine);
-        
+
         _isInAttackPattern = true;
         _isAttackInterrupted = false;
         if (_closeIsAttackInterruptedCoroutine != null)
@@ -600,11 +571,11 @@ public class EnemyCombat : MonoBehaviour, IKillable
             else
                 RangedAttack();
         }
-        
+
     }
     public IEnumerator AttackPatternCoroutine(List<string> patternNumbers)
     {
-        while (_enemyStateController._agent.velocity.magnitude > 7.5f) 
+        while (_enemyStateController._agent.velocity.magnitude > 7.5f)
         {
             _enemyStateController._agent.speed = 0f;
             yield return null;
@@ -674,7 +645,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
     }
     public void MeleeAttackFinished()
     {
-        if (_isAttackInterrupted) return;
+        if (_enemyStateController._isDead || _isAttackInterrupted || !_isAttacking) return;
         _isAttacking = false;
         _attackColliderWarning.gameObject.SetActive(false);
         _enemyStateController.EnableHeadAim();
@@ -686,12 +657,12 @@ public class EnemyCombat : MonoBehaviour, IKillable
     {
         if (_enemyStateController._isDead || _isAttackInterrupted) return;
 
-        SoundManager._instance.PlaySound(SoundManager._instance.GetAttackSound(_attackCollider), transform.position, 0.225f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        SoundManager._instance.PlaySound(SoundManager._instance.GetAttackSound(_attackCollider), transform.position, 0.275f, false, UnityEngine.Random.Range(1.02f, 1.12f));
         _attackCollider.gameObject.SetActive(true);
     }
     public void CloseAttackCollider()
     {
-        if (_isAttackInterrupted) return;
+        if (_enemyStateController._isDead || _isAttackInterrupted) return;
         _attackCollider.gameObject.SetActive(false);
     }
     public void AttackWarning(Collider collider, bool isFast, Vector3 attackPosition)
@@ -699,14 +670,15 @@ public class EnemyCombat : MonoBehaviour, IKillable
         _enemyStateController._enemyAI._isAttackWarned = true;
         _enemyStateController._enemyAI._isAttackFast = isFast;
         _enemyStateController._enemyAI._attackPosition = attackPosition;
+        _enemyStateController._enemyAI._lastAttackWarnedCollider = collider;
     }
     public void ChangeStamina(float amount)
     {
         //
     }
-    public void TrapTriggered()
+    public void TrapTriggered(float chance)
     {
-        if (!_IsDodging && UnityEngine.Random.Range(1, 101) < 65)
+        if (!_IsDodging && UnityEngine.Random.Range(1, 101) < chance)
         {
             if (UnityEngine.Random.Range(1, 101) < 60)
             {
@@ -763,7 +735,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
     {
         _rangedWarning.SetActive(true);
         float startTime = Time.time;
-        while(startTime + 0.4f > Time.time)
+        while (startTime + 0.4f > Time.time)
         {
             if (_isAttackInterrupted)
             {
@@ -881,7 +853,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
             Vector3 newSpeed = (transform.position - otherTransform.position).normalized * tempSpeed.magnitude;
             _enemyStateController._rb.velocity = new Vector3(newSpeed.x, _enemyStateController._rb.velocity.y, newSpeed.z);
         }
-        
+
         GameManager._instance.CallForAction(() => { _isStunned = false; }, time);
         _enemyStateController.ChangeAnimation("Stun");
     }
@@ -950,9 +922,10 @@ public class EnemyCombat : MonoBehaviour, IKillable
         if (_ThrowableItem.CountInterface == 0) return;
         if (_enemyStateController._enemyAI.CheckForAttackFriendlyFire(15f)) return;
         if (_IsRanged || _IsDodging || _IsBlocking || _isInAttackPattern || !_IsAllowedToThrow) return;
-        
+
         _IsAllowedToThrow = false;
-        Action OpenIsAllowedToThrow = () => {
+        Action OpenIsAllowedToThrow = () =>
+        {
             _IsAllowedToThrow = true;
         };
         GameManager._instance.CallForAction(OpenIsAllowedToThrow, _throwWaitTime);
@@ -977,13 +950,16 @@ public class EnemyCombat : MonoBehaviour, IKillable
 
         GameManager._instance.allEnemies.Remove(gameObject);
 
-        //_enemyStateController._animator.SetTrigger("Death");
-        if(isHardHit)
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Crushs), transform.position, 0.2f, false, UnityEngine.Random.Range(1.15f, 1.25f));
-        else
-            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.2f, false, UnityEngine.Random.Range(0.95f, 1.05f));
+        if (Steamworks.SteamClient.IsValid && !new Steamworks.Data.Achievement("Kill").State)
+            new Steamworks.Data.Achievement("Kill").Trigger();
 
-        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds), transform.position, 0.7f, false, UnityEngine.Random.Range(0.6f, 0.65f));
+        //_enemyStateController._animator.SetTrigger("Death");
+        if (isHardHit)
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Crushs), transform.position, 0.6f, false, UnityEngine.Random.Range(0.9f, 1f));
+        else
+            SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Cuts), transform.position, 0.7f, false, UnityEngine.Random.Range(0.9f, 1f));
+
+        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.WeaponHitSounds), transform.position, 0.45f, false, UnityEngine.Random.Range(0.6f, 0.65f));
         GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.EnemyDeathSounds), transform.position, 0.06f, false, UnityEngine.Random.Range(0.95f, 1.05f)), 1f);
         Vector3 bloodDir = (GameManager._instance.MainCamera.transform.position - transform.position).normalized;
         bloodDir.y = 0f;
@@ -1004,7 +980,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
         pos = hit.collider == null ? transform.position - Vector3.up * 0.7f : hit.point;
         bloodPrefab = GameManager._instance.BloodDecalPrefabs[UnityEngine.Random.Range(0, GameManager._instance.BloodDecalPrefabs.Count)];
         GameObject groundDecal = Instantiate(bloodPrefab, pos, Quaternion.identity);
-        groundDecal.transform.forward= hit.collider == null ? Vector3.up : -hit.normal;
+        groundDecal.transform.forward = hit.collider == null ? Vector3.up : -hit.normal;
         groundDecal.GetComponent<DecalProjector>().size = new Vector3(groundDecal.GetComponent<DecalProjector>().size.x * sizeMul, groundDecal.GetComponent<DecalProjector>().size.y * sizeMul, groundDecal.GetComponent<DecalProjector>().size.z);
         groundDecal.GetComponent<DecalProjector>().decalLayerMask = DecalLayerEnum.DecalLayerDefault;
 
@@ -1068,7 +1044,7 @@ public class EnemyCombat : MonoBehaviour, IKillable
         if (!IsDead) return;
 
         float forceMultiplier = 600f;
-        float forceUpMultiplier = -20f;
+        float forceUpMultiplier = -40f;
 
         if (isKilledByPlayer)
         {
@@ -1157,12 +1133,12 @@ public class EnemyCombat : MonoBehaviour, IKillable
             }
 
             Vector3 tempDir = dir;
-            tempDir += new Vector3(UnityEngine.Random.Range(-0.6f, 0.6f), UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.6f, 0.6f));
+            tempDir += new Vector3(UnityEngine.Random.Range(-0.25f, 0.25f), UnityEngine.Random.Range(-0.1f, 0.1f), UnityEngine.Random.Range(-0.25f, 0.25f));
             //tempDir = tempDir.normalized; commented for power variety
             if (collider.gameObject.name == "CC_Base_Hip" || collider.gameObject.name == "CC_Base_Head")
-                collider.GetComponent<Rigidbody>().AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 3.5f + tempDir * forceMultiplier + Vector3.up * forceUpMultiplier / 2f) * 4f);
+                collider.GetComponent<Rigidbody>().AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 5f + tempDir * forceMultiplier * 1.75f + Vector3.up * forceUpMultiplier / 2f) * 3.25f);
             else
-                collider.GetComponent<Rigidbody>().AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 3.5f + tempDir * forceMultiplier + Vector3.up * forceUpMultiplier / 2f) * 1.5f);
+                collider.GetComponent<Rigidbody>().AddForce((tempDir * killersVelocityMagnitude * forceMultiplier / 5f + tempDir * forceMultiplier * 1.75f + Vector3.up * forceUpMultiplier / 2f) * 1.15f);
 
             collider.gameObject.layer = LayerMask.NameToLayer("Default");
 

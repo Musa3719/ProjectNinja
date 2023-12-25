@@ -34,6 +34,7 @@ public class BossStateController : MonoBehaviour
     public bool _isDead { get; set; }
     public bool _isOnOffMeshLinkPath { get; set; }
     public bool _isInSmoke { get; set; }
+    private bool _isHeadAimEnabled;
 
     public Vector3 _searchingPositionBuffer { get; set; }
 
@@ -69,6 +70,10 @@ public class BossStateController : MonoBehaviour
     private char[] _arrayForChangeAnim;
     private char[] _newArrayForChangeAnim;
 
+    private float _lastTimeWolfSpawned;
+
+    private Material[] _materialsForDissolve;
+
     private void Awake()
     {
         TouchingGrounds = new List<GameObject>();
@@ -103,22 +108,42 @@ public class BossStateController : MonoBehaviour
     }
     public void TeleportAndDissolve(bool hasMovedAlready = false)
     {
+        if (_bossAI._BossNumber != 3) return;
         GameManager._instance.CoroutineCall(ref _dissolveCoroutine, DissolveCoroutine(hasMovedAlready), this);
     }
     private IEnumerator DissolveCoroutine(bool hasMovedAlready)
     {
-        if (EyeObject != null) EyeObject.SetActive(false);
-
-        _mesh.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        _mesh.material = _dissolveMaterial;
 
         List<GameObject> weapons = GetComponentInChildren<RagdollForWeapon>()._Weapons;
         List<MeshRenderer> renderers = new List<MeshRenderer>();
+        string name = "";
         foreach (var weapon in weapons)
         {
+            if (weapon.GetComponent<MeshRenderer>() == null) continue;
             renderers.Add(weapon.GetComponent<MeshRenderer>());
             renderers[renderers.Count - 1].shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderers[renderers.Count - 1].material = weapon.GetComponent<PlaySoundOnCollision>()._dissolveMaterial;
+        }
+        foreach (var mesh in _meshes)
+        {
+            if (mesh.GetComponent<PlaySoundOnCollision>() != null)
+            {
+                mesh.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                mesh.material = _dissolveMaterial;
+            }
+            else if (_materialsForDissolve == null) 
+            {
+                _materialsForDissolve = mesh.materials;
+                var yourMaterials = new Material[] { _dissolveMaterial, _dissolveMaterial, _dissolveMaterial };
+                mesh.materials = yourMaterials;
+                name = mesh.name;
+            }
+            else
+            {
+                var yourMaterials = new Material[] { _dissolveMaterial, _dissolveMaterial, _dissolveMaterial };
+                mesh.materials = yourMaterials;
+                name = mesh.name;
+            }
         }
 
         while (_mesh.material.GetFloat("_CutoffHeight") > 0f)
@@ -127,21 +152,28 @@ public class BossStateController : MonoBehaviour
             {
                 renderer.material.SetFloat("_CutoffHeight", _mesh.material.GetFloat("_CutoffHeight") - 24f * Time.deltaTime);
             }
-            _mesh.material.SetFloat("_CutoffHeight", _mesh.material.GetFloat("_CutoffHeight") - 18f * Time.deltaTime);
+            foreach (var mesh in _meshes)
+            {
+                mesh.material.SetFloat("_CutoffHeight", _mesh.material.GetFloat("_CutoffHeight") - 18f * Time.deltaTime);
+            }
             yield return null;
         }
 
-        if (!hasMovedAlready && !(_bossState is BossStates.RetreatBoss1) && !(_bossState is BossStates.SpecialAction))
+        if (!hasMovedAlready && !(_bossState is BossStates.RetreatBoss1) && !(_bossState is BossStates.SpecialActionBoss1))
         {
             Vector3 direction = (GameManager._instance.PlayerRb.transform.position - _rb.transform.position).normalized;
             direction.y = 0f;
-            _rb.transform.position = _rb.transform.position - (direction * 6f);
+            _rb.transform.position = _rb.transform.position - (direction * Random.Range(6f, 12f));
         }
 
         _mesh.material.SetFloat("_CutoffHeight", 0f);
         foreach (var renderer in renderers)
         {
             renderer.material.SetFloat("_CutoffHeight", 0f);
+        }
+        foreach (var mesh in _meshes)
+        {
+            mesh.material.SetFloat("_CutoffHeight", 0f);
         }
 
         while (_mesh.material.GetFloat("_CutoffHeight") < 3f)
@@ -150,20 +182,33 @@ public class BossStateController : MonoBehaviour
             {
                 renderer.material.SetFloat("_CutoffHeight", _mesh.material.GetFloat("_CutoffHeight") + 12f * Time.deltaTime);
             }
-            _mesh.material.SetFloat("_CutoffHeight", _mesh.material.GetFloat("_CutoffHeight") + 12f * Time.deltaTime);
+            foreach (var mesh in _meshes)
+            {
+                mesh.material.SetFloat("_CutoffHeight", _mesh.material.GetFloat("_CutoffHeight") + 12f * Time.deltaTime);
+            }
             yield return null;
         }
 
-        _mesh.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
-        _mesh.material = _normalMaterial;
-
         foreach (var weapon in weapons)
         {
-            weapon.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
-            weapon.GetComponent<MeshRenderer>().material = weapon.GetComponent<PlaySoundOnCollision>()._normalMaterial;
+            if (weapon.GetComponent<PlaySoundOnCollision>()._normalMaterial != null)
+            {
+                weapon.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                weapon.GetComponent<MeshRenderer>().material = weapon.GetComponent<PlaySoundOnCollision>()._normalMaterial;
+            }
         }
-
-        if (EyeObject != null) EyeObject.SetActive(true);
+        foreach (var mesh in _meshes)
+        {
+            if (mesh.GetComponent<PlaySoundOnCollision>() != null)
+            {
+                mesh.GetComponent<SkinnedMeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                mesh.GetComponent<SkinnedMeshRenderer>().material = mesh.GetComponent<PlaySoundOnCollision>()._normalMaterial;
+            }
+            else if (mesh.name.Equals(name) && _materialsForDissolve != null)
+            {
+                mesh.materials = _materialsForDissolve;
+            }
+        }
     }
     private void ArrangeIsInSmoke()
     {
@@ -191,8 +236,11 @@ public class BossStateController : MonoBehaviour
         ArrangeAnimStateParameter();
         ArrangeCombatStamina();
         CheckForPush();
+        CheckForSpawnWolfs();
         _bossCombat.ArrangeBlockCounterTimer();
         GameManager._instance.ArrangeBossUI(_bossCombat._CombatStamina, _bossCombat._CombatStaminaLimit);
+        ArrangeHeadAimWeight();
+        //Debug.Log(_bossAnimState);
     }
     void LateUpdate()
     {
@@ -230,6 +278,11 @@ public class BossStateController : MonoBehaviour
         _animator.SetFloat("LocalX", Mathf.Lerp(_animator.GetFloat("LocalX"), localX, Time.deltaTime * 3f));
         _animator.SetFloat("LocalZ", Mathf.Lerp(_animator.GetFloat("LocalZ"), localZ, Time.deltaTime * 3f));
     }
+    private void ArrangeHeadAimWeight()
+    {
+        if ((GameManager._instance.PlayerRb.transform.position - transform.position).magnitude < 2.75f && _isHeadAimEnabled)
+            DisableHeadAim();
+    }
     private void CheckForPush()
     {
         if (_pushCounter > 0.75f && !_bossCombat._IsAttacking && !_bossCombat._IsDodging && !_bossCombat._IsBlocking)
@@ -246,7 +299,28 @@ public class BossStateController : MonoBehaviour
             _pushCounter = 0f;
         }
     }
+    private void CheckForSpawnWolfs()
+    {
+        if (_bossAI._BossNumber == 3 && GameManager._instance.BossPhaseCounterBetweenScenes.transform.position.x == 2)
+        {
+            if (Time.time - _lastTimeWolfSpawned > 20f)
+            {
+                SpawnWolfs();
+                _lastTimeWolfSpawned = Time.time;
+            }
+        }
+    }
+    private void SpawnWolfs()
+    {
+        GameObject wolf1 = Instantiate(PrefabHolder._instance.Wolf, new Vector3(5.06f, 2.25f, 47f), Quaternion.identity);
+        GameObject wolf2 = Instantiate(PrefabHolder._instance.Wolf, new Vector3(9.66f, 2.25f, 47f), Quaternion.identity);
 
+        wolf1.transform.LookAt(GameManager._instance.PlayerRb.transform);
+        wolf2.transform.LookAt(GameManager._instance.PlayerRb.transform);
+
+        wolf1.transform.localEulerAngles = new Vector3(0f, wolf1.transform.localEulerAngles.y, 0f);
+        wolf2.transform.localEulerAngles = new Vector3(0f, wolf2.transform.localEulerAngles.y, 0f);
+    }
     /// <returns>true if plays hand idle anim</returns>
     public bool ChangeAnimation(string name, float fadeTime = 0.2f, bool isInstantPlay = false)
     {
@@ -265,7 +339,7 @@ public class BossStateController : MonoBehaviour
         else if (AnimNameWithoutNumber(name).Equals("Dodge"))
         {
             EnterAnimState(new BossAnimations.Dodge());
-            _animator.CrossFadeInFixedTime(name, fadeTime);
+            _animator.CrossFadeInFixedTime("Block1", fadeTime);
             return false;
         }
         else if (name.Equals("Die"))
@@ -310,7 +384,7 @@ public class BossStateController : MonoBehaviour
         {
             if (!_animator.GetCurrentAnimatorStateInfo(6).IsName("EmptyBody") && !_animator.IsInTransition(6))
             {
-                 ChangeAnimation("EmptyBody");
+                ChangeAnimation("EmptyBody");
             }
         }
 
@@ -335,17 +409,17 @@ public class BossStateController : MonoBehaviour
     }
     private void ArrangeCombatStamina()
     {
-        if (_bossState is BossStates.RetreatBoss1 || _bossState is BossStates.SpecialAction)
+        if (_bossState is BossStates.RetreatBoss1 || _bossState is BossStates.SpecialActionBoss1 || _bossState is BossStates.FastAttackBoss2 || _bossState is BossStates.TeleportBoss3)
         {
-            _bossCombat._CombatStamina += Time.deltaTime * 1f * _bossCombat._CombatStaminaLimit / 100f;
+            _bossCombat._CombatStamina += Time.deltaTime * 0.75f * _bossCombat._CombatStaminaLimit / 100f;
         }
         else if (_bossCombat._IsInAttackPattern || _bossCombat._IsDodging || _bossCombat._IsBlocking)
         {
-            _bossCombat._CombatStamina += Time.deltaTime * 2f * _bossCombat._CombatStaminaLimit / 100f;
+            _bossCombat._CombatStamina += Time.deltaTime * 1.2f * _bossCombat._CombatStaminaLimit / 100f;
         }
         else
         {
-            _bossCombat._CombatStamina += Time.deltaTime * 4f * _bossCombat._CombatStaminaLimit / 100f;
+            _bossCombat._CombatStamina += Time.deltaTime * 2.85f * _bossCombat._CombatStaminaLimit / 100f;
         }
     }
     public void EnableHeadAim()
@@ -355,6 +429,7 @@ public class BossStateController : MonoBehaviour
         if (_disableHeadAimCoroutine != null)
             StopCoroutine(_disableHeadAimCoroutine);
 
+        _isHeadAimEnabled = true;
         _enableHeadAimCoroutine = StartCoroutine(EnableHeadAimCoroutine());
     }
     private IEnumerator EnableHeadAimCoroutine()
@@ -373,6 +448,7 @@ public class BossStateController : MonoBehaviour
         if (_disableHeadAimCoroutine != null)
             StopCoroutine(_disableHeadAimCoroutine);
 
+        _isHeadAimEnabled = false;
         _disableHeadAimCoroutine = StartCoroutine(DisableHeadAimCoroutine());
     }
     private IEnumerator DisableHeadAimCoroutine()
@@ -408,7 +484,7 @@ public class BossStateController : MonoBehaviour
             {
                 ChangeAnimation("Stun");
                 SoundManager._instance.PlaySound(SoundManager._instance.SmallCrash, transform.position, 0.1f, false, UnityEngine.Random.Range(0.93f, 1.07f));
-                GameManager._instance.CoroutineCall(ref _pushCoroutine, PushCoroutine(), this);
+                //GameManager._instance.CoroutineCall(ref _pushCoroutine, PushCoroutine(), this);
             }
         }
     }
@@ -486,7 +562,7 @@ public class BossStateController : MonoBehaviour
 
     public void BlockOpen(Vector3 blockedEnemyPosition)
     {
-        if(_bossState is BossStates.RetreatBoss1 || _bossState is BossStates.SpecialAction)
+        if (_bossState is BossStates.RetreatBoss1 || _bossState is BossStates.SpecialActionBoss1)
         {
             Debug.LogError("Special but block opened..");
             return;

@@ -11,6 +11,12 @@ public class PlayerCombat : MonoBehaviour, IKillable
         Left,
         Right
     }
+    private enum WeaponAttackType
+    {
+        Right,
+        Left,
+        Up
+    }
 
     public static PlayerCombat _instance;
     private AttackType _attackType;
@@ -22,11 +28,12 @@ public class PlayerCombat : MonoBehaviour, IKillable
     public GameObject AttackCollider => _attackCollider.gameObject;
     public int InterruptAttackCounterGetter => _interruptAttackCounter;
     public float _CollisionVelocity => CollisionVelocity;
-    public bool _DeflectedBuffer { get => false; set {  } }
+    public bool _DeflectedBuffer { get => false; set { } }
 
     public CapsuleCollider _collider { get; private set; }
 
     private AttackType _lastAttackType;
+    private WeaponAttackType _lastWeaponAttackType;
 
     [SerializeField]
     private Transform _sparkPosition;
@@ -70,8 +77,10 @@ public class PlayerCombat : MonoBehaviour, IKillable
     private float _blockStartTime;
     private float _blockTimingValue;
     private float _blockWaitTime;
-    private float _attackWaitTime;
-    private float _attackTime;
+
+    private float _AttackWaitTime { get { if (MeleeWeapon == null) return 0.5f; else return MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().GetAttackTime() / 3.25f; } }
+    private float _AttackTime { get { if (MeleeWeapon == null) return 0.5f; else return MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().GetAttackTime(); } }
+
     private float _throwWaitTime;
     private float _dodgeWaitTime;
     private float _dodgeTime;
@@ -81,8 +90,6 @@ public class PlayerCombat : MonoBehaviour, IKillable
     private int _lastAttackDeflectedCounter;
     private float _lastAttackDeflectedTime;
     private float _lastDeflectedTime;
-
-    public float _AttackTime => _attackTime;
 
     private float _crashStunCheckValue;
     public float CollisionVelocity;
@@ -105,18 +112,16 @@ public class PlayerCombat : MonoBehaviour, IKillable
         _isAllowedToAttack = true;
         _isAllowedToThrow = true;
         _blockWaitTime = 0.1f;
-        _attackWaitTime = 0.6f;
-        _attackTime = 0.6f;
-        _throwWaitTime = 0.8f;
+        _throwWaitTime = 0.75f;
         _dodgeWaitTime = 0.75f;
         _dodgeTime = 0.05f;
-        _blockTimingValue = 0.225f;
+        _blockTimingValue = 0.19f;
         _crashStunCheckValue = 11.25f;
 
         _trails = GameManager._instance.PlayerHands.GetComponentsInChildren<TrailRenderer>();
         CloseTrails();
     }
-    
+
     private void FixedUpdate()
     {
         GameManager._instance.PlayerLastSpeed = CollisionVelocity;
@@ -140,16 +145,38 @@ public class PlayerCombat : MonoBehaviour, IKillable
     {
         //
     }
+    public void CheckMeleeAttackAgainstWall(Collider other)
+    {
+        if (MeleeWeapon == null) return;
+        
+        transform.Find("WallCheckForMeleeWeapon").gameObject.SetActive(false);
+        CameraController.ShakeCamera(4f, 1.8f, 0.1f, 0.3f);
+        PlayerMovement._instance._Stamina -= PlayerMovement._instance._attackDeflectedStaminaUse / 2.5f;
+        PlayerStateController._instance.ChangeAnimation(GetAttackDeflectedName(), checkForNameChange: false);
+        SoundManager._instance.PlaySound(SoundManager._instance.HitWallWithWeapon, transform.position + transform.forward / 4f, 0.1f, false, UnityEngine.Random.Range(0.5f, 0.55f));
+        _IsAttacking = false;
+        _IsAttackInterrupted = true;
+        GameManager._instance.CallForAction(() => _IsAttackInterrupted = false, _AttackWaitTime * 1.25f);
+        _attackColliderWarning.gameObject.SetActive(false);
+        _attackCollider.gameObject.SetActive(false);
+
+        if (MeleeWeapon.transform.Find("Trail") != null)
+            MeleeWeapon.transform.Find("Trail").gameObject.SetActive(false);
+
+        _isAllowedToAttack = false;
+        GameManager._instance.CallForAction(() => _isAllowedToAttack = true, _AttackWaitTime * 1.25f);
+    }
     public void AttackDeflected(IKillable deflectedKillable)
     {
+        transform.Find("WallCheckForMeleeWeapon").gameObject.SetActive(false);
         CameraController.ShakeCamera(4f, 1.8f, 0.1f, 0.3f);
         PlayerMovement._instance._Stamina -= PlayerMovement._instance._attackDeflectedStaminaUse;
         PlayerStateController._instance.ChangeAnimation(GetAttackDeflectedName(), checkForNameChange: false);
-        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.AttackDeflecteds), transform.position, 0.5f, false, UnityEngine.Random.Range(0.93f, 1.07f));
+        SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.AttackDeflecteds), transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         _IsAttacking = false;
         _IsAttackInterrupted = true;
         PlayerMovement._instance.AttackDeflectedMove(PlayerStateController._instance._rb);
-        GameManager._instance.CallForAction(() => _IsAttackInterrupted = false, _attackWaitTime * 1.25f);
+        GameManager._instance.CallForAction(() => _IsAttackInterrupted = false, _AttackWaitTime * 1.25f);
         _attackColliderWarning.gameObject.SetActive(false);
         _attackCollider.gameObject.SetActive(false);
 
@@ -157,11 +184,12 @@ public class PlayerCombat : MonoBehaviour, IKillable
             MeleeWeapon.transform.Find("Trail").gameObject.SetActive(false);
 
         _isAllowedToAttack = false;
-        GameManager._instance.CallForAction(() => _isAllowedToAttack = true, _attackWaitTime * 1.25f);
+        GameManager._instance.CallForAction(() => _isAllowedToAttack = true, _AttackWaitTime * 1.25f);
     }
 
     public void AddToThrowableInventory(IThrowableItem item)
     {
+        SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, transform.position, 0.1f, pitch: UnityEngine.Random.Range(0.475f, 0.525f));
         if (_ThrowableInventory.Contains(item))
         {
             item.CountInterface++;
@@ -213,12 +241,14 @@ public class PlayerCombat : MonoBehaviour, IKillable
         PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.25f));
         CameraController.ShakeCamera(3f, 1.6f, 0.1f, 0.7f);
 
-        Action OpenIsAllowedToDodge = () => {
+        Action OpenIsAllowedToDodge = () =>
+        {
             _isAllowedToDodge = true;
         };
         GameManager._instance.CallForAction(OpenIsAllowedToDodge, _dodgeWaitTime);
 
-        Action CloseIsDodging = () => {
+        Action CloseIsDodging = () =>
+        {
             _IsDodging = false;
         };
         GameManager._instance.CallForAction(CloseIsDodging, _dodgeTime);
@@ -251,7 +281,8 @@ public class PlayerCombat : MonoBehaviour, IKillable
             Destroy(combatSmokeVFX, 4f);
 
             //_isAllowedToBlock = false;
-            Action OpenIsAllowedToBlock = () => {
+            Action OpenIsAllowedToBlock = () =>
+            {
                 _isAllowedToBlock = true;
             };
             GameManager._instance.CallForAction(OpenIsAllowedToBlock, _blockWaitTime * 2f);
@@ -259,10 +290,11 @@ public class PlayerCombat : MonoBehaviour, IKillable
             if (_isAllowedToAttack)
             {
                 _isAllowedToAttack = false;
-                Action OpenIsAllowedToAttack = () => {
+                Action OpenIsAllowedToAttack = () =>
+                {
                     _isAllowedToAttack = true;
                 };
-                GameManager._instance.CallForAction(OpenIsAllowedToAttack, _attackWaitTime / 1.15f);
+                GameManager._instance.CallForAction(OpenIsAllowedToAttack, _AttackWaitTime / 1.15f);
             }
 
             _lastAttackDeflectedCounter = 0;
@@ -284,11 +316,14 @@ public class PlayerCombat : MonoBehaviour, IKillable
 
             if (attacker != null && attacker.Object.CompareTag("Boss"))
             {
-                attacker.ChangeStamina(-1f);
                 if (!isRangedAttack && _lastAttackDeflectedCounter >= attacker.InterruptAttackCounterGetter && _lastAttackDeflectedTime + 5f > Time.time)
                 {
                     _lastAttackDeflectedCounter = -1;
                     attacker.AttackDeflected(this as IKillable);
+                }
+                else
+                {
+                    attacker.ChangeStamina(-0.65f);
                 }
             }
             else
@@ -298,7 +333,8 @@ public class PlayerCombat : MonoBehaviour, IKillable
             }
 
             //_isAllowedToBlock = false;
-            Action OpenIsAllowedToBlock = () => {
+            Action OpenIsAllowedToBlock = () =>
+            {
                 _isAllowedToBlock = true;
             };
             GameManager._instance.CallForAction(OpenIsAllowedToBlock, _blockWaitTime);
@@ -361,6 +397,8 @@ public class PlayerCombat : MonoBehaviour, IKillable
         _weaponAttackNumber = 1;
         GameManager._instance.CoroutineCall(ref _resetWeaponAttackNumberCoroutine, ResetWeaponAttackNumberCoroutine(), this);
 
+        PlayerStateController._instance.ChangeAnimation("EmptyLeft");
+        PlayerStateController._instance.ChangeAnimation("EmptyRight");
 
         GameManager._instance.IsPlayerHasMeleeWeapon = true;
         _weaponScale = MeleeWeapon.transform.localScale;
@@ -370,6 +408,8 @@ public class PlayerCombat : MonoBehaviour, IKillable
 
         MeleeWeapon.transform.Find("AttackCollider").GetComponent<MeleeWeapon>().SetIgnoreCollisionColliderForTakeWeapon(_collider);
 
+        Rigidbody childRb;
+
         if (MeleeWeapon.GetComponentInChildren<Collider>() != null)
             Destroy(MeleeWeapon.GetComponentInChildren<Collider>());
         if (MeleeWeapon.GetComponentInChildren<Rigidbody>() != null)
@@ -377,11 +417,23 @@ public class PlayerCombat : MonoBehaviour, IKillable
         if (MeleeWeapon.GetComponentInChildren<MeleeWeaponThrowed>() != null)
             Destroy(MeleeWeapon.GetComponentInChildren<MeleeWeaponThrowed>());
 
+        if (MeleeWeapon.transform.Find("AttackCollider").GetComponent<Rigidbody>() == null)
+            childRb = MeleeWeapon.transform.Find("AttackCollider").gameObject.AddComponent<Rigidbody>();
+        else
+            childRb = MeleeWeapon.transform.Find("AttackCollider").GetComponent<Rigidbody>();
+
+        childRb.mass = 1f;
+        childRb.freezeRotation = true;
+        childRb.isKinematic = true;
+        childRb.useGravity = false;
+
         MeleeWeapon.transform.Find("AttackCollider").gameObject.SetActive(false);
         MeleeWeapon.transform.Find("AttackColliderWarning").gameObject.SetActive(false);
 
         Vector3 targetPos = Vector3.zero;
         Vector3 targetAngles = Vector3.zero;
+        MeleeWeapon.transform.Find("AttackCollider").GetComponent<CapsuleCollider>().radius *= 1.5f;
+        MeleeWeapon.transform.Find("AttackCollider").GetComponent<CapsuleCollider>().height *= 1.5f;
         switch (meleeWeaponForPlayer.WeaponType)
         {
             case MeleeWeaponType.Sword:
@@ -400,8 +452,8 @@ public class PlayerCombat : MonoBehaviour, IKillable
                 else if (meleeWeaponForPlayer.name.StartsWith("Two"))
                 {
                     MeleeWeapon.transform.localScale *= 1.5f;
-                    targetPos = new Vector3(0.00991f, 0.00261f, -0.00076f);
-                    targetAngles = new Vector3(-0.669f, 100.972f, 81.908f);
+                    targetPos = new Vector3(0.00992f, 0.00405f, -0.00091f);
+                    targetAngles = new Vector3(-0.669f, 100.972f, 100.084f);
                 }
                 else
                 {
@@ -435,8 +487,8 @@ public class PlayerCombat : MonoBehaviour, IKillable
                 targetAngles = new Vector3(10.677f, 10.387f, 88.938f);
                 break;
             case MeleeWeaponType.Spear:
-                targetPos = new Vector3(-0.02515f, 0.00145f, 0.00979f);
-                targetAngles = new Vector3(7.852f, 21.055f, 275.636f);
+                targetPos = new Vector3(-0.02574f, 0.00394f, 0.0109f);
+                targetAngles = new Vector3(7.852f, 21.055f, -88.966f);
                 break;
             default:
                 MeleeWeapon.transform.localScale *= 1.1f;
@@ -451,24 +503,28 @@ public class PlayerCombat : MonoBehaviour, IKillable
     private IEnumerator TakeWeaponLerpCoroutine(Vector3 targetPos, Vector3 targetAngles)
     {
         _isTakeOrDropWeapon = true;
-        PlayerStateController._instance.ChangeAnimation("TakeWeaponStart");
+        PlayerStateController._instance.ChangeAnimation("TakeWeaponStart", 0.05f, checkForNameChange: false);
         PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Wait());
         SoundManager._instance.PlaySound(SoundManager._instance.TimeSlowEnter, transform.position, 0.125f, false, UnityEngine.Random.Range(1.8f, 2.2f));
-        float lerpSpeed = 3f;
+        float lerpSpeed = 1f;
         Quaternion targetRot = Quaternion.Euler(targetAngles);
         float startTime = Time.time;
         while (startTime + 0.5f > Time.time)
         {
             MeleeWeapon.transform.localPosition = Vector3.Lerp(MeleeWeapon.transform.localPosition, targetPos, Time.deltaTime * lerpSpeed);
             MeleeWeapon.transform.localRotation = Quaternion.Lerp(MeleeWeapon.transform.localRotation, targetRot, Time.deltaTime * 5f);
-            lerpSpeed += Time.deltaTime * 45f;
+            lerpSpeed += Time.deltaTime * 20f;
             yield return null;
         }
         MeleeWeapon.transform.localPosition = targetPos;
         _isTakeOrDropWeapon = false;
 
-        PlayerStateController._instance.ChangeAnimation("TakeWeapon");
-        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.8f));
+        if (MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().WeaponType != MeleeWeaponType.Spear)
+            PlayerStateController._instance.ChangeAnimation("TakeWeapon", checkForNameChange: false);
+        else
+            PlayerStateController._instance.ChangeAnimation("Idle");
+
+        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.4f));
         //SoundManager._instance.PlaySound(SoundManager._instance.TimeSlowExit, transform.position, 0.125f, false, UnityEngine.Random.Range(1.8f, 2.2f));
         lerpSpeed = 20f;
         startTime = Time.time;
@@ -479,7 +535,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
         }
         MeleeWeapon.transform.localEulerAngles = targetAngles;
     }
-    public void DropWeaponStart()
+    public void DropWeaponStart(bool isSpear = false)
     {
         if (_isTakeOrDropWeapon) return;
 
@@ -487,12 +543,17 @@ public class PlayerCombat : MonoBehaviour, IKillable
             StopCoroutine(_takeWeaponLerpCoroutine);
         if (_dropWeaponStartCoroutine != null)
             StopCoroutine(_dropWeaponStartCoroutine);
-        _dropWeaponStartCoroutine = StartCoroutine(DropWeaponStartCoroutine());
+        _dropWeaponStartCoroutine = StartCoroutine(DropWeaponStartCoroutine(isSpear));
     }
-    private IEnumerator DropWeaponStartCoroutine()
+    private IEnumerator DropWeaponStartCoroutine(bool isSpear)
     {
         _isTakeOrDropWeapon = true;
-        PlayerStateController._instance.ChangeAnimation("ThrowWeaponStart");
+
+        if(!isSpear)
+            PlayerStateController._instance.ChangeAnimation("ThrowWeaponStart", checkForNameChange: false);
+        else
+            PlayerStateController._instance.ChangeAnimation("ThrowSpearStart", checkForNameChange: false);
+
         PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Wait());
         //SoundManager._instance.PlaySound(SoundManager._instance.TimeSlowEnter, transform.position, 0.125f, false, UnityEngine.Random.Range(1.8f, 2.2f));
 
@@ -503,15 +564,20 @@ public class PlayerCombat : MonoBehaviour, IKillable
             yield return null;
         }
         SoundManager._instance.PlaySound(SoundManager._instance.TimeSlowExit, transform.position, 0.125f, false, UnityEngine.Random.Range(1.8f, 2.2f));
-        DropWeapon(Time.time - startTime + 1f);
-        yield return new WaitForSeconds(0.5f);
+        StartCoroutine(DropWeapon(Time.time - startTime + 1f, isSpear));
     }
-    private void DropWeapon(float power)
+    private IEnumerator DropWeapon(float power, bool isSpear)
     {
-        power = Mathf.Clamp(power, 1f, 3f);
-
-        PlayerStateController._instance.ChangeAnimation("ThrowWeapon");
-        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.8f));
+        if (!IsDead)
+        {
+            power = Mathf.Clamp(power, 1f, 3f);
+            if (!isSpear)
+                PlayerStateController._instance.ChangeAnimation("ThrowWeapon", checkForNameChange: false);
+            else
+                PlayerStateController._instance.ChangeAnimation("ThrowSpear", checkForNameChange: false);
+            PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.25f));
+        }
+        yield return new WaitForSeconds(0.08f);
 
         MeleeWeapon.transform.parent = null;
         //MeleeWeapon.GetComponentInChildren<MeshRenderer>().renderingLayerMask = 257;
@@ -537,6 +603,9 @@ public class PlayerCombat : MonoBehaviour, IKillable
         else
             MeleeWeapon.AddComponent(typeof(BoxCollider));
 
+        if (MeleeWeapon.transform.Find("AttackCollider").GetComponent<Rigidbody>() != null)
+            Destroy(MeleeWeapon.transform.Find("AttackCollider").GetComponent<Rigidbody>());
+
         Rigidbody rb = (Rigidbody)MeleeWeapon.AddComponent(typeof(Rigidbody));
         MeleeWeaponThrowed weaponInAir = (MeleeWeaponThrowed)MeleeWeapon.AddComponent(typeof(MeleeWeaponThrowed));
         weaponInAir.IgnoreCollisionCollider = _collider;
@@ -545,6 +614,8 @@ public class PlayerCombat : MonoBehaviour, IKillable
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
 
+        MeleeWeapon.transform.Find("AttackCollider").GetComponent<CapsuleCollider>().radius /= 1.5f;
+        MeleeWeapon.transform.Find("AttackCollider").GetComponent<CapsuleCollider>().height /= 1.5f;
         switch (MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().WeaponType)
         {
             case MeleeWeaponType.Sword:
@@ -572,18 +643,28 @@ public class PlayerCombat : MonoBehaviour, IKillable
                 rb.mass = 3.5f;
                 break;
             case MeleeWeaponType.Spear:
-                power *= 1.25f;
-                rb.mass = 4f;
+                power *= 0.85f;
+                rb.mass = 1.5f;
                 break;
             default:
                 break;
         }
 
-        rb.velocity = Camera.main.transform.forward * 15f * power + Vector3.up * 1f * power;
+        if (isSpear)
+            rb.velocity = rb.transform.up * 15f * power;
+        else
+            rb.velocity = Camera.main.transform.forward * 15f * power + Vector3.up * 1f * power;
+        
         if (MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().WeaponType == MeleeWeaponType.Katana)
             rb.angularVelocity = power * MeleeWeapon.transform.right * -7f;
-        else if(MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().WeaponType != MeleeWeaponType.Spear)
+        else if (MeleeWeapon.name.StartsWith("One") || MeleeWeapon.name.StartsWith("Two"))
+            rb.angularVelocity = power * MeleeWeapon.transform.up * -7f;
+        else if (!isSpear)
             rb.angularVelocity = power * MeleeWeapon.transform.forward * -7f;
+
+        if(isSpear)
+            if (Steamworks.SteamClient.IsValid && !new Steamworks.Data.Achievement("SpearThrowAchievement").State)
+                new Steamworks.Data.Achievement("SpearThrowAchievement").Trigger();
 
         MeleeWeapon.GetComponentInChildren<MeshRenderer>().gameObject.layer = LayerMask.NameToLayer("Default");
         MeleeWeapon.transform.localScale = _weaponScale;
@@ -591,7 +672,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
         GameManager._instance.IsPlayerHasMeleeWeapon = false;
         MeleeWeapon = null;
         GameManager._instance.CallForAction(() => _isTakeOrDropWeapon = false, 0.75f);
-        
+
     }
     #region Attacks
     public void DashAttack()
@@ -640,12 +721,12 @@ public class PlayerCombat : MonoBehaviour, IKillable
         yield return new WaitWhile(() => PlayerMovement._instance._isOnAttackOrAttackDeflectedMove);
 
         string attackName = GetAttackNameBlade();
-       
+
         //CameraController._instance.GetComponentInChildren<Animator>().CrossFade("Camera" + attackName, 0.15f);
 
-       
 
-        float localAttackWaitTime = _attackWaitTime;
+
+        float localAttackWaitTime = _AttackWaitTime;
         if (_lastDeflectedTime + 1.75f > Time.time || _isImmune)
             localAttackWaitTime /= 2f;
         GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; _isAllowedToAttack = true; }, localAttackWaitTime);
@@ -658,7 +739,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
             _attackColliderWarning.gameObject.SetActive(false);
         _attackColliderWarning.gameObject.SetActive(true);
 
-        GameManager._instance.CallForAction(() => { if (IsDead) return; PlayerCombat._instance._IsAttacking = false; _attackColliderWarning.gameObject.SetActive(false); CloseTrails(); }, _attackTime * 0.7f);
+        GameManager._instance.CallForAction(() => { if (IsDead) return; PlayerCombat._instance._IsAttacking = false; _attackColliderWarning.gameObject.SetActive(false); CloseTrails(); }, _AttackTime * 0.7f);
     }
     private IEnumerator AttackWithWeaponNormal()
     {
@@ -679,22 +760,27 @@ public class PlayerCombat : MonoBehaviour, IKillable
         if (MeleeWeapon != null && MeleeWeapon.transform.Find("Trail") != null)
             MeleeWeapon.transform.Find("Trail").gameObject.SetActive(true);
 
-        float localAttackWaitTime = _attackWaitTime;
+        float localAttackWaitTime = _AttackWaitTime;
         if (_lastDeflectedTime + 1.75f > Time.time || _isImmune)
             localAttackWaitTime /= 2f;
         GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; _isAllowedToAttack = true; }, localAttackWaitTime);
 
         PlayerStateController._instance.ChangeAnimation(attackName, checkForNameChange: false);
-        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetAttackSoundForPlayer(PlayerCombat._instance.MeleeWeapon), transform.position, 0.22f, false, UnityEngine.Random.Range(0.8f, 0.85f)), 0.125f);
+
+        float attackSoundWaitTime = attackName.StartsWith("ZweiAxe") ? 0.55f : 0.225f;
+        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetAttackSoundForPlayer(PlayerCombat._instance.MeleeWeapon), transform.position, 0.22f, false, UnityEngine.Random.Range(0.8f, 0.85f)), attackSoundWaitTime);
 
         if (_attackColliderWarning.gameObject.activeSelf)
             _attackColliderWarning.gameObject.SetActive(false);
         _attackColliderWarning.gameObject.SetActive(true);
 
-        GameManager._instance.CallForAction(() => { if (IsDead) return; PlayerCombat._instance._IsAttacking = false; _attackColliderWarning.gameObject.SetActive(false);
+        GameManager._instance.CallForAction(() =>
+        {
+            if (IsDead) return; PlayerCombat._instance._IsAttacking = false; _attackColliderWarning.gameObject.SetActive(false);
+            transform.Find("WallCheckForMeleeWeapon").gameObject.SetActive(false);
             if (MeleeWeapon != null && MeleeWeapon.transform.Find("Trail") != null)
                 MeleeWeapon.transform.Find("Trail").gameObject.SetActive(false);
-        }, _attackTime * 0.9f);
+        }, _AttackTime * 0.9f);
     }
     private IEnumerator AttackTeleportCoroutine(bool isWeapon)
     {
@@ -702,6 +788,13 @@ public class PlayerCombat : MonoBehaviour, IKillable
 
         _isAllowedToAttack = false;
         PlayerCombat._instance._IsAttacking = true;
+
+        if (isWeapon)
+        {
+            string name = MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().WeaponType == MeleeWeaponType.Katana ? "KatanaTeleport" : "SwordTeleport";
+            PlayerStateController._instance.ChangeAnimation(name, checkForNameChange: false);
+            PlayerStateController._instance.EnterAnimState(new PlayerAnimations.Wait());
+        }
 
         GameManager._instance.MidScreenDot.gameObject.SetActive(false);
         GameManager._instance.SlowTime();
@@ -712,7 +805,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
         while (InputHandler.GetButton("MiddleMouse"))
         {
             rayDistance += Time.unscaledDeltaTime * 4f;
-            rayDistance = Mathf.Clamp(rayDistance, 4f, 14f);
+            rayDistance = Mathf.Clamp(rayDistance, 2.5f, 16f);
             Physics.Raycast(transform.position, Camera.main.transform.forward, out RaycastHit hit, rayDistance);
             if (hit.collider != null)
                 teleportDistance = (hit.point - transform.position).magnitude;
@@ -733,18 +826,18 @@ public class PlayerCombat : MonoBehaviour, IKillable
     private void AttackWithBladesTeleport(float teleportDistance)
     {
         PlayerMovement._instance.AttackMoveTeleport(PlayerStateController._instance._rb, teleportDistance);
-        /*
+        
         string attackName = GetAttackNameBlade();
 
         GameManager._instance.PlayerAttackHandle();
 
-        float localAttackWaitTime = _attackWaitTime;
+        float localAttackWaitTime = _AttackWaitTime;
         if (_lastDeflectedTime + 1.75f > Time.time || _isImmune)
             localAttackWaitTime /= 2f;
         GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; _isAllowedToAttack = true; }, localAttackWaitTime);
 
         PlayerStateController._instance.ChangeAnimation(attackName, checkForNameChange: false);
-        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetRandomSoundFromList(SoundManager._instance.Attacks), transform.position, 0.17f, false, UnityEngine.Random.Range(0.8f, 0.85f)), 0.125f);
+        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetAttackSoundForPlayer(PlayerCombat._instance.MeleeWeapon), transform.position, 0.22f, false, UnityEngine.Random.Range(0.8f, 0.85f)), 0.125f);
         SoundManager._instance.PlaySound(SoundManager._instance.BladeSlide, transform.position, 0.12f, false, UnityEngine.Random.Range(0.65f, 0.75f));
 
 
@@ -752,9 +845,9 @@ public class PlayerCombat : MonoBehaviour, IKillable
             _attackColliderWarning.gameObject.SetActive(false);
         _attackColliderWarning.gameObject.SetActive(true);
         
-        GameManager._instance.CallForAction(() => { if (IsDead) return; PlayerCombat._instance._IsAttacking = false; _attackColliderWarning.gameObject.SetActive(false); }, _attackTime * 0.9f);*/
+        GameManager._instance.CallForAction(() => { if (IsDead) return; PlayerCombat._instance._IsAttacking = false; _attackColliderWarning.gameObject.SetActive(false); }, _AttackTime * 0.9f);
 
-        GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; PlayerCombat._instance._IsAttacking = false; _isAllowedToAttack = true; }, _attackTime * 0.7f);
+        GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; PlayerCombat._instance._IsAttacking = false; _isAllowedToAttack = true; }, _AttackTime * 0.7f);
     }
     private void AttackWithWeaponTeleport(float teleportDistance)
     {
@@ -764,19 +857,29 @@ public class PlayerCombat : MonoBehaviour, IKillable
         _weaponAttackNumber += 1;
         GameManager._instance.PlayerAttackHandle();
 
-        float localAttackWaitTime = _attackWaitTime;
+        if (MeleeWeapon != null && MeleeWeapon.transform.Find("Trail") != null)
+            MeleeWeapon.transform.Find("Trail").gameObject.SetActive(true);
+
+        float localAttackWaitTime = _AttackWaitTime;
         if (_lastDeflectedTime + 1.75f > Time.time || _isImmune)
             localAttackWaitTime /= 2f;
         GameManager._instance.CallForAction(() => { if (_IsAttackInterrupted) return; _isAllowedToAttack = true; }, localAttackWaitTime);
 
         PlayerStateController._instance.ChangeAnimation(attackName, checkForNameChange: false);
-        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetAttackSoundForPlayer(PlayerCombat._instance.MeleeWeapon), transform.position, 0.22f, false, UnityEngine.Random.Range(0.8f, 0.85f)), 0.125f);
+        PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.75f));
+
+        float attackSoundWaitTime = attackName.StartsWith("ZweiAxe") ? 0.55f : 0.2f;
+        GameManager._instance.CallForAction(() => SoundManager._instance.PlaySound(SoundManager._instance.GetAttackSoundForPlayer(PlayerCombat._instance.MeleeWeapon), transform.position, 0.22f, false, UnityEngine.Random.Range(0.8f, 0.85f)), attackSoundWaitTime);
 
         if (_attackColliderWarning.gameObject.activeSelf)
             _attackColliderWarning.gameObject.SetActive(false);
         _attackColliderWarning.gameObject.SetActive(true);
 
-        GameManager._instance.CallForAction(() => { if (IsDead) return; PlayerCombat._instance._IsAttacking = false; _attackColliderWarning.gameObject.SetActive(false); }, _attackTime * 0.9f);
+        GameManager._instance.CallForAction(() => { if (IsDead) return; PlayerCombat._instance._IsAttacking = false; _attackColliderWarning.gameObject.SetActive(false);
+            transform.Find("WallCheckForMeleeWeapon").gameObject.SetActive(false);
+            if (MeleeWeapon != null && MeleeWeapon.transform.Find("Trail") != null)
+                MeleeWeapon.transform.Find("Trail").gameObject.SetActive(false);
+        }, _AttackTime * 0.9f);
     }
 
 
@@ -786,7 +889,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
         if (PlayerStateController._instance._playerState is PlayerStates.OnWall)
         {
             bool isLeft = !(PlayerStateController._instance._playerState as PlayerStates.OnWall)._isWallOnLeftSide;
-            if(isLeft)
+            if (isLeft)
                 _attackType = AttackType.Left;
             else
                 _attackType = AttackType.Right;
@@ -799,7 +902,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
         {
             _attackType = AttackType.Left;
         }
-        else
+        else if (PlayerStateController._instance._rb.velocity.magnitude < 12f)
         {
             do
             {
@@ -812,10 +915,23 @@ public class PlayerCombat : MonoBehaviour, IKillable
                     _attackType = AttackType.Right;
             } while (_attackType == _lastAttackType);
         }
+        else
+        {
+            do
+            {
+                int random = UnityEngine.Random.Range(0, 6);
+                if (random == 0 || random == 1 || random == 2 || random == 3)
+                    _attackType = AttackType.Both;
+                else if (random == 4)
+                    _attackType = AttackType.Left;
+                else if (random == 5)
+                    _attackType = AttackType.Right;
+            } while (_attackType == _lastAttackType);
+        }
 
         if (_attackType != AttackType.Both)
         {
-            if(!PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(4).IsName("EmptyCombat"))
+            if (!PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(4).IsName("EmptyCombat"))
                 PlayerStateController._instance.ChangeAnimation("EmptyCombat", 0.25f);
 
             if (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(1).IsName("Idle") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(1).IsName("Walk") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(1).IsName("Run"))
@@ -830,30 +946,31 @@ public class PlayerCombat : MonoBehaviour, IKillable
                     PlayerStateController._instance.ChangeAnimation("LeftEmptyForAttack");
                     PlayerStateController._instance.EnterAnimState(new PlayerAnimations.WaitForOneAnim(0.25f));
                 }
-                
+
             }
 
         }
 
         _lastAttackType = _attackType;
-        
+
     }
     public void ChangeStamina(float amount)
     {
         //
     }
-   
+
     public void ThrowKillObject(IThrowableItem item)
     {
         _isAllowedToThrow = false;
-        Action OpenIsAllowedToThrow = () => {
+        Action OpenIsAllowedToThrow = () =>
+        {
             _isAllowedToThrow = true;
         };
         GameManager._instance.CallForAction(OpenIsAllowedToThrow, _throwWaitTime);
 
         PlayerStateController._instance.ChangeAnimation(GetThrowName());
 
-        GameManager._instance.CallForAction(() => {SoundManager._instance.PlaySound(SoundManager._instance.Throw, transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f)); UseThrowableItem(item); }, 0.15f);
+        GameManager._instance.CallForAction(() => { SoundManager._instance.PlaySound(SoundManager._instance.Throw, transform.position, 0.25f, false, UnityEngine.Random.Range(0.93f, 1.07f)); UseThrowableItem(item); }, 0.15f);
     }
     public void BombDeflected()
     {
@@ -888,7 +1005,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
     {
         if (MeleeWeapon == null)
             return "Blocked" + UnityEngine.Random.Range(1, 5).ToString();
-        return "WeaponBlocked" + UnityEngine.Random.Range(1, 5).ToString();
+        return "WeaponBlocked" + UnityEngine.Random.Range(1, 3).ToString();
     }
     public string GetDeflectedName()
     {
@@ -899,13 +1016,18 @@ public class PlayerCombat : MonoBehaviour, IKillable
             else
                 return "DeflectedToLeft";
         }
-
-        return "WeaponDeflected" + UnityEngine.Random.Range(1, 3).ToString();
+        else
+        {
+            if (UnityEngine.Random.Range(0, 2) == 0)
+                return "DeflectedToRightWeapon";
+            else
+                return "DeflectedToLeftWeapon";
+        }
 
     }
     public string GetAttackDeflectedName()
     {
-        if(MeleeWeapon == null)
+        if (MeleeWeapon == null)
         {
             if (_attackType != AttackType.Both)
             {
@@ -915,56 +1037,161 @@ public class PlayerCombat : MonoBehaviour, IKillable
             }
             return "AttackDeflected" + UnityEngine.Random.Range(1, 3).ToString();
         }
-
-        return "WeaponAttackDeflected" + UnityEngine.Random.Range(1, 3).ToString();
-
+        else
+        {
+            if (_lastWeaponAttackType == WeaponAttackType.Right || _lastWeaponAttackType == WeaponAttackType.Up)
+                return "RightAttackDeflectedWeapon";
+            else
+                return "LeftAttackDeflectedWeapon";
+        }
     }
     public string GetAttackNameBlade()
     {
         SelectAttackType();
         if (_attackType == AttackType.Both)
         {
-            int random = UnityEngine.Random.Range(1, 3);
+            SetLastBladeAttackType(WeaponAttackType.Up, GetVectorFromWeaponType(WeaponAttackType.Up));
+
+            int random = UnityEngine.Random.Range(1, 4);
             return "Attack" + random.ToString();
         }
         else
         {
             int random = UnityEngine.Random.Range(1, 3);
 
-            if(_attackType == AttackType.Left)
+            if (_attackType == AttackType.Left)
+            {
+                SetLastBladeAttackType(WeaponAttackType.Right, GetVectorFromWeaponType(WeaponAttackType.Right));
+
                 return "LeftAttack" + random.ToString();
+            }
             else
+            {
+                SetLastBladeAttackType(WeaponAttackType.Left, GetVectorFromWeaponType(WeaponAttackType.Left));
+
                 return "RightAttack" + random.ToString();
+            }
         }
     }
     public string GetAttackNameWeapon(bool isTeleport)
     {
         if (MeleeWeapon == null) return "";
 
+        if (isTeleport)
+        {
+            switch (MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().WeaponType)
+            {
+                case MeleeWeaponType.Mace:
+                case MeleeWeaponType.Hammer:
+                case MeleeWeaponType.Sword:
+                    SetLastWeaponAttackType(WeaponAttackType.Right, GetVectorFromWeaponType(WeaponAttackType.Right));
+                    return "SwordTeleportAttack";
+                case MeleeWeaponType.Katana:
+                    SetLastWeaponAttackType(WeaponAttackType.Left, GetVectorFromWeaponType(WeaponAttackType.Left));
+                    return "KatanaTeleportAttack";
+                case MeleeWeaponType.Axe:
+                case MeleeWeaponType.Zweihander:
+                    SetLastWeaponAttackType(WeaponAttackType.Right, GetVectorFromWeaponType(WeaponAttackType.Right));
+                    return "SwordTeleportAttack";
+                case MeleeWeaponType.Spear:
+                default:
+                    return "";
+            }
+        }
+
+        if (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(4).IsName("DeflectedToRightWeapon") || PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(4).IsName("DeflectedToLeftWeapon"))
+        {
+            string attackTypeToNumber;
+            if (PlayerStateController._instance._Animator.GetCurrentAnimatorStateInfo(4).IsName("DeflectedToRightWeapon"))
+            {
+                SetLastWeaponAttackType(WeaponAttackType.Right, GetVectorFromWeaponType(WeaponAttackType.Right));
+                attackTypeToNumber = "1";
+            }
+            else
+            {
+                SetLastWeaponAttackType(WeaponAttackType.Left, GetVectorFromWeaponType(WeaponAttackType.Left));
+                attackTypeToNumber = "2";
+            }
+
+            switch (MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().WeaponType)
+            {
+                case MeleeWeaponType.Mace:
+                case MeleeWeaponType.Hammer:
+                case MeleeWeaponType.Sword:
+                    return "SwordMaceHammer" + attackTypeToNumber;
+                    case MeleeWeaponType.Katana:
+                    return "Katana" + attackTypeToNumber;
+                case MeleeWeaponType.Axe:
+                case MeleeWeaponType.Zweihander:
+                    return "ZweiAxe" + attackTypeToNumber;
+                case MeleeWeaponType.Spear:
+                default:
+                    Debug.LogError("Weapon Type Not Found..");
+                    return "";
+            }
+        }
+
+        _weaponAttackNumber = _weaponAttackNumber >= 4 ? 1 : _weaponAttackNumber;
+        bool isSecondaryRightAttack = false;
+        if (_weaponAttackNumber == 1)
+        {
+            if (UnityEngine.Random.Range(0, 100) < 25)
+                _weaponAttackNumber = 2;
+            else if (UnityEngine.Random.Range(0, 100) < 33)
+                isSecondaryRightAttack = true;
+        }
+
+        SetLastWeaponAttackType((WeaponAttackType)_weaponAttackNumber, GetVectorFromWeaponType((WeaponAttackType)_weaponAttackNumber));
+
         switch (MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().WeaponType)
         {
-            case MeleeWeaponType.Sword:
-                _weaponAttackNumber = _weaponAttackNumber >= 5 ? 1 : _weaponAttackNumber;
-                return "Sword" + _weaponAttackNumber;
-            case MeleeWeaponType.Katana:
-                _weaponAttackNumber = _weaponAttackNumber >= 5 ? 1 : _weaponAttackNumber;
-                return "Katana" + _weaponAttackNumber;
             case MeleeWeaponType.Mace:
             case MeleeWeaponType.Hammer:
-                _weaponAttackNumber = _weaponAttackNumber >= 4 ? 1 : _weaponAttackNumber;
-                return "MaceHammer" + _weaponAttackNumber;
+            case MeleeWeaponType.Sword:
+                if (isSecondaryRightAttack)
+                    return "SwordMaceHammer4";
+                return "SwordMaceHammer" + _weaponAttackNumber;
+            case MeleeWeaponType.Katana:
+                if (isSecondaryRightAttack)
+                    return "Katana4";
+                return "Katana" + _weaponAttackNumber;
             case MeleeWeaponType.Axe:
             case MeleeWeaponType.Zweihander:
-                _weaponAttackNumber = _weaponAttackNumber >= 4 ? 1 : _weaponAttackNumber;
+                if (isSecondaryRightAttack)
+                    return "ZweiAxe4";
                 return "ZweiAxe" + _weaponAttackNumber;
             case MeleeWeaponType.Spear:
             default:
+                Debug.LogError("Weapon Type Not Found..");
                 return "";
         }
     }
+    private Vector3 GetVectorFromWeaponType(WeaponAttackType type)
+    {
+        switch (type)
+        {
+            case WeaponAttackType.Right:
+                return transform.right;
+            case WeaponAttackType.Left:
+                return -transform.right;
+            case WeaponAttackType.Up:
+                return transform.up;
+        }
+        return transform.right;
+    }
+    private void SetLastWeaponAttackType(WeaponAttackType type, Vector3 weaponVelocity)
+    {
+        _lastWeaponAttackType = type;
+        MeleeWeapon.transform.Find("AttackCollider").GetComponent<MeleeWeapon>().WeaponVelocityForPlayer = weaponVelocity;
+    }
+    private void SetLastBladeAttackType(WeaponAttackType type, Vector3 weaponVelocity)
+    {
+        _lastWeaponAttackType = type;
+        AttackCollider.GetComponent<MeleeWeapon>().WeaponVelocityForPlayer = weaponVelocity;
+    }
     private IEnumerator ResetWeaponAttackNumberCoroutine()
     {
-        yield return new WaitForSeconds(3);
+        yield return new WaitForSeconds(1.75f);
         _weaponAttackNumber = 1;
     }
     public string GetThrowName()
@@ -992,12 +1219,12 @@ public class PlayerCombat : MonoBehaviour, IKillable
             return "RightThrow";
         }
     }
-    
+
     public void Die(Vector3 dir, float killersVelocityMagnitude, IKillObject killer, bool isHardHit)
     {
-        if (GameManager._instance.isPlayerDead) return;
+        if (GameManager._instance.isPlayerDead || GameManager._instance.isOnCutscene || GameManager._instance.isGameStopped) return;
 
-        if(killer is Projectile)
+        if (killer != null && killer is Projectile)
             SoundManager._instance.PlaySound(SoundManager._instance.DeathByProjectile, transform.position, 0.9f, false, UnityEngine.Random.Range(0.65f, 0.75f));
 
         if (_isImmune)
@@ -1017,6 +1244,10 @@ public class PlayerCombat : MonoBehaviour, IKillable
             script.StopAllCoroutines();
         }
 
+        GameManager._instance.Die();
+
+        if (MeleeWeapon != null)
+            StartCoroutine(DropWeapon(0.02f, false));
         CameraController.ShakeCamera(3.25f, 1.4f, 0.15f, 2.25f);
         GameManager._instance.BlurVolume.enabled = true;
 
@@ -1026,8 +1257,7 @@ public class PlayerCombat : MonoBehaviour, IKillable
         SoundManager._instance.PlaySound(SoundManager._instance.Die, transform.position, 0.2f, false, UnityEngine.Random.Range(0.93f, 1.07f));
         CameraController._instance.DeathMove();
         PlayerMovement._instance.DeathMove(dir, killersVelocityMagnitude);
-        
-        GameManager._instance.Die();
+
     }
     public void AttackWarning(Collider collider, bool isFast, Vector3 attackPosition)
     {
@@ -1035,20 +1265,27 @@ public class PlayerCombat : MonoBehaviour, IKillable
     }
     public void OpenAttackCollider()
     {
+        if (IsDead || _IsAttackInterrupted) return;
+
         if (MeleeWeapon == null)
         {
             GameObject attackCollider = _attackCollider.gameObject;
-            attackCollider.SetActive(true); 
+            attackCollider.SetActive(true);
             CameraController.ShakeCamera(3.5f, 2.5f, 0.2f, 0.4f);
         }
         else
         {
             GameObject attackCollider = MeleeWeapon.transform.Find("AttackCollider").gameObject;
             attackCollider.SetActive(true); CameraController.ShakeCamera(4f, 3f, 0.2f, 0.5f);
+            transform.Find("WallCheckForMeleeWeapon").gameObject.SetActive(true);
         }
     }
     public void CloseAttackCollider()
     {
+        if (IsDead || _IsAttackInterrupted) return;
+
+        if (PlayerStateController._instance._Animator.IsInTransition(4) && PlayerStateController._instance._Animator.GetNextAnimatorStateInfo(4).IsName("EmptyCombat")) return;
+
         if (MeleeWeapon == null)
         {
             GameObject attackCollider = _attackCollider.gameObject;

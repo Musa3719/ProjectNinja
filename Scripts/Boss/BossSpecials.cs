@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 public abstract class BossSpecial
@@ -26,6 +27,7 @@ public class Boss1Special : BossSpecial
         _phase = (int)GameManager._instance.BossPhaseCounterBetweenScenes.transform.position.x;
         _controller = controller;
         _name = "Ginhaeyr The Yielder";
+        GameManager._instance.BossUI.GetComponentInChildren<TextMeshProUGUI>().text = _name;
     }
     public override float DoRandomWallAction()
     {
@@ -320,11 +322,13 @@ public class Boss2Special : BossSpecial
 {
     public Boss2Special(BossStateController controller)
     {
-        _phaseCount = 2;
+        _phaseCount = 1;
         _phase = (int)GameManager._instance.BossPhaseCounterBetweenScenes.transform.position.x;
         _controller = controller;
-        _name = "Zebhylaton The Grandest";
+        _name = "Pheardosa The Traitor";
+        GameManager._instance.BossUI.GetComponentInChildren<TextMeshProUGUI>().text = _name;
     }
+
     public override float DoRandomWallAction()
     {
         switch (_phase)
@@ -408,7 +412,74 @@ public class Boss2Special : BossSpecial
 
     public override float JumpToPlayer()
     {
+        _controller.ChangeAnimation("JumpAttackFlying");
+        GameManager._instance.StartCoroutine(JumpToPlayerCoroutine());
         return -1f;
+    }
+    private IEnumerator JumpToPlayerCoroutine()
+    {
+        _controller._rb.useGravity = true;
+        Vector3 dir = (GameManager._instance.PlayerRb.transform.position - _controller.transform.position).normalized;
+        float distance = (GameManager._instance.PlayerRb.transform.position - _controller.transform.position).magnitude;
+        float speedMul = distance < 9f ? 0.3f : (distance < 18f ? 0.65f : 1f);
+        _controller._rb.velocity = Vector3.up * speedMul * 1.5f + 60f * speedMul * dir;
+        Vector3 velWithoutY;
+
+        float time = 0f;
+        float isGroundedCounter = 0f;
+        while ((GameManager._instance.PlayerRb.transform.position - _controller.transform.position).magnitude > (_controller._rb.velocity.magnitude > 32f ? 5.4f : 3.5f))
+        {
+            time += Time.deltaTime;
+
+            if (_controller._bossMovement.IsGrounded()) isGroundedCounter += Time.deltaTime;
+            else isGroundedCounter = 0f;
+
+            if (time > 0.5f || _controller._bossCombat.IsDead || (time > 0.75f && _controller._rb.velocity.magnitude < 0.5f) || isGroundedCounter > 0.8f)
+                break;
+
+            velWithoutY = _controller._rb.velocity;
+            velWithoutY.y = 0f;
+            dir = (GameManager._instance.PlayerRb.transform.position - _controller.transform.position - Vector3.up * 6f + _controller.transform.forward * 1.5f).normalized;
+            Vector3 forwardToPlayerDirection = new Vector3(dir.x, 0f, dir.z);
+            _controller.transform.forward = Vector3.Lerp(_controller.transform.forward, forwardToPlayerDirection, Time.deltaTime * 4f);
+            velWithoutY = Vector3.Lerp(velWithoutY, velWithoutY.magnitude * dir, Time.deltaTime * 1.5f);
+            velWithoutY *= (1f - Time.deltaTime / 2.5f);
+            _controller._rb.velocity = new Vector3(velWithoutY.x, _controller._rb.velocity.y, velWithoutY.z);
+            yield return null;
+        }
+        JumpToPlayerAttack();
+    }
+    private void JumpToPlayerAttack()
+    {
+        float animTime = GameManager._instance.GetAnimationTime("JumpAttack", _controller._animatorController);
+        _controller._bossCombat.SingleAttack("JumpAttack");
+        GameManager._instance.CoroutineCall(ref _singleAttackCoroutine, _controller._bossCombat.SingleAttack("JumpAttack"), _controller._bossCombat);
+        GameManager._instance.CoroutineCall(ref _jumpCoroutine, JumpToPlayerAttackCoroutine(), _controller._bossCombat);
+    }
+    private IEnumerator JumpToPlayerAttackCoroutine()
+    {
+        float time = 0f;
+        while (time < 0.7f)
+        {
+            time += Time.deltaTime;
+            if (_controller._bossCombat.IsDead)
+            {
+                _controller.EnterState(new BossStates.Chase());
+                yield break;
+            }
+            Vector3 dir = (GameManager._instance.PlayerRb.transform.position - _controller.transform.position).normalized;
+            Vector3 forwardToPlayerDirection = new Vector3(dir.x, 0f, dir.z);
+            _controller.transform.forward = Vector3.Lerp(_controller.transform.forward, forwardToPlayerDirection, Time.deltaTime * 15f);
+            _controller._rb.velocity = Vector3.Lerp(_controller._rb.velocity, 6f * dir, Time.deltaTime * 10f);
+            yield return null;
+        }
+        _controller._rb.velocity = Vector3.zero;
+
+        _controller._rb.useGravity = true;
+        _controller._rb.isKinematic = true;
+        _controller._agent.enabled = true;
+
+        _controller.EnterState(new BossStates.Chase());
     }
     public float Action1()
     {
@@ -440,7 +511,8 @@ public class Boss3Special : BossSpecial
         _phaseCount = 1;
         _phase = 1;
         _controller = controller;
-        _name = "Hahgnash";
+        _name = "Zec The Leader";
+        GameManager._instance.BossUI.GetComponentInChildren<TextMeshProUGUI>().text = _name;
     }
     public override float DoRandomWallAction()
     {

@@ -344,7 +344,7 @@ public class EnemyMovement : MonoBehaviour
     {
         if (!_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh || _enemyStateController._isOnOffMeshLinkPath) return;
 
-        _navMeshAgent.acceleration = 5f;
+        _navMeshAgent.acceleration = 7.5f;
 
         Vector3 direction = (lookAtPos - _rb.transform.position).normalized;
 

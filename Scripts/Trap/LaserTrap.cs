@@ -4,6 +4,9 @@ using UnityEngine;
 
 public class LaserTrap : MonoBehaviour
 {
+    [SerializeField]
+    private bool _isBoss;
+
     private GameObject _laser;
     private GameObject _laserWarning;
 
@@ -21,13 +24,26 @@ public class LaserTrap : MonoBehaviour
     }
     void Update()
     {
-        if (_lastTimeActivated + _waitForReActivateTime < Time.time)
+        if (_isBoss && _lastTimeActivated == 0f)
         {
-            StartWarning();
+            Invoke("StartWarning", 0.3f);
         }
+        else
+        {
+            if (_lastTimeActivated + _waitForReActivateTime < Time.time)
+            {
+                StartWarning();
+            }
+        }
+        
+    }
+    private void OnDestroy()
+    {
+        StopAllCoroutines();
     }
     public void StartWarning()
     {
+        if (gameObject == null) return;
         _lastTimeActivated = Time.time;
         _waitForReActivateTime = Random.Range(9f, 18f);
 
@@ -40,17 +56,21 @@ public class LaserTrap : MonoBehaviour
     }
     private void ActivateLaser()
     {
+        if (gameObject == null) return;
         _laserWarning.GetComponent<TubeRenderer>().enabled = false;
         _laser.SetActive(true);
 
-        GameManager._instance.CallForAction(() => {
-            if (_soundPitchCoroutine != null)
-                StopCoroutine(_soundPitchCoroutine);
-            _soundPitchCoroutine = StartCoroutine(SoundPitchCoroutine(false));
-            _laser.SetActive(false);
-            _laserWarning.GetComponent<TubeRenderer>().enabled = true;
-            _laserWarning.SetActive(false);
-        }, 4f);
+        if (!_isBoss)
+        {
+            GameManager._instance.CallForAction(() => {
+                if (_soundPitchCoroutine != null)
+                    StopCoroutine(_soundPitchCoroutine);
+                _soundPitchCoroutine = StartCoroutine(SoundPitchCoroutine(false));
+                _laser.SetActive(false);
+                _laserWarning.GetComponent<TubeRenderer>().enabled = true;
+                _laserWarning.SetActive(false);
+            }, 4f);
+        }
     }
     private IEnumerator SoundPitchCoroutine(bool isCreating)
     {

@@ -131,6 +131,8 @@ public class PlayerMovement : MonoBehaviour
 
     private RaycastHit[] _hitsForGrounded;
     private bool[] _raysForGrounded;
+
+    private float _staminaIncreaseMultiplier;
     private void OnEnable()
     {
         GameManager._instance._staminaGainEvent += StaminaGain;
@@ -226,11 +228,11 @@ public class PlayerMovement : MonoBehaviour
         _staminaDecreasePerSecond = 9f;
         _staminaIncreasePerSecond = 3f;
         _hookStaminaUse = _staminaIncreasePerSecond;
-        _attackStaminaUse = 14f;
-        _dashAttackStaminaUse = 22f;
-        _dodgeStaminaUse = 16f;
-        _blockedStaminaUse = 8f;
-        _attackDeflectedStaminaUse = 14f;
+        _attackStaminaUse = 8f;
+        _dashAttackStaminaUse = 18f;
+        _dodgeStaminaUse = 12f;
+        _blockedStaminaUse = 5f;
+        _attackDeflectedStaminaUse = 10f;
         _xBound = GetComponent<Collider>().bounds.extents.x;
         _zBound = GetComponent<Collider>().bounds.extents.z;
         _distToGround = GetComponent<Collider>().bounds.extents.y;
@@ -247,6 +249,13 @@ public class PlayerMovement : MonoBehaviour
         GameManager._instance.PlayerRunningSpeed = _MoveSpeed;
         _hookAnimTime = 0.125f;
     }
+    private void Start()
+    {
+        if (GameManager._instance._isInBossLevel)
+            _staminaIncreaseMultiplier = 2f;
+        else
+            _staminaIncreaseMultiplier = 1f;
+    }
     private void Update()
     {
         if (GameManager._instance.isPlayerDead || GameManager._instance.isGameStopped || GameManager._instance.isOnCutscene) return;
@@ -258,15 +267,15 @@ public class PlayerMovement : MonoBehaviour
 
         if (PlayerStateController._instance._isStaminaManual)
         {
-            _Stamina += Time.deltaTime * _staminaIncreasePerSecond * (PlayerCombat._instance.MeleeWeapon == null ? 1f : 0.7f) * Mathf.Clamp((PlayerStateController._instance._staminaManualCounter + 0.25f) * 7f, 1f, 10f);
+            _Stamina += Time.deltaTime * _staminaIncreasePerSecond * _staminaIncreaseMultiplier * (PlayerCombat._instance.MeleeWeapon == null ? 1f : 0.7f) * Mathf.Clamp((PlayerStateController._instance._staminaManualCounter + 0.25f) * 7f, 1f, 10f);
         }
         else if(PlayerCombat._instance._IsBlocking)
         {
-            _Stamina += Time.deltaTime * _staminaIncreasePerSecond * 0.7f;
+            _Stamina += Time.deltaTime * _staminaIncreasePerSecond * 0.7f * _staminaIncreaseMultiplier;
         }
         else
         {
-            _Stamina += Time.deltaTime * _staminaIncreasePerSecond * 1.75f;
+            _Stamina += Time.deltaTime * _staminaIncreasePerSecond * 1.75f * _staminaIncreaseMultiplier;
         }
     }
     private void LateUpdate()
@@ -540,22 +549,22 @@ public class PlayerMovement : MonoBehaviour
             switch (PlayerCombat._instance.MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().WeaponType)
             {
                 case MeleeWeaponType.Sword:
-                    speed *= 0.85f;
+                    speed *= 0.7f;
                     break;
                 case MeleeWeaponType.Katana:
-                    speed *= 0.925f;
-                    break;
-                case MeleeWeaponType.Mace:
-                    speed *= 0.88f;
-                    break;
-                case MeleeWeaponType.Hammer:
                     speed *= 0.8f;
                     break;
-                case MeleeWeaponType.Axe:
+                case MeleeWeaponType.Mace:
                     speed *= 0.7f;
                     break;
+                case MeleeWeaponType.Hammer:
+                    speed *= 0.65f;
+                    break;
+                case MeleeWeaponType.Axe:
+                    speed *= 0.6f;
+                    break;
                 case MeleeWeaponType.Zweihander:
-                    speed *= 0.7f;
+                    speed *= 0.6f;
                     break;
                 case MeleeWeaponType.Spear:
                     break;
@@ -589,7 +598,7 @@ public class PlayerMovement : MonoBehaviour
     {
         _isOnAttackOrAttackDeflectedMove = true;
 
-        float speed = 400f;
+        float speed = 120f;
         float moveTime = distance / speed;
         float startTime = Time.time;
 
@@ -749,8 +758,10 @@ public class PlayerMovement : MonoBehaviour
     }
     private IEnumerator AimAssistCoroutine(GameObject enemy)
     {
+        GameManager._instance.PlayerRb.velocity = Vector3.ClampMagnitude(GameManager._instance.PlayerRb.velocity, 13f);
+
         float startTime = Time.time;
-        while (Time.time < startTime + 0.25f)
+        while (Time.time < startTime + 0.32f)
         {
             if (Time.timeScale > 0.8f)
             {
@@ -970,7 +981,7 @@ public class PlayerMovement : MonoBehaviour
         }
 
 
-        var targetVelocity = direction * Mathf.Clamp(speed, 0, _RunSpeed * 0.85f);
+        var targetVelocity = direction * Mathf.Clamp(speed, 0, _RunSpeed * 0.925f);
         if (xInput != 0f || yInput != 0f)
             targetVelocity.y = rb.velocity.y;
         else

@@ -67,7 +67,7 @@ public class CameraController : MonoBehaviour
         _isRunningForCamera = PlayerStateController.IsRunning();
 
         Vector3 targetPosition = _playerTransform.position + _cameraOffset + _headBobber.bobOffset;
-        transform.localPosition = Vector3.Lerp(transform.localPosition, targetPosition, Time.deltaTime * 25f);
+        transform.localPosition = Vector3.Lerp(transform.localPosition, targetPosition, Time.deltaTime * 80f);
 
         if (PlayerStateController._instance._rb.velocity.magnitude < 0.25f || !PlayerMovement._instance.IsGrounded())
         {

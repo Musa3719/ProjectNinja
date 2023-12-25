@@ -85,16 +85,30 @@ public class PlayerStateController : MonoBehaviour
     }
     public void ChangeAnimation(string name, float fadeTime = 0.2f, bool checkForNameChange = true)
     {
+        if (PlayerCombat._instance.MeleeWeapon != null && PlayerCombat._instance.MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().WeaponType == MeleeWeaponType.Spear)
+        {
+            if (name.Equals("AirToGround") || name.Equals("FastLandToGround") || name.Equals("InAir")) return;
+            if (name.Equals("Idle") || name.Equals("Walk") || name.Equals("Run"))
+            {
+                if (!_Animator.GetCurrentAnimatorStateInfo(1).IsName("SpearIdle"))
+                    _Animator.CrossFadeInFixedTime("SpearIdle", 0.35f);
+                return;
+            }
+            
+        }
+
         if (checkForNameChange && PlayerCombat._instance.MeleeWeapon != null)
         {
             if (name == "EmptyRight" || name == "EmptyLeft" || name == "Sliding" || name == "Born" || name == "FastLand") return;
             if (name == "Dodge" || name == "Stun" || name == "HitBreakable") name = PlayerCombat._instance.GetBlockedName();
-            if (name != "ThrowWeaponStart" && name != "ThrowWeapon" && name != "TakeWeaponStart" && name != "TakeWeapon")
+            else
             {
                 name += "Weapon";
             }
+
+            if (name.Equals("RunWeapon")) fadeTime = 0.35f;
         }
-        
+
         _Animator.CrossFadeInFixedTime(name, fadeTime);
     }
     private void ArrangeAnimStateParameter()
@@ -188,7 +202,7 @@ public class PlayerStateController : MonoBehaviour
         ArrangeAttackBlockedCounter();
         CheckForLoopSounds();
         CheckForPlayerFallsFromMap();
-            
+
     }
     private void ArrangeAttackColliderYPosition()
     {
@@ -237,6 +251,22 @@ public class PlayerStateController : MonoBehaviour
                 SmokeTriggers.Remove(other.gameObject);
             }
         }
+    }
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.collider != null && IsBackground(collision.collider))
+            PlayerCombat._instance.Die(Vector3.zero, 0f, null, true);
+    }
+    public bool IsBackground(Collider other)
+    {
+        if (other == null) return false;
+        Transform temp = other.transform;
+        while (temp.parent != null)
+        {
+            if (temp.CompareTag("Background")) return true;
+            temp = temp.parent;
+        }
+        return false;
     }
     private void ArrangeIsInSmoke()
     {
@@ -319,10 +349,11 @@ public class PlayerStateController : MonoBehaviour
         if (_attackCoroutine != null)
             StopCoroutine(_attackCoroutine);
         _attackBuffer = true;
-        yield return new WaitForSeconds(_attackBufferTime);
+        float bufferTimeMultiplier = PlayerCombat._instance.MeleeWeapon == null ? 1f : 2f;
+        yield return new WaitForSeconds(_attackBufferTime * bufferTimeMultiplier);
         _attackBuffer = false;
     }
-    
+
     public IEnumerator ThrowBuffer()
     {
         if (_throwCoroutine != null)
@@ -385,7 +416,7 @@ public class PlayerStateController : MonoBehaviour
         if (PlayerStateController._instance._playerAnimState is PlayerAnimations.Wait) return false;
         if (PlayerCombat._instance.MeleeWeapon != null) return false;
 
-        
+
         bool _isWallOnLeftSide = false;
         Vector3 playerForward = PlayerMovement._instance.GetForwardDirectionForWall(PlayerStateController._instance._rb.transform, 1f);
         Vector3 playerLeftVector = Quaternion.AngleAxis(-90f, Vector3.up) * playerForward / 10f;
@@ -424,7 +455,10 @@ public class PlayerStateController : MonoBehaviour
         {
             if (PlayerCombat._instance.MeleeWeapon != null)
             {
-                PlayerCombat._instance.DropWeaponStart();
+                if (PlayerCombat._instance.MeleeWeapon.GetComponent<MeleeWeaponForPlayer>().WeaponType == MeleeWeaponType.Spear)
+                    PlayerCombat._instance.DropWeaponStart(true);
+                else
+                    PlayerCombat._instance.DropWeaponStart();
             }
             else
             {
@@ -434,21 +468,33 @@ public class PlayerStateController : MonoBehaviour
     }
     public static bool CheckForAttack()
     {
-        return !PlayerCombat._instance._IsAttacking && !IsUsingSpear() && PlayerStateController._instance._attackBuffer && PlayerCombat._instance._isAllowedToAttack && PlayerMovement._instance._Stamina >= PlayerMovement._instance._attackStaminaUse && !(PlayerStateController._instance._playerAnimState is PlayerAnimations.Wait);
+        return !PlayerCombat._instance._IsAttacking && !IsUsingSpear() && !IsJumpingWithMeleeWeapon() && PlayerStateController._instance._attackBuffer && PlayerCombat._instance._isAllowedToAttack && PlayerMovement._instance._Stamina >= PlayerMovement._instance._attackStaminaUse && !(PlayerStateController._instance._playerAnimState is PlayerAnimations.Wait);
+    }
+    private static bool IsJumpingWithMeleeWeapon()
+    {
+        if (PlayerCombat._instance.MeleeWeapon == null) return false;
+        if (!PlayerMovement._instance.IsGrounded(0f) || PlayerMovement._instance._isJumped) return true;
+        return false;
     }
     public static bool CheckForDashAttack()
     {
-        return !PlayerCombat._instance._IsAttacking  && !IsUsingSpear() && InputHandler.GetButtonDown("MiddleMouse") && PlayerCombat._instance._isAllowedToAttack && PlayerMovement._instance._Stamina >= PlayerMovement._instance._dashAttackStaminaUse && !(PlayerStateController._instance._playerAnimState is PlayerAnimations.Wait);
+        return !PlayerCombat._instance._IsAttacking && !IsUsingSpear() && InputHandler.GetButtonDown("MiddleMouse") && PlayerCombat._instance._isAllowedToAttack && PlayerMovement._instance._Stamina >= PlayerMovement._instance._dashAttackStaminaUse && !(PlayerStateController._instance._playerAnimState is PlayerAnimations.Wait);
     }
     public static bool CheckForThrow()
     {
+        if ((PlayerStateController._instance._throwBuffer && PlayerCombat._instance.MeleeWeapon != null) || (PlayerStateController._instance._throwBuffer && PlayerCombat._instance._CurrentThrowableItem == null))
+        {
+            SoundManager._instance.PlaySound(SoundManager._instance.HookNotReady, PlayerStateController._instance.transform.position, 0.12f);
+            PlayerStateController._instance.StopCoroutine(PlayerStateController._instance._throwCoroutine);
+            PlayerStateController._instance._throwBuffer = false;
+        }
         return PlayerStateController._instance._throwBuffer && PlayerCombat._instance.MeleeWeapon == null && PlayerCombat._instance._isAllowedToThrow && !PlayerCombat._instance._IsDodging && PlayerCombat._instance._CurrentThrowableItem != null && !(PlayerStateController._instance._playerAnimState is PlayerAnimations.Wait);
     }
     public static bool CheckForThrowableChange()
     {
         return InputHandler.GetScrollForItems() != 0f && PlayerCombat._instance._ThrowableInventory.Count > 1;
     }
-    
+
     public void CheckForLoopSounds()
     {
 
@@ -504,7 +550,13 @@ public class PlayerStateController : MonoBehaviour
     }
     public static bool CheckForJump()
     {
-        return PlayerStateController._instance._jumpBuffer && PlayerStateController._instance._isGroundedBuffer && PlayerMovement._instance._Stamina >= PlayerMovement._instance._needStaminaForJump;
+        return PlayerStateController._instance._jumpBuffer && PlayerStateController._instance._isGroundedBuffer && !IsInMeleeWeaponAttack() && PlayerMovement._instance._Stamina >= PlayerMovement._instance._needStaminaForJump;
+    }
+    private static bool IsInMeleeWeaponAttack()
+    {
+        if (PlayerCombat._instance.MeleeWeapon == null) return false;
+        if (PlayerCombat._instance._IsAttacking && Time.timeScale > 0.95f) return true;
+        return false;
     }
     public static bool CheckForWallJump()
     {

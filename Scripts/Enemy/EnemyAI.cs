@@ -25,6 +25,8 @@ public class EnemyAI : MonoBehaviour
     private float _ThrowValue;
 
     private float _lastStepBackCounter;
+    [HideInInspector]
+    public Collider _lastAttackWarnedCollider;
 
     private List<string> _selectedAnimNames;
     private void Awake()
@@ -146,7 +148,7 @@ public class EnemyAI : MonoBehaviour
         selectedAnimNames.Add("Attack" + (i + 1).ToString());
         return i;
     }
-   
+
     IEnumerator Parabola(NavMeshAgent agent, float height, float duration)
     {
         _controller._isOnOffMeshLinkPath = true;
@@ -196,12 +198,12 @@ public class EnemyAI : MonoBehaviour
         }
         return transform.right * xTemp + forward * (Random.Range(0.6f, 0.7f) + extraZ);
     }
-    
+
     public bool CheckForStepBack()
     {
         if (_controller._enemyCombat._IsRanged || _controller._enemyCombat._IsDodging || _controller._enemyCombat._IsBlocking || _controller._enemyCombat._isInAttackPattern) return false;
 
-        if (_StepBackValue * 8f * Time.deltaTime * 60f > Random.Range(0,1000))
+        if (_StepBackValue * 8f * Time.deltaTime * 60f > Random.Range(0, 1000))
         {
             return true;
         }
@@ -237,19 +239,22 @@ public class EnemyAI : MonoBehaviour
             else
                 CanDeflectAttack = true;
 
-            if (_controller._enemyCombat._lastAttackDeflectedTime + 1.75f > Time.time)
-                chanceMultiplier = 0.68f;
+            if (_lastAttackWarnedCollider != null && _lastAttackWarnedCollider.GetComponent<AttackWarning>() != null && _lastAttackWarnedCollider.GetComponent<AttackWarning>().Killables.Count > 1)
+                chanceMultiplier = 0.825f;
+            else if (_controller._enemyCombat._lastAttackDeflectedTime + 1.75f > Time.time)
+                chanceMultiplier = 0.25f;
             else if (GameManager._instance.IsPlayerHasMeleeWeapon)
-                chanceMultiplier = 0.81f;
+                chanceMultiplier = 0.55f;
             else if (IsAttackFast())
-                chanceMultiplier = 0.71f;
+                chanceMultiplier = 0.25f;
             else
-                chanceMultiplier = 1f;
+                chanceMultiplier = 0.75f;
 
             if (_controller._enemyState is EnemyStates.StepBack)
                 chanceMultiplier = 1.35f;
             if (_DodgeOrBlockEfficiencyValue * 1000 * chanceMultiplier >= Random.Range(0, 1000))
                 return true;
+            _controller.ChangeAnimation("Blocking", 0.45f);
             return false;
         }
         return false;
@@ -327,7 +332,7 @@ public class EnemyAI : MonoBehaviour
             }
             return false;
         }
-        
+
     }
     public bool CheckForAttackFriendlyFire(float range = 0f)
     {
@@ -373,7 +378,7 @@ public class EnemyAI : MonoBehaviour
                 RaycastHit hit;
                 Vector3 dir = (position - nearEnemy.transform.position).normalized;
                 Physics.Raycast(nearEnemy.transform.position, dir, out hit, GameManager._instance.LayerMaskForVisible);
-                
+
                 if (hit.collider != null && (hit.collider.CompareTag("Player") || (hit.collider.transform.parent != null && hit.collider.transform.parent.CompareTag("Player"))))
                 {
                     enemyAIs[nearEnemy].HearArtificialSound(position);
@@ -381,13 +386,13 @@ public class EnemyAI : MonoBehaviour
             }
         }
     }
-    
+
     public void MakeArtificialSoundForProjectileHit(Vector3 position, float radius)
     {
         radius *= 1f;
         if ((position - transform.position).magnitude <= radius / 3f)
             HearArtificialSound(position);
-        else if ((position-transform.position).magnitude <= radius)
+        else if ((position - transform.position).magnitude <= radius)
         {
             RaycastHit hit;
             Physics.Raycast(position, (transform.position - position).normalized, out hit, GameManager._instance.LayerMaskForVisible);

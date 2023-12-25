@@ -116,6 +116,14 @@ namespace BossStates
                 {
                     _bossStateController.EnterState(new RetreatBoss1());
                 }
+                else if (_bossStateController._bossAI._BossNumber == 2)
+                {
+                    _bossStateController.EnterState(new FastAttackBoss2());
+                }
+                else if (_bossStateController._bossAI._BossNumber == 3)
+                {
+                    _bossStateController.EnterState(new TeleportBoss3());
+                }
             }
             else if (_bossStateController._bossAI.CheckForDodgeOrBlock())
             {
@@ -129,14 +137,27 @@ namespace BossStates
                     _bossStateController.BlockOpen(_bossStateController._bossAI._attackPosition);
                 }
             }
-            
+
             else if (_bossStateController._bossAI.CheckForAttack())
             {
                 _bossStateController._bossCombat.AttackWithPattern();
             }
 
             if (!_bossStateController._bossCombat._IsDodging && !_bossStateController._bossCombat._IsInAttackPattern && !_bossStateController._bossCombat._IsBlocking)
-                if ((_playerTransform.position - _bossStateController.transform.position).magnitude < _bossStateController._bossCombat.AttackRange * 0.8f)
+                if (_bossStateController._bossAI._BossNumber == 2)
+                {
+                    if (GameManager._instance.BossPhaseCounterBetweenScenes.transform.position.x == 1)
+                    {
+                        _bossStateController._bossMovement.MoveToPosition(_playerTransform.position + (_bossStateController.transform.position - _playerTransform.position).normalized * 2f, GameManager._instance.PlayerRb.transform.position, speedMultiplier: 0.6f);
+                        _bossStateController._animator.SetFloat("LocomotionSpeedMultiplier", 0.7f);
+                    }
+                    else
+                    {
+                        _bossStateController._bossMovement.MoveToPosition(_playerTransform.position + (_bossStateController.transform.position - _playerTransform.position).normalized * 2f, GameManager._instance.PlayerRb.transform.position);
+                        _bossStateController._animator.SetFloat("LocomotionSpeedMultiplier", 1f);
+                    }
+                }
+                else if ((_playerTransform.position - _bossStateController.transform.position).magnitude < _bossStateController._bossCombat.AttackRange * 0.8f)
                 {
                     _bossStateController._bossMovement.MoveToPosition(_bossStateController.transform.position + _bossStateController.transform.right, _playerTransform.position, speedMultiplier: 0.55f);
                     _bossStateController._animator.SetFloat("LocomotionSpeedMultiplier", 0.7f);
@@ -179,7 +200,7 @@ namespace BossStates
         }
         public void Exit(Rigidbody rb, IBossState newState)
         {
-            if (!(newState is SpecialAction))
+            if (!(newState is SpecialActionBoss1))
             {
                 _bossStateController.EnterAnimState(new BossAnimations.Walk());
             }
@@ -192,7 +213,7 @@ namespace BossStates
         {
             if (_bossStateController._bossAI.CheckForRetreatToSpecialAction())
             {
-                _bossStateController.EnterState(new SpecialAction());
+                _bossStateController.EnterState(new SpecialActionBoss1());
             }
         }
 
@@ -206,7 +227,7 @@ namespace BossStates
 
         }
     }
-    public class SpecialAction : IBossState
+    public class SpecialActionBoss1 : IBossState
     {
         public BossStateController _bossStateController { get; set; }
 
@@ -238,8 +259,105 @@ namespace BossStates
         }
         public void DoState(Rigidbody rb)
         {
-            
+
             //Exit handled in ai
+        }
+
+        public void DoStateFixedUpdate(Rigidbody rb)
+        {
+
+        }
+
+        public void DoStateLateUpdate(Rigidbody rb)
+        {
+
+        }
+    }
+
+    public class FastAttackBoss2 : IBossState
+    {
+        public BossStateController _bossStateController { get; set; }
+
+        public Transform _playerTransform;
+
+        public void Enter(Rigidbody rb, IBossState oldState)
+        {
+            _bossStateController = rb.GetComponent<BossStateController>();
+            _bossStateController.EnterAnimState(new BossAnimations.Retreat());
+            _bossStateController._bossMovement.StopDodgeOrBlockMovement();
+            _bossStateController.EnableHeadAim();
+            _playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
+
+            _bossStateController._bossMovement.FastAttack();
+        }
+        public void Exit(Rigidbody rb, IBossState newState)
+        {
+            _bossStateController.EnterAnimState(new BossAnimations.Walk());
+        }
+        public void DoState(Rigidbody rb)
+        {
+            if (_bossStateController._bossAI.CheckForDodgeOrBlock())
+            {
+                bool isDodgingToRight = _bossStateController._bossMovement.Dodge();
+                _bossStateController._bossCombat.Dodge(isDodgingToRight);
+            }
+        }
+
+        public void DoStateFixedUpdate(Rigidbody rb)
+        {
+
+        }
+
+        public void DoStateLateUpdate(Rigidbody rb)
+        {
+
+        }
+    }
+    public class TeleportBoss3 : IBossState
+    {
+        public BossStateController _bossStateController { get; set; }
+
+        public Transform _playerTransform;
+        private float _enterTime;
+
+        public void Enter(Rigidbody rb, IBossState oldState)
+        {
+            _enterTime = Time.time;
+            _bossStateController = rb.GetComponent<BossStateController>();
+            _bossStateController.EnterAnimState(new BossAnimations.Retreat());
+            _bossStateController._bossMovement.StopDodgeOrBlockMovement();
+            _bossStateController.EnableHeadAim();
+            _playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
+
+            _bossStateController._bossMovement.Teleport();
+            if (Random.Range(0, 100) < 75)
+            {
+                int random = Random.Range(0, 3);
+                if (random == 0)
+                    _bossStateController._bossCombat.GunAttack();
+                else if (random == 1)
+                    _bossStateController._bossCombat.LaserAttack();
+                else
+                    _bossStateController._bossCombat.Throw();
+            }
+            else
+            {
+                GameManager._instance.CallForAction(() => _bossStateController.EnterState(new BossStates.Chase()), 1f);
+            }
+        }
+        public void Exit(Rigidbody rb, IBossState newState)
+        {
+            if (_bossStateController._bossCombat.Boss3ExtraWeapon != null)
+                GameObject.Destroy(_bossStateController._bossCombat.Boss3ExtraWeapon);
+            _bossStateController.EnterAnimState(new BossAnimations.Walk());
+        }
+        public void DoState(Rigidbody rb)
+        {
+            if (_bossStateController._bossAI.CheckForDodgeOrBlock() && _enterTime >= 1f)
+            {
+                bool isDodgingToRight = _bossStateController._bossMovement.Dodge();
+                _bossStateController._bossCombat.Dodge(isDodgingToRight);
+            }
         }
 
         public void DoStateFixedUpdate(Rigidbody rb)

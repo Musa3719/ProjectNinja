@@ -43,33 +43,33 @@ public class BossAI : MonoBehaviour
         {
             case 1:
                 _bossSpecial = new Boss1Special(_controller);
-                _AgressiveValue = 0.8f;
+                _AgressiveValue = 0.4f;
                 _DodgeOverBlockValue = 0.1f;
-                _RetreatValue = 0.4f;
+                _RetreatValue = 0.5f;
                 _IdleValue = 0.5f;
                 _controller._animatorController = GameManager._instance.Boss1AnimatorGetter;
                 break;
             case 2:
                 _bossSpecial = new Boss2Special(_controller);
-                _AgressiveValue = 0.8f;
-                _DodgeOverBlockValue = 0f;
-                _RetreatValue = 0.4f;
-                _IdleValue = 0.5f;
+                _AgressiveValue = 2.5f;
+                _DodgeOverBlockValue = 0.01f;
+                _RetreatValue = 0.65f;
+                _IdleValue = 0.05f;
                 _controller._animatorController = GameManager._instance.Boss2AnimatorGetter;
                 break;
             case 3:
                 _bossSpecial = new Boss3Special(_controller);
-                _AgressiveValue = 0.8f;
-                _DodgeOverBlockValue = 0.2f;
-                _RetreatValue = 0.4f;
-                _IdleValue = 0.5f;
+                _AgressiveValue = 1.25f;
+                _DodgeOverBlockValue = 0.175f;
+                _RetreatValue = 1.25f;
+                _IdleValue = 0.28f;
                 _controller._animatorController = GameManager._instance.Boss3AnimatorGetter;
                 break;
             default:
                 break;
         }
     }
-    
+
     private void Update()
     {
         if (GameManager._instance.isGameStopped || _controller._isDead || GameManager._instance.isOnCutscene) return;
@@ -100,7 +100,7 @@ public class BossAI : MonoBehaviour
     private IEnumerator SpecialActionMovementCoroutine(Rigidbody rb, float speed)
     {
         Coroutine velocityLerperCoroutine = null;
-        
+
         Vector3[] array = GetSpecialActionWallToWallDirection(rb);
         Vector3 toWallDirection = array[0];
         Vector3 wallNormal = array[1];
@@ -175,7 +175,7 @@ public class BossAI : MonoBehaviour
             }
             rb.transform.forward = wallNormal;
         }
-       
+
 
         yield return new WaitForSeconds(Random.Range(0.3f, 0.7f));
 
@@ -252,7 +252,7 @@ public class BossAI : MonoBehaviour
     }
     private void ArrangeYSpeed(Rigidbody rb, float startYSpeed)
     {
-        if(rb.velocity.y > -startYSpeed)
+        if (rb.velocity.y > -startYSpeed)
         {
             rb.velocity -= Vector3.up * Time.deltaTime * 20f;
         }
@@ -262,7 +262,7 @@ public class BossAI : MonoBehaviour
         Physics.Raycast(rb.transform.position + dir, dir, out RaycastHit hit, 100f);
         if (hit.collider == null) return;
         //if (!hit.collider.CompareTag("Wall"))
-            //Debug.LogError("WallToWall ray didn't hit any wall..");
+        //Debug.LogError("WallToWall ray didn't hit any wall..");
 
         if ((hit.transform.position - rb.transform.position).magnitude < minDistance)
         {
@@ -306,10 +306,10 @@ public class BossAI : MonoBehaviour
             yield return null;
         }
         rb.velocity = targetVelocity;
-        
+
     }
 
-#endregion
+    #endregion
     public List<string> ChooseAttackPattern()
     {
         int attackAnimCount = _controller._bossCombat._AttackAnimCount;
@@ -321,7 +321,7 @@ public class BossAI : MonoBehaviour
         int lastSelectedIndex = -2;
         for (int i = 0; i < attackAnimCount; i++)
         {
-            if (Random.Range(0, 8) < 3)
+            if (Random.Range(0, 8) < 4)
             {
                 lastSelectedIndex = AddAnimToPattern(_selectedAnimNames, i);
             }
@@ -404,6 +404,10 @@ public class BossAI : MonoBehaviour
     }
     public bool CheckForIdle()
     {
+        if (_BossNumber == 3 && Time.time < 4.5f) return true;
+        else if (_BossNumber == 2 && Time.time < 2f) return true;
+        else if (_BossNumber == 1 && Time.time < 2f) return true;
+
         if (_controller._bossCombat._IsDodging || _controller._bossCombat._IsBlocking || _controller._bossCombat._IsInAttackPattern) return false;
 
         if ((transform.position - _controller._playerTransform.position).magnitude > 6f)
@@ -503,13 +507,13 @@ public class BossAI : MonoBehaviour
             allowAttack = true;
         }
 
-        if(allowAttack && (_controller._playerTransform.position - _controller._rb.transform.position).magnitude < attackRange)
+        if (allowAttack && (_controller._playerTransform.position - _controller._rb.transform.position).magnitude < attackRange)
         {
             return true;
         }
         else if ((_controller._playerTransform.position - _controller._rb.transform.position).magnitude < attackRange && _controller._bossCombat._IsAllowedToAttack)
         {
-            if (_AgressiveValue * chanceMultiplier * 12.5f * Time.deltaTime * 60f > Random.Range(0, 1000))
+            if (_AgressiveValue * chanceMultiplier * 25f * Time.deltaTime * 60f > Random.Range(0, 1000))
             {
                 return true;
             }
